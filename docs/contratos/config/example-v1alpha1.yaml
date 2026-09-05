@@ -1,0 +1,84 @@
+apiVersion: modelcairn.io/v1alpha1
+kind: Configuration
+resources:
+  - kind: Provider
+    state: present
+    metadata:
+      name: example-provider
+      displayName: Example Provider
+    spec: {}
+  - kind: ProviderAccount
+    state: present
+    metadata:
+      name: example-account
+    spec:
+      providerRef: { name: example-provider }
+  - kind: ProviderConnection
+    state: present
+    metadata:
+      name: example-api
+    spec:
+      providerRef: { name: example-provider }
+      baseUrl: https://api.example.invalid/v1
+      adapter: openai-chat-v1
+      allowPrivateNetwork: false
+      enabled: true
+  - kind: Egress
+    state: present
+    metadata:
+      name: main-direct
+    spec:
+      type: direct
+      enabled: true
+  - kind: Credential
+    state: present
+    metadata:
+      name: example-key
+    spec:
+      providerAccountRef: { name: example-account }
+      egressRef: { name: main-direct }
+      secretRef: { name: example-key-secret }
+      enabled: true
+  - kind: Model
+    state: present
+    metadata:
+      name: example-chat
+    spec:
+      connectionRef: { name: example-api }
+      providerModelId: example-chat-model
+      capabilities: [text, stream, tools]
+      enabled: true
+  - kind: Destination
+    state: present
+    metadata:
+      name: example-primary
+    spec:
+      modelRef: { name: example-chat }
+      credentialRef: { name: example-key }
+      enabled: true
+      weight: 100
+  - kind: Strategy
+    state: present
+    metadata:
+      name: example-sequential
+    spec:
+      destinations: [{ name: example-primary }]
+      maxAttempts: 1
+      attemptTimeoutMs: 60000
+      totalTimeoutMs: 120000
+  - kind: Route
+    state: present
+    metadata:
+      name: example-route
+    spec:
+      modelAlias: example-assistant
+      strategyRef: { name: example-sequential }
+      enabled: true
+  - kind: AgentToken
+    state: present
+    metadata:
+      name: example-agent
+    spec:
+      allowedRouteRefs: [{ name: example-route }]
+      expiresAt: null
+      enabled: true

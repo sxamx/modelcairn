@@ -1,0 +1,343 @@
+openapi: 3.1.0
+info:
+  title: ModelCairn Administration API
+  version: 1.0.0-alpha.1
+servers:
+  - url: /api/v1/admin
+security:
+  - adminSession: []
+    csrfToken: []
+paths:
+  /session:
+    post:
+      security: []
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Login' }
+      responses:
+        '200':
+          description: Session created; token is also returned by session/me after reload
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: mc_session with HttpOnly, SameSite=Strict, Path=/ and Secure on HTTPS
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionContext' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteSession
+      responses:
+        '204': { description: Session revoked and cookie cleared }
+  /session/me:
+    get:
+      security:
+        - adminSession: []
+      operationId: getCurrentSession
+      responses:
+        '200':
+          description: Current administrator
+          content: { application/json: { schema: { $ref: '#/components/schemas/SessionContext' } } }
+        '401': { $ref: '#/components/responses/Error' }
+  /resources/{kind}:
+    parameters:
+      - $ref: '#/components/parameters/Kind'
+    get:
+      operationId: listResources
+      parameters:
+        - { name: cursor, in: query, schema: { type: string, maxLength: 512 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        '200':
+          description: Page ordered by immutable uid
+          content: { application/json: { schema: { $ref: '#/components/schemas/ResourcePage' } } }
+        '400': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createResource
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/Resource' } } }
+      responses:
+        '201': { $ref: '#/components/responses/Resource' }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /resources/{kind}/{name}:
+    parameters:
+      - $ref: '#/components/parameters/Kind'
+      - $ref: '#/components/parameters/Name'
+    get:
+      operationId: getResource
+      responses:
+        '200': { $ref: '#/components/responses/Resource' }
+        '404': { $ref: '#/components/responses/Error' }
+    put:
+      operationId: replaceResource
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/Resource' } } }
+      responses:
+        '200': { $ref: '#/components/responses/Resource' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '412': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteResource
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '412': { $ref: '#/components/responses/Error' }
+  /config/validate:
+    post:
+      operationId: validateConfiguration
+      requestBody: { $ref: '#/components/requestBodies/Configuration' }
+      responses:
+        '200': { $ref: '#/components/responses/Validation' }
+        '400': { $ref: '#/components/responses/Error' }
+  /config/plan:
+    post:
+      operationId: planConfiguration
+      requestBody: { $ref: '#/components/requestBodies/Configuration' }
+      responses:
+        '200': { $ref: '#/components/responses/Plan' }
+        '400': { $ref: '#/components/responses/Error' }
+  /config/apply:
+    post:
+      operationId: applyConfiguration
+      parameters:
+        - { name: allowDelete, in: query, schema: { type: boolean, default: false } }
+        - $ref: '#/components/parameters/PlanToken'
+      requestBody: { $ref: '#/components/requestBodies/Configuration' }
+      responses:
+        '200': { $ref: '#/components/responses/ApplyResult' }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /secrets/{name}:
+    put:
+      operationId: setSecret
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/IfMatchOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [value]
+              properties: { value: { type: string, minLength: 1, maxLength: 16384, writeOnly: true } }
+      responses:
+        '200': { $ref: '#/components/responses/SecretMetadata' }
+        '201': { $ref: '#/components/responses/SecretMetadata' }
+        '412': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteSecret
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204': { description: Deleted }
+        '409': { $ref: '#/components/responses/Error' }
+  /agent-tokens/{name}/issue:
+    post:
+      operationId: issueAgentToken
+      parameters: [ { $ref: '#/components/parameters/Name' } ]
+      responses:
+        '201':
+          description: Token value returned exactly once
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token]
+                properties: { token: { type: string, writeOnly: true } }
+        '409': { $ref: '#/components/responses/Error' }
+  /agent-tokens/{name}/revoke:
+    post:
+      operationId: revokeAgentToken
+      parameters: [ { $ref: '#/components/parameters/Name' } ]
+      responses:
+        '204': { description: Revoked immediately for new requests }
+        '404': { $ref: '#/components/responses/Error' }
+  /strategies/{name}/publish:
+    post:
+      operationId: publishStrategy
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200': { $ref: '#/components/responses/Resource' }
+        '409': { $ref: '#/components/responses/Error' }
+  /connections/{name}/test:
+    post:
+      operationId: testProviderConnection
+      parameters: [ { $ref: '#/components/parameters/Name' } ]
+      responses:
+        '200':
+          description: Redacted diagnostic
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, latencyMs]
+                properties:
+                  ok: { type: boolean }
+                  latencyMs: { type: integer, minimum: 0 }
+                  code: { type: [string, 'null'] }
+        '400': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    adminSession: { type: apiKey, in: cookie, name: mc_session }
+    csrfToken: { type: apiKey, in: header, name: X-CSRF-Token }
+  parameters:
+    Kind:
+      name: kind
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [providers, provider-accounts, provider-connections, credentials, egresses, models, destinations, strategies, routes, agent-tokens]
+    Name: { name: name, in: path, required: true, schema: { type: string, pattern: '^[a-z][a-z0-9-]{0,62}$' } }
+    IfMatch: { name: If-Match, in: header, required: true, schema: { type: string } }
+    IfMatchOptional: { name: If-Match, in: header, required: false, schema: { type: string } }
+    PlanToken:
+      name: X-ModelCairn-Plan-Token
+      in: header
+      required: true
+      description: Opaque token returned by plan; binds the desired configuration to the observed resource versions and expiry.
+      schema: { type: string, minLength: 32 }
+  requestBodies:
+    Configuration:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '../config/modelcairn-config-v1alpha1.schema.json' }
+        application/yaml:
+          schema: { $ref: '../config/modelcairn-config-v1alpha1.schema.json' }
+  responses:
+    Error:
+      description: Structured error
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Resource:
+      description: Resource with ETag header
+      headers: { ETag: { schema: { type: string } } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Resource' } } }
+    SecretMetadata:
+      description: Metadata only; never the secret value
+      headers: { ETag: { schema: { type: string } } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/SecretMetadata' } } }
+    Validation:
+      description: Validation result
+      content: { application/json: { schema: { $ref: '#/components/schemas/Validation' } } }
+    Plan:
+      description: Redacted ordered changes
+      content: { application/json: { schema: { $ref: '#/components/schemas/Plan' } } }
+    ApplyResult:
+      description: Redacted result of the atomic apply
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApplyResult' } } }
+  schemas:
+    Login:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username: { type: string, minLength: 1, maxLength: 120 }
+        password: { type: string, minLength: 12, writeOnly: true, description: Maximum 1024 UTF-8 bytes enforced by server }
+    Admin:
+      type: object
+      required: [id, username]
+      properties: { id: { type: string, format: uuid }, username: { type: string } }
+    SessionContext:
+      type: object
+      required: [admin, csrfToken, expiresAt]
+      properties:
+        admin: { $ref: '#/components/schemas/Admin' }
+        csrfToken: { type: string, description: Kept in SPA memory and sent as X-CSRF-Token }
+        expiresAt: { type: string, format: date-time }
+    Resource:
+      $ref: '../config/modelcairn-config-v1alpha1.schema.json#/$defs/resource'
+    ResourcePage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Resource' } }
+        nextCursor: { type: [string, 'null'] }
+    SecretMetadata:
+      type: object
+      required: [name, resourceVersion, updatedAt]
+      properties:
+        name: { type: string }
+        resourceVersion: { type: integer }
+        fingerprint: { type: string, description: Non-reversible display fingerprint }
+        updatedAt: { type: string, format: date-time }
+    Validation:
+      type: object
+      required: [valid, issues]
+      properties:
+        valid: { type: boolean }
+        issues: { type: array, items: { $ref: '#/components/schemas/Issue' } }
+    Issue:
+      type: object
+      required: [severity, code, path, message]
+      properties:
+        severity: { enum: [error, warning] }
+        code: { type: string }
+        path: { type: string }
+        message: { type: string }
+    Plan:
+      type: object
+      required: [changes, valid, planToken, expiresAt]
+      properties:
+        valid: { type: boolean }
+        planToken:
+          type: string
+          minLength: 32
+          description: Opaque short-lived precondition token required by apply; never contains secret values.
+        expiresAt: { type: string, format: date-time }
+        changes:
+          type: array
+          items:
+            type: object
+            required: [operation, kind, name]
+            properties:
+              operation: { enum: [create, update, noop, delete] }
+              kind: { type: string }
+              name: { type: string }
+    ApplyResult:
+      type: object
+      required: [applied, changes, appliedAt]
+      properties:
+        applied: { type: boolean, const: true }
+        appliedAt: { type: string, format: date-time }
+        changes:
+          type: array
+          items:
+            type: object
+            required: [operation, kind, name]
+            properties:
+              operation: { enum: [create, update, noop, delete] }
+              kind: { type: string }
+              name: { type: string }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            requestId: { type: string }
+            field: { type: [string, 'null'] }
+            retryable: { type: boolean, default: false }

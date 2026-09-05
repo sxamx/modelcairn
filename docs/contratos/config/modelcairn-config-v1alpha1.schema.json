@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modelcairn.dev/schemas/config/v1alpha1.json",
+  "title": "ModelCairn declarative configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "resources"],
+  "properties": {
+    "apiVersion": { "const": "modelcairn.io/v1alpha1" },
+    "kind": { "const": "Configuration" },
+    "resources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/resource" },
+      "maxItems": 10000
+    }
+  },
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "uid": { "type": "string", "format": "uuid", "readOnly": true },
+        "resourceVersion": { "type": "integer", "minimum": 1, "readOnly": true }
+      }
+    },
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": { "name": { "$ref": "#/$defs/name" } }
+    },
+    "base": {
+      "type": "object",
+      "required": ["kind", "metadata"],
+      "properties": {
+        "state": { "const": "present", "default": "present" },
+        "metadata": { "$ref": "#/$defs/metadata" }
+      }
+    },
+    "provider": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "metadata", "spec"],
+          "properties": {
+            "kind": { "const": "Provider" }, "state": {}, "metadata": {},
+            "spec": { "type": "object", "additionalProperties": false,
+              "properties": {}
+            }
+          }
+        }
+      ]
+    },
+    "providerAccount": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false,
+          "required": ["kind", "metadata", "spec"],
+          "properties": { "kind": { "const": "ProviderAccount" }, "state": {}, "metadata": {},
+            "spec": { "type": "object", "additionalProperties": false,
+              "required": ["providerRef"],
+              "properties": { "providerRef": { "$ref": "#/$defs/ref" } }
+            }
+          }
+        }
+      ]
+    },
+    "connection": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false,
+          "required": ["kind", "metadata", "spec"],
+          "properties": { "kind": { "const": "ProviderConnection" }, "state": {}, "metadata": {},
+            "spec": { "type": "object", "additionalProperties": false,
+              "required": ["providerRef", "baseUrl", "adapter"],
+              "properties": {
+                "providerRef": { "$ref": "#/$defs/ref" },
+                "baseUrl": { "type": "string", "format": "uri", "maxLength": 2048 },
+                "adapter": { "type": "string", "enum": ["openai-chat-v1"] },
+                "allowPrivateNetwork": { "type": "boolean", "default": false },
+                "enabled": { "type": "boolean", "default": true }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "credential": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false,
+          "required": ["kind", "metadata", "spec"],
+          "properties": { "kind": { "const": "Credential" }, "state": {}, "metadata": {},
+            "spec": { "type": "object", "additionalProperties": false,
+              "required": ["providerAccountRef", "egressRef", "secretRef"],
+              "properties": {
+                "providerAccountRef": { "$ref": "#/$defs/ref" },
+                "egressRef": { "$ref": "#/$defs/ref" },
+                "secretRef": { "$ref": "#/$defs/ref" },
+                "enabled": { "type": "boolean", "default": true }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "egress": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false,
+          "required": ["kind", "metadata", "spec"],
+          "properties": { "kind": { "const": "Egress" }, "state": {}, "metadata": {},
+            "spec": { "type": "object", "additionalProperties": false,
+              "required": ["type"],
+              "properties": { "type": { "const": "direct" }, "enabled": { "type": "boolean", "default": true } }
+            }
+          }
+        }
+      ]
+    },
+    "model": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false,
+          "required": ["kind", "metadata", "spec"],
+          "properties": { "kind": { "const": "Model" }, "state": {}, "metadata": {},
+            "spec": { "type": "object", "additionalProperties": false,
+              "required": ["connectionRef", "providerModelId", "capabilities"],
+              "properties": {
+                "connectionRef": { "$ref": "#/$defs/ref" },
+                "providerModelId": { "type": "string", "minLength": 1, "maxLength": 255 },
+                "capabilities": { "type": "array", "uniqueItems": true,
+                  "items": { "enum": ["text", "stream", "tools", "parallel-tools", "developer-role", "json-schema", "logprobs"] }
+                },
+                "enabled": { "type": "boolean", "default": true }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "destination": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false,
+          "required": ["kind", "metadata", "spec"],
+          "properties": { "kind": { "const": "Destination" }, "state": {}, "metadata": {},
+            "spec": { "type": "object", "additionalProperties": false,
+              "required": ["modelRef", "credentialRef"],
+              "properties": {
+                "modelRef": { "$ref": "#/$defs/ref" },
+                "credentialRef": { "$ref": "#/$defs/ref" },
+                "enabled": { "type": "boolean", "default": true },
+                "weight": { "type": "integer", "minimum": 1, "maximum": 1000, "default": 100 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "strategy": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false,
+          "required": ["kind", "metadata", "spec"],
+          "properties": { "kind": { "const": "Strategy" }, "state": {}, "metadata": {},
+            "spec": { "type": "object", "additionalProperties": false,
+              "required": ["destinations"],
+              "properties": {
+                "destinations": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "$ref": "#/$defs/ref" } },
+                "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 32, "default": 3 },
+                "attemptTimeoutMs": { "type": "integer", "minimum": 100, "maximum": 600000, "default": 60000 },
+                "totalTimeoutMs": { "type": "integer", "minimum": 100, "maximum": 900000, "default": 120000 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "route": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false,
+          "required": ["kind", "metadata", "spec"],
+          "properties": { "kind": { "const": "Route" }, "state": {}, "metadata": {},
+            "spec": { "type": "object", "additionalProperties": false,
+              "required": ["modelAlias", "strategyRef"],
+              "properties": {
+                "modelAlias": { "type": "string", "pattern": "^[A-Za-z0-9._:/-]{1,128}$" },
+                "strategyRef": { "$ref": "#/$defs/ref" },
+                "enabled": { "type": "boolean", "default": true }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "agentToken": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false,
+          "required": ["kind", "metadata", "spec"],
+          "properties": { "kind": { "const": "AgentToken" }, "state": {}, "metadata": {},
+            "spec": { "type": "object", "additionalProperties": false,
+              "required": ["allowedRouteRefs"],
+              "properties": {
+                "allowedRouteRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/ref" } },
+                "expiresAt": { "type": ["string", "null"], "format": "date-time" },
+                "enabled": { "type": "boolean", "default": true }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "tombstone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "state", "metadata"],
+      "properties": {
+        "kind": { "enum": ["Provider", "ProviderAccount", "ProviderConnection", "Credential", "Egress", "Model", "Destination", "Strategy", "Route", "AgentToken"] },
+        "state": { "const": "absent" },
+        "metadata": { "$ref": "#/$defs/metadata" }
+      }
+    },
+    "resource": {
+      "oneOf": [
+        { "$ref": "#/$defs/tombstone" },
+        { "$ref": "#/$defs/provider" }, { "$ref": "#/$defs/providerAccount" },
+        { "$ref": "#/$defs/connection" }, { "$ref": "#/$defs/credential" },
+        { "$ref": "#/$defs/egress" }, { "$ref": "#/$defs/model" },
+        { "$ref": "#/$defs/destination" }, { "$ref": "#/$defs/strategy" },
+        { "$ref": "#/$defs/route" }, { "$ref": "#/$defs/agentToken" }
+      ]
+    }
+  }
+}

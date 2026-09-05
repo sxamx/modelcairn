@@ -1,0 +1,26 @@
+# Local secrets and environment
+.env
+.env.*
+!.env.example
+.local-private/
+
+# Runtime data and backups
+data/
+*.sqlite
+*.sqlite-*
+*.db
+*.mcb.age
+
+# Build and test outputs
+bin/
+dist/
+coverage/
+work/
+node_modules/
+web/node_modules/
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

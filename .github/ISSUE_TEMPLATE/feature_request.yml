@@ -1,0 +1,29 @@
+name: Feature request
+description: Propose a bounded improvement to ModelCairn
+title: "[Feature]: "
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or operational problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the observable behavior, without prescribing an implementation unless necessary.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and trade-offs
+      description: What alternatives have you considered?
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Include relevant deployment constraints, documentation, or examples. Never include credentials.
