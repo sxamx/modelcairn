@@ -45,6 +45,7 @@ override this index.
 ## Governance
 
 - [Project management](governance/project-management.md)
+- [Dependency policy and inventory](dependencies.md)
 
 ## Publication
 

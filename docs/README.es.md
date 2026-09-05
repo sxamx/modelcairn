@@ -45,6 +45,7 @@ documento viejo del prototipo no prevalece sobre este índice.
 ## Gobernanza
 
 - [Gestión del proyecto](governance/project-management.es.md)
+- [Política e inventario de dependencias](dependencies.es.md)
 
 ## Publicación
 

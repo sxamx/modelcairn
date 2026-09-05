@@ -104,9 +104,15 @@ Resultado: siete hitos de implementación más un Hito 0 documental, trazabilida
 RF/RNF, riesgos, puertas de entrada y definición de terminado. El Hito 0 fue
 aprobado por QA independiente sin hallazgos críticos o altos pendientes.
 
-## Etapa E — Implementación incremental (siguiente)
+## Etapa E — Implementación incremental (activa)
 
 Cada incremento debe incluir código, pruebas, documentación operativa, medición de recursos y revisión independiente. No se aceptan grandes lotes de funciones sin una puerta de calidad intermedia.
+
+El Hito 1 comenzó con el workspace modular de Go, CLI y ciclo HTTP mínimos,
+sondas de health/readiness, Actions fijadas, compilaciones cruzadas para Linux e
+inventario de dependencias. Esta es una base incremental, no el cierre del hito;
+siguen pendientes los spikes de SQLite y streaming y el informe representativo de
+recursos.
 
 ## Etapa F — Validación de sistema y seguridad (pendiente)
 
@@ -125,3 +131,4 @@ Incluye incorporar la licencia elegida en la Etapa C, completar la guía de cont
 | 2026-09-04 | Etapa C iniciada | Pausa explícita de implementación y lista de entregables |
 | 2026-09-05 | Etapa C cerrada para Fase 1 | Charter, arquitectura, requisitos, contratos y ADR aprobados |
 | 2026-09-05 | Etapa D completada para Fase 1 | Hitos, riesgos, trazabilidad y QA independiente |
+| 2026-09-05 | Etapa E e Hito 1 iniciados | Esqueleto Go, pruebas, CI, compilaciones cruzadas y revisión independiente de código |

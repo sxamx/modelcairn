@@ -40,3 +40,16 @@ Phase 1 are complete; incremental development in Go follows. See:
 
 ModelCairn is distributed under the [Apache License 2.0](LICENSE) and includes a
 [NOTICE](NOTICE) with its original attribution.
+
+## Development
+
+The first implementation milestone is in progress. With Go installed:
+
+```sh
+go test ./...
+go run ./cmd/modelcairn serve
+```
+
+The development server listens on `127.0.0.1:8080` by default. `/healthz`
+reports process liveness; `/readyz` remains unavailable until persistence,
+configuration, and the secret store are initialized in their milestones.

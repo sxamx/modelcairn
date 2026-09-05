@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Verify formatting
+        run: test -z "$(gofmt -l .)"
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test -race -cover ./...
+      - name: Validate documentation contracts
+        run: |
+          node scripts/validate-docs.cjs
+          node docs/contratos/storage/schema-v1.contract.test.cjs
+      - name: Benchmark smoke test
+        run: go test -run '^$' -bench '^BenchmarkHealthz$' -benchtime=100x ./internal/httpserver
+      - name: Verify module files
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+  cross-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build Linux artifact
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: go build -trimpath -ldflags="-s -w" -o "dist/modelcairn-linux-${GOARCH}" ./cmd/modelcairn

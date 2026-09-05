@@ -1,0 +1,101 @@
+package app
+
+import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"log/slog"
+	"net"
+	"net/http"
+	"time"
+
+	"github.com/sxamx/modelcairn/internal/buildinfo"
+	server "github.com/sxamx/modelcairn/internal/httpserver"
+)
+
+const (
+	defaultAddress         = "127.0.0.1:8080"
+	defaultShutdownTimeout = 10 * time.Second
+)
+
+// Run executes the CLI and returns a process exit code.
+func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	if len(args) == 0 {
+		printUsage(stderr)
+		return 2
+	}
+
+	switch args[0] {
+	case "serve":
+		return runServe(ctx, args[1:], stdout, stderr)
+	case "version":
+		fmt.Fprintln(stdout, buildinfo.String())
+		return 0
+	case "help", "-h", "--help":
+		printUsage(stdout)
+		return 0
+	default:
+		fmt.Fprintf(stderr, "unknown command %q\n\n", args[0])
+		printUsage(stderr)
+		return 2
+	}
+}
+
+func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("serve", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	address := flags.String("listen", defaultAddress, "HTTP listen address")
+	shutdownTimeout := flags.Duration("shutdown-timeout", defaultShutdownTimeout, "graceful shutdown timeout")
+	if err := flags.Parse(args); err != nil {
+		return 2
+	}
+	if flags.NArg() != 0 {
+		fmt.Fprintf(stderr, "serve does not accept positional arguments: %q\n", flags.Args())
+		return 2
+	}
+	if *shutdownTimeout <= 0 {
+		fmt.Fprintln(stderr, "shutdown-timeout must be greater than zero")
+		return 2
+	}
+
+	logger := slog.New(slog.NewJSONHandler(stdout, nil))
+	probe := server.NewReadinessProbe()
+	httpServer := server.New(*address, probe, logger)
+	listener, err := net.Listen("tcp", *address)
+	if err != nil {
+		logger.Error("http server bind failed", "address", *address, "error", err)
+		return 1
+	}
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- httpServer.Serve(listener) }()
+	logger.Info("http server started", "address", listener.Addr().String(), "version", buildinfo.Version)
+
+	select {
+	case err := <-errCh:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("http server failed", "error", err)
+			return 1
+		}
+		return 0
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), *shutdownTimeout)
+		defer cancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			logger.Error("http server shutdown failed", "error", err)
+			return 1
+		}
+		logger.Info("http server stopped")
+		return 0
+	}
+}
+
+func printUsage(w io.Writer) {
+	fmt.Fprintln(w, "ModelCairn — lightweight self-hosted AI provider gateway")
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  modelcairn serve [--listen address] [--shutdown-timeout duration]")
+	fmt.Fprintln(w, "  modelcairn version")
+}

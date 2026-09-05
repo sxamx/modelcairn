@@ -85,9 +85,14 @@ Objective: transform the approved contracts into small milestones, dependencies,
 
 Result: seven implementation milestones plus a documentation Milestone 0, RF/RNF traceability, risks, entry gates, and definition of done. Milestone 0 was approved by independent QA with no pending critical or high findings.
 
-## Stage E - Incremental implementation (next)
+## Stage E - Incremental implementation (active)
 
 Each increment must include code, tests, operational documentation, resource measurement, and independent review. Large batches of features without an intermediate quality gate are not accepted.
+
+Milestone 1 began with the modular Go workspace, minimal CLI and HTTP lifecycle,
+health/readiness probes, pinned CI actions, Linux cross-builds, and a dependency
+inventory. This is an incremental foundation, not completion of the milestone;
+SQLite and streaming spikes plus the representative resource report remain open.
 
 ## Stage F - System and security validation (pending)
 
@@ -106,3 +111,4 @@ Includes incorporating the license chosen in Stage C, completing the contributio
 | 2026-09-04 | Stage C started | Explicit implementation pause and deliverables list |
 | 2026-09-05 | Stage C closed for Phase 1 | Charter, architecture, requirements, contracts, and ADRs approved |
 | 2026-09-05 | Stage D completed for Phase 1 | Milestones, risks, traceability, and independent QA |
+| 2026-09-05 | Stage E and Milestone 1 started | Go skeleton, tests, CI, cross-builds, and independent code review |

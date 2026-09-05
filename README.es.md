@@ -41,3 +41,16 @@ Consulta:
 
 ModelCairn se distribuye bajo [Apache License 2.0](LICENSE) e incluye
 [NOTICE](NOTICE) con su atribución de origen.
+
+## Desarrollo
+
+El primer hito de implementación está en curso. Con Go instalado:
+
+```sh
+go test ./...
+go run ./cmd/modelcairn serve
+```
+
+El servidor de desarrollo escucha en `127.0.0.1:8080` por defecto. `/healthz`
+informa que el proceso está vivo; `/readyz` permanece no disponible hasta que la
+persistencia, configuración y el almacén de secretos se inicialicen en sus hitos.
