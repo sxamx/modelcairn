@@ -110,9 +110,9 @@ Cada incremento debe incluir código, pruebas, documentación operativa, medici�
 
 El Hito 1 comenzó con el workspace modular de Go, CLI y ciclo HTTP mínimos,
 sondas de health/readiness, Actions fijadas, compilaciones cruzadas para Linux e
-inventario de dependencias. Esta es una base incremental, no el cierre del hito;
-siguen pendientes los spikes de SQLite y streaming y el informe representativo de
-recursos.
+inventario de dependencias. Los spikes contractuales ya verifican el comportamiento
+de SQLite y el compromiso, cancelación y desconexión de SSE. Esto aún no cierra el
+hito: sigue pendiente el presupuesto y el informe representativo de recursos.
 
 ## Etapa F — Validación de sistema y seguridad (pendiente)
 

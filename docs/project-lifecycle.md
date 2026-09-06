@@ -91,8 +91,9 @@ Each increment must include code, tests, operational documentation, resource mea
 
 Milestone 1 began with the modular Go workspace, minimal CLI and HTTP lifecycle,
 health/readiness probes, pinned CI actions, Linux cross-builds, and a dependency
-inventory. This is an incremental foundation, not completion of the milestone;
-SQLite and streaming spikes plus the representative resource report remain open.
+inventory. Contract spikes now verify SQLite behavior and SSE commitment,
+cancellation, and disconnect handling. This is still not completion of the
+milestone: the representative resource budget and report remain open.
 
 ## Stage F - System and security validation (pending)
 

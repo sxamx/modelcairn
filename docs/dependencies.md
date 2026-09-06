@@ -11,6 +11,13 @@ maintenance and license review, resource-impact evidence, and a removal plan.
 | Dependency | Scope | Purpose |
 |---|---|---|
 | Go standard library | build and runtime | CLI, HTTP lifecycle, logging, synchronization, and tests |
+| `modernc.org/sqlite` v1.58.0 | build and runtime from Milestone 2 | CGO-free SQLite driver; enables Linux AMD64/ARM64 cross-builds and is BSD-3-Clause licensed |
 
-There are currently no third-party Go modules. SQLite and cryptographic libraries
-will be added only with the milestone that exercises their approved contracts.
+The SQLite driver is the only direct third-party Go module. Its transitive modules
+are locked in `go.sum`; CI runs `go mod tidy` and rejects an uncommitted module-file
+change. The Milestone 1 spike compiles and tests the driver, while the executable
+will not link it until persistence becomes part of application startup. The
+measured binary and memory cost must be recorded before Milestone 1 closes.
+
+Cryptographic libraries will be added only with the milestone that exercises their
+approved contracts.
