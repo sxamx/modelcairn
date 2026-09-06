@@ -22,6 +22,9 @@ redacted representative report will be copied into documentation when accepted.
 Hostnames, IP addresses, usernames, and provider credentials must never appear in
 the published report.
 
+The representative Milestone 1 run passed on September 6, 2026. See the
+[reviewed evidence](evidencia/benchmark-hito-1-2026-09-06.md).
+
 Sampling reads the process RSS and swap from `/proc`; measurements have the
 granularity of the configured interval and do not include kernel page cache or
 child processes. The script also records memory and swap before/after sampling,

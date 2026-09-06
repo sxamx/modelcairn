@@ -92,8 +92,9 @@ Each increment must include code, tests, operational documentation, resource mea
 Milestone 1 began with the modular Go workspace, minimal CLI and HTTP lifecycle,
 health/readiness probes, pinned CI actions, Linux cross-builds, and a dependency
 inventory. Contract spikes now verify SQLite behavior and SSE commitment,
-cancellation, and disconnect handling. This is still not completion of the
-milestone: the representative resource budget and report remain open.
+cancellation, and disconnect handling. Milestone 1 was completed on September 6
+after CI passed and the reviewed 15-minute run on the representative 1 GB VM
+reported 6,328 KiB peak RSS and zero process swap. Milestone 2 is next.
 
 ## Stage F - System and security validation (pending)
 
@@ -113,3 +114,4 @@ Includes incorporating the license chosen in Stage C, completing the contributio
 | 2026-09-05 | Stage C closed for Phase 1 | Charter, architecture, requirements, contracts, and ADRs approved |
 | 2026-09-05 | Stage D completed for Phase 1 | Milestones, risks, traceability, and independent QA |
 | 2026-09-05 | Stage E and Milestone 1 started | Go skeleton, tests, CI, cross-builds, and independent code review |
+| 2026-09-06 | Milestone 1 completed | SQLite and streaming spikes, green CI, cross-builds, and reviewed representative resource benchmark |

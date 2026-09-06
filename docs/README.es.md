@@ -47,6 +47,7 @@ documento viejo del prototipo no prevalece sobre este índice.
 - [Gestión del proyecto](governance/project-management.es.md)
 - [Política e inventario de dependencias](dependencies.es.md)
 - [Procedimiento de benchmark de recursos](benchmarks.es.md)
+- [Evidencia del benchmark representativo del Hito 1](evidencia/benchmark-hito-1-2026-09-06.es.md)
 
 ## Publicación
 

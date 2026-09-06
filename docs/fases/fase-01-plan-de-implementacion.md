@@ -2,7 +2,7 @@
 
 [Español](fase-01-plan-de-implementacion.es.md)
 
-- Status: accepted; Milestone 0 complete and Milestone 1 prepared
+- Status: accepted; Milestones 0 and 1 complete, Milestone 2 next
 - Delivery rule: every milestone includes code, tests, and documentation; a visual
   demonstration alone does not make it complete
 
@@ -22,6 +22,10 @@ Output: reviewed contracts that can generate fixtures and tests. Spikes are
 discarded; no persistent product code is written yet.
 
 ## Milestone 1 — Skeleton and verified decisions
+
+Status: **completed on September 6, 2026**. The representative 1 GB VM run
+passed its 15-minute resource gate; see the
+[reviewed benchmark evidence](../evidencia/benchmark-hito-1-2026-09-06.md).
 
 - Modular Go structure, CLI, and minimal HTTP server.
 - Reproducible Linux AMD64/ARM64 build.

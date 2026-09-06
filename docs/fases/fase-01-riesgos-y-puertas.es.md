@@ -2,7 +2,9 @@
 
 [English](fase-01-riesgos-y-puertas.md)
 
-- Estado: aceptado para iniciar Hito 1
+- Estado de esta línea base: aceptada como conjunto de puertas del Hito 1. Para
+  el avance vigente, véase
+  [Estado y ciclo](../estado-y-ciclo-del-proyecto.es.md).
 
 ## Riesgos activos
 

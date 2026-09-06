@@ -47,6 +47,7 @@ override this index.
 - [Project management](governance/project-management.md)
 - [Dependency policy and inventory](dependencies.md)
 - [Resource benchmark procedure](benchmarks.md)
+- [Milestone 1 representative benchmark evidence](evidencia/benchmark-hito-1-2026-09-06.md)
 
 ## Publication
 

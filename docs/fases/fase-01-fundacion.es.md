@@ -2,7 +2,9 @@
 
 [English](fase-01-fundacion.md)
 
-- Estado: alcance y planificación aprobados; lista para Hito 1
+- Estado de esta línea base: alcance y planificación aprobados para el Hito 1.
+  Para el estado vigente del proyecto, véase
+  [Estado y ciclo](../estado-y-ciclo-del-proyecto.es.md).
 - Objetivo: demostrar una ruta completa, segura, instalable y medible antes de
   añadir aprendizaje adaptativo, relays o el editor visual
 

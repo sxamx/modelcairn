@@ -2,7 +2,8 @@
 
 [Español](fase-01-riesgos-y-puertas.es.md)
 
-- Status: accepted to begin Milestone 1
+- Baseline status: accepted as the gate set for Milestone 1. For current progress,
+  see [Project Status and Lifecycle](../project-lifecycle.md).
 
 ## Active risks
 

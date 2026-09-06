@@ -2,7 +2,7 @@
 
 [English](fase-01-plan-de-implementacion.md)
 
-- Estado: aceptado; Hito 0 completado y Hito 1 preparado
+- Estado: aceptado; Hitos 0 y 1 completados, Hito 2 siguiente
 - Regla de entrega: cada hito incluye código, pruebas y documentación; no se marca
   completo por una demostración visual
 
@@ -22,6 +22,10 @@ Salida: contratos revisados que pueden generar fixtures y pruebas. Los spikes se
 desechan; no se escribe todavía código persistente del producto.
 
 ## Hito 1 — Esqueleto y decisiones verificadas
+
+Estado: **completado el 6 de septiembre de 2026**. La ejecución representativa en
+la VM de 1 GB aprobó su puerta de recursos de 15 minutos; véase la
+[evidencia revisada del benchmark](../evidencia/benchmark-hito-1-2026-09-06.es.md).
 
 - Estructura modular Go, CLI y servidor HTTP mínimo.
 - Build reproducible para Linux AMD64/ARM64.

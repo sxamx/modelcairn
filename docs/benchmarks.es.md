@@ -23,6 +23,9 @@ su aprobación se copiará a la documentación un informe representativo revisad
 redactado. El informe público nunca debe contener hostnames, direcciones IP,
 usuarios ni credenciales de proveedores.
 
+La ejecución representativa del Hito 1 fue aprobada el 6 de septiembre de 2026.
+Véase la [evidencia revisada](evidencia/benchmark-hito-1-2026-09-06.es.md).
+
 El muestreo lee RSS y swap del proceso desde `/proc`; las mediciones tienen la
 granularidad del intervalo configurado y no incluyen la page cache del kernel ni
 procesos hijos. El script también registra memoria y swap antes/después del

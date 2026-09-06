@@ -111,8 +111,10 @@ Cada incremento debe incluir código, pruebas, documentación operativa, medici�
 El Hito 1 comenzó con el workspace modular de Go, CLI y ciclo HTTP mínimos,
 sondas de health/readiness, Actions fijadas, compilaciones cruzadas para Linux e
 inventario de dependencias. Los spikes contractuales ya verifican el comportamiento
-de SQLite y el compromiso, cancelación y desconexión de SSE. Esto aún no cierra el
-hito: sigue pendiente el presupuesto y el informe representativo de recursos.
+de SQLite y el compromiso, cancelación y desconexión de SSE. El Hito 1 quedó
+completado el 6 de septiembre después de aprobar CI y de que la ejecución revisada
+de 15 minutos en la VM representativa de 1 GB informara 6.328 KiB de RSS pico y
+cero swap del proceso. El Hito 2 es el siguiente.
 
 ## Etapa F — Validación de sistema y seguridad (pendiente)
 
@@ -132,3 +134,4 @@ Incluye incorporar la licencia elegida en la Etapa C, completar la guía de cont
 | 2026-09-05 | Etapa C cerrada para Fase 1 | Charter, arquitectura, requisitos, contratos y ADR aprobados |
 | 2026-09-05 | Etapa D completada para Fase 1 | Hitos, riesgos, trazabilidad y QA independiente |
 | 2026-09-05 | Etapa E e Hito 1 iniciados | Esqueleto Go, pruebas, CI, compilaciones cruzadas y revisión independiente de código |
+| 2026-09-06 | Hito 1 completado | Spikes SQLite y streaming, CI verde, compilaciones cruzadas y benchmark representativo revisado |

@@ -2,7 +2,8 @@
 
 [Español](fase-01-fundacion.es.md)
 
-- Status: scope and planning approved; ready for Milestone 1
+- Baseline status: scope and planning approved for Milestone 1. For the current
+  project status, see [Project Status and Lifecycle](../project-lifecycle.md).
 - Objective: prove a complete, secure, installable, and measurable path before adding adaptive learning, relays, or the visual editor
 
 ## Phase outcome
