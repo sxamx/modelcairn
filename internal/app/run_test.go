@@ -126,12 +126,15 @@ func TestRunServeReportsBindFailureWithoutStartedEvent(t *testing.T) {
 func TestRunServeShutsDownAfterCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		cancel()
-	}()
+	address := unusedAddress(t)
 	var stdout, stderr bytes.Buffer
-	if code := Run(ctx, []string{"serve", "--data-dir", t.TempDir(), "--listen", "127.0.0.1:0", "--shutdown-timeout", time.Second.String()}, &stdout, &stderr); code != 0 {
+	done := make(chan int, 1)
+	go func() {
+		done <- Run(ctx, []string{"serve", "--data-dir", t.TempDir(), "--listen", address, "--shutdown-timeout", time.Second.String()}, &stdout, &stderr)
+	}()
+	waitForListener(t, address, done)
+	cancel()
+	if code := <-done; code != 0 {
 		t.Fatalf("Run() code = %d, want 0; stdout=%q stderr=%q", code, stdout.String(), stderr.String())
 	}
 	if !strings.Contains(stdout.String(), `"msg":"http server stopped"`) {
