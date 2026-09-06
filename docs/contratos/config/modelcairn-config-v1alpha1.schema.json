@@ -28,6 +28,16 @@
         "resourceVersion": { "type": "integer", "minimum": 1, "readOnly": true }
       }
     },
+    "tombstoneMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "uid": { "type": "string", "format": "uuid", "readOnly": true },
+        "resourceVersion": { "type": "integer", "minimum": 1, "readOnly": true }
+      }
+    },
     "ref": {
       "type": "object",
       "additionalProperties": false,
@@ -226,7 +236,7 @@
       "properties": {
         "kind": { "enum": ["Provider", "ProviderAccount", "ProviderConnection", "Credential", "Egress", "Model", "Destination", "Strategy", "Route", "AgentToken"] },
         "state": { "const": "absent" },
-        "metadata": { "$ref": "#/$defs/metadata" }
+        "metadata": { "$ref": "#/$defs/tombstoneMetadata" }
       }
     },
     "resource": {

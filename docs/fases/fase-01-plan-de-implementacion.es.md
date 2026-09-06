@@ -43,12 +43,15 @@ Las reglas comunes se definen en [Riesgos y puertas de calidad](fase-01-riesgos-
 
 ## Hito 2 — Persistencia, configuración y secretos
 
+Estado: **preparado**. Véase el [plan técnico de entrega](hito-02-plan-tecnico.es.md).
+
 - Migraciones y repositorios SQLite.
 - Esquema YAML, validate/plan/apply/export.
 - Clave maestra, credenciales cifradas y redacción común.
 - Auditoría y tests de round-trip/fallo seguro.
 
-Salida: configuración completa sin router ni interfaz, operable por CLI y pruebas.
+Salida: configuración persistida completa sin ejecución de routing ni interfaz,
+operable por CLI y pruebas.
 
 ## Hito 3 — Identidad y plano administrativo
 

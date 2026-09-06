@@ -139,6 +139,10 @@ filesystem de red. Grupos iniciales:
 - sesiones administrativas y auditoría;
 - versión de esquema y trabajos de mantenimiento.
 
+La propiedad entre servicio y CLI offline, junto con el protocolo de llavero
+resistente a interrupciones, se especifica en
+[Propiedad de SQLite y durabilidad del llavero](../contratos/storage/propiedad-y-llavero-v1.es.md).
+
 Cada migración tiene ID monotónico, checksum y transacción cuando SQLite lo
 permita. Antes de una migración destructiva se crea y verifica un backup. Si una
 migración falla, el servicio no queda ready y muestra una instrucción de

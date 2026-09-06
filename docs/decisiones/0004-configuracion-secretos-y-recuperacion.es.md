@@ -22,12 +22,20 @@ una restauración debe poder recuperar una instalación funcional.
   configuración.
 - La primera versión no observará ni recargará continuamente un archivo editable.
   Un cambio se aplica explícitamente mediante CLI o API y produce auditoría.
+- SQLite tiene un único proceso propietario. Durante el Hito 2, los comandos CLI
+  con estado adquieren el bloqueo de la instalación y requieren que el servicio
+  esté detenido. El Hito 3 mueve las mutaciones en línea detrás de la API
+  administrativa; la CLI usará esa API cuando el servicio esté activo. La
+  validación sin estado instalado no adquiere el bloqueo.
+
+El orden exacto del bloqueo y el comportamiento de fallo se definen en
+[Propiedad de SQLite y durabilidad del llavero](../contratos/storage/propiedad-y-llavero-v1.es.md).
 
 ### Secretos en operación
 
 - Las API keys se cifrarán antes de persistirlas.
-- El instalador generará una clave maestra aleatoria y la guardará en un archivo
-  accesible solo por la identidad del servicio.
+- El instalador generará la primera clave maestra aleatoria y la guardará en el
+  llavero privado versionado, accesible solo por la identidad del servicio.
 - La clave maestra no se mostrará en la consola ni aparecerá en exportaciones
   normales, logs o métricas.
 - Una clave maestra ausente o incorrecta hará que el almacén de secretos falle de

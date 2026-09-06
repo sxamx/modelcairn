@@ -23,3 +23,7 @@ coste enlazado al producto volverá a medirse en ese hito.
 
 Las bibliotecas criptográficas se añadirán únicamente en el hito que pruebe sus
 contratos aprobados.
+
+En cada hito que cambie dependencias, CI verifica `go mod tidy` limpio y ejecuta
+un `govulncheck ./...` fijado; la licencia y el propósito de cada módulo directo se
+registran aquí antes de aceptarlo.

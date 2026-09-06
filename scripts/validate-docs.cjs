@@ -38,6 +38,12 @@ if (broken.length > 0) {
 }
 
 const schemaPath = path.join(root, "docs", "contratos", "config", "modelcairn-config-v1alpha1.schema.json");
-JSON.parse(fs.readFileSync(schemaPath, "utf8"));
+const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
+if (schema.$defs.base.properties.metadata.$ref !== "#/$defs/metadata") {
+  throw new Error("Present resources must use full metadata");
+}
+if (schema.$defs.tombstone.properties.metadata.$ref !== "#/$defs/tombstoneMetadata") {
+  throw new Error("Absent resources must use tombstone metadata");
+}
 
 console.log(`Documentation contracts valid: ${markdownFiles.length} Markdown files, JSON Schema parsed.`);

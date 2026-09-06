@@ -12,6 +12,7 @@
 6. [Fase 1 — Fundación](fases/fase-01-fundacion.es.md)
 7. [Contratos técnicos](fases/fase-01-contratos-tecnicos.es.md)
 8. [Plan de implementación](fases/fase-01-plan-de-implementacion.es.md)
+9. [Plan técnico de entrega del Hito 2](fases/hito-02-plan-tecnico.es.md)
 
 ## Contratos ejecutables de la Fase 1
 
@@ -22,6 +23,7 @@
 - [Matriz Chat Completions](contratos/compatibilidad-chat-completions-v1.es.md)
 - [Schema SQLite documental](contratos/storage/schema-v1.sql)
 - [Reglas del modelo SQLite](contratos/storage/modelo-sqlite-v1.es.md)
+- [Propiedad de SQLite y durabilidad del llavero](contratos/storage/propiedad-y-llavero-v1.es.md)
 - [Sesiones administrativas](contratos/sesiones-admin-v1.es.md)
 - [Formato de backup MCB1](contratos/backup-mcb1.es.md)
 - [Trazabilidad de requisitos](fases/fase-01-trazabilidad.es.md)

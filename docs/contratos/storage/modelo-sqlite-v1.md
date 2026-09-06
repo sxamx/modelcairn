@@ -16,6 +16,12 @@ migrations and tests.
 - The SQLite writer will be coordinated within the process and WAL will be tested.
   There will be no direct access from other processes or a network filesystem.
 - Retention deletes in small batches and never disables disk limits.
+- Configuration changes and their success audit event commit together. After a
+  mutation rolls back, its failure event is attempted in a separate short
+  transaction and cannot claim that state was applied. If SQLite itself cannot
+  record that event, a structured secret-free operational error is emitted.
+- A plan-token nonce is consumed in the same transaction as apply. Reuse returns
+  `plan_already_used`; expired nonce rows are maintenance data and may be pruned.
 
 ## Deliberately absent content
 

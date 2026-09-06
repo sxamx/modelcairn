@@ -42,12 +42,15 @@ Common rules are defined in [Risks and quality gates](fase-01-riesgos-y-puertas.
 
 ## Milestone 2 — Persistence, configuration, and secrets
 
+Status: **ready**. See the [technical delivery plan](hito-02-plan-tecnico.md).
+
 - SQLite migrations and repositories.
 - YAML schema, validate/plan/apply/export.
 - Master key, encrypted credentials, and common redaction.
 - Auditing and round-trip/safe-failure tests.
 
-Output: complete configuration without router or interface, operable by CLI and tests.
+Output: complete persisted configuration without routing execution or interface,
+operable by CLI and tests.
 
 ## Milestone 3 — Identity and administrative plane
 

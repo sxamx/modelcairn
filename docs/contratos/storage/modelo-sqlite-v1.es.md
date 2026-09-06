@@ -17,6 +17,13 @@ versionadas y pruebas.
 - El writer SQLite será coordinado dentro del proceso y se probará WAL. No habrá
   acceso directo desde otros procesos ni filesystem de red.
 - Las retenciones eliminan por lotes pequeños y nunca desactivan límites de disco.
+- Los cambios de configuración y su evento de auditoría exitoso confirman juntos.
+  Después de revertir una mutación, su evento de fallo se intenta en otra
+  transacción breve y no puede afirmar que el estado fue aplicado. Si SQLite no
+  puede registrar ese evento, se emite un error operativo estructurado sin secretos.
+- El nonce de un token de plan se consume en la misma transacción que apply. Su
+  reutilización devuelve `plan_already_used`; las filas vencidas son datos de
+  mantenimiento y pueden depurarse.
 
 ## Contenido deliberadamente ausente
 

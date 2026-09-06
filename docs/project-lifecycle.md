@@ -96,6 +96,10 @@ cancellation, and disconnect handling. Milestone 1 was completed on September 6
 after CI passed and the reviewed 15-minute run on the representative 1 GB VM
 reported 6,328 KiB peak RSS and zero process swap. Milestone 2 is next.
 
+Milestone 2 was prepared on September 6 with an ordered technical plan and exact
+contracts for process ownership, interrupted key rotation, plan tokens, bounded
+configuration parsing, redaction, auditing, and routing-resource drafts.
+
 ## Stage F - System and security validation (pending)
 
 Includes load on a VM equivalent to Oracle Free Tier, network failures, restarts, migrations, backup recovery, multinode tests, privacy, panel abuse, and review of the threat model.
@@ -115,3 +119,4 @@ Includes incorporating the license chosen in Stage C, completing the contributio
 | 2026-09-05 | Stage D completed for Phase 1 | Milestones, risks, traceability, and independent QA |
 | 2026-09-05 | Stage E and Milestone 1 started | Go skeleton, tests, CI, cross-builds, and independent code review |
 | 2026-09-06 | Milestone 1 completed | SQLite and streaming spikes, green CI, cross-builds, and reviewed representative resource benchmark |
+| 2026-09-06 | Milestone 2 prepared | Persistence, configuration, secret-store contracts, delivery order, and independent QA |

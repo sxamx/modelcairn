@@ -12,6 +12,7 @@
 6. [Phase 1 — Foundation](fases/fase-01-fundacion.md)
 7. [Technical contracts](fases/fase-01-contratos-tecnicos.md)
 8. [Implementation plan](fases/fase-01-plan-de-implementacion.md)
+9. [Milestone 2 technical delivery plan](fases/hito-02-plan-tecnico.md)
 
 ## Phase 1 executable contracts
 
@@ -22,6 +23,7 @@
 - [Chat Completions compatibility matrix](contratos/compatibilidad-chat-completions-v1.md)
 - [Documentary SQLite schema](contratos/storage/schema-v1.sql)
 - [SQLite model rules](contratos/storage/modelo-sqlite-v1.md)
+- [SQLite ownership and keyring durability](contratos/storage/propiedad-y-llavero-v1.md)
 - [Administrative sessions](contratos/sesiones-admin-v1.md)
 - [MCB1 backup format](contratos/backup-mcb1.md)
 - [Requirements traceability](fases/fase-01-trazabilidad.md)

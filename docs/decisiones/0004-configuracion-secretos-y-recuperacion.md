@@ -22,12 +22,20 @@ asset, and a restoration must be able to recover a working installation.
   automating configuration.
 - The first version will not continuously watch or reload an editable file. A
   change is applied explicitly through the CLI or API and produces an audit event.
+- SQLite has one owning process. During Milestone 2, stateful CLI commands acquire
+  the installation lock and require the service to be stopped. Milestone 3 moves
+  online mutations behind the administrative API; the CLI then uses that API when
+  the service is running. Read-only validation that needs no installed state does
+  not acquire the lock.
+
+The exact lock order and failure behavior are defined in
+[SQLite ownership and keyring durability](../contratos/storage/propiedad-y-llavero-v1.md).
 
 ### Secrets during operation
 
 - API keys will be encrypted before they are persisted.
-- The installer will generate a random master key and store it in a file accessible
-  only to the service identity.
+- The installer will generate the first random master key and store it in the
+  private versioned keyring accessible only to the service identity.
 - The master key will not be shown in the console or included in normal exports,
   logs, or metrics.
 - A missing or incorrect master key will cause the secret store to fail closed:

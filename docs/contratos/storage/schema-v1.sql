@@ -7,6 +7,21 @@ CREATE TABLE schema_migrations (
   applied_at TEXT NOT NULL
 ) STRICT;
 
+CREATE TABLE installation_state (
+  singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+  installation_id TEXT NOT NULL UNIQUE,
+  active_key_version INTEGER NOT NULL CHECK(active_key_version > 0),
+  config_revision INTEGER NOT NULL DEFAULT 1 CHECK(config_revision > 0),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE consumed_plan_tokens (
+  nonce_hash BLOB PRIMARY KEY CHECK(length(nonce_hash) = 32),
+  expires_at TEXT NOT NULL,
+  consumed_at TEXT NOT NULL
+) STRICT;
+
 CREATE TABLE resources (
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL,
@@ -206,6 +221,7 @@ CREATE INDEX idx_attempts_destination_started ON attempts(destination_id, starte
 CREATE INDEX idx_observations_scope_time ON rate_limit_observations(scope_kind, scope_resource_id, observed_at DESC);
 CREATE INDEX idx_audit_time ON audit_events(occurred_at DESC);
 CREATE INDEX idx_sessions_admin_expiry ON admin_sessions(admin_id, expires_at);
+CREATE INDEX idx_plan_tokens_expiry ON consumed_plan_tokens(expires_at);
 
 CREATE TRIGGER destinations_provider_match_insert
 BEFORE INSERT ON destinations

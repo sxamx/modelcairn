@@ -124,6 +124,9 @@ encrypted credentials and affinities; agent identities and token hashes; request
 attempts, and decisions; observations and metric aggregates; administrative
 sessions and auditing; schema version and maintenance jobs.
 
+Service and offline CLI ownership, plus the interruption-safe keyring protocol,
+are specified in [SQLite ownership and keyring durability](../contratos/storage/propiedad-y-llavero-v1.md).
+
 Every migration has a monotonic ID, checksum, and transaction where SQLite allows.
 A destructive migration requires a created and verified backup first. On failure,
 the service is not ready and displays a recovery instruction; it does not continue

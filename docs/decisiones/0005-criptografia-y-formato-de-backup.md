@@ -11,10 +11,16 @@
   of `m=19456 KiB`, `t=2`, `p=1`; the installer may increase the cost if the
   VM meets the 100–500 ms target without exceeding the memory budget.
 - API-key encryption: XChaCha20-Poly1305 with a 256-bit key, random 24-byte nonce,
-  and associated data including version, installation ID, and credential ID and
-  version.
-- Master key: 32 bytes from the system CSPRNG, in a file separate from SQLite,
-  mode `0600`, owned by the service. Versioned, transactional rotation.
+  and associated data including format version, installation ID, secret ID,
+  secret resource version, and master-key version. A secret exists independently
+  from credentials, so credential identity is not encryption context.
+- Master keys: each version is 32 bytes from the system CSPRNG, stored outside
+  SQLite in a service-owned `0600` versioned keyring. Rotation writes and syncs the
+  new key before re-encrypting rows transactionally. Old versions remain until no
+  row references them, which makes interruption recoverable.
+
+The durable rotation protocol is defined in
+[SQLite ownership and keyring durability](../contratos/storage/propiedad-y-llavero-v1.md).
 - Agent tokens: 32 random bytes encoded for transport; the value is shown once and
   SHA-256 of the complete token is stored. Their 256 bits of random entropy avoid
   dependence on the master key and allow their verifiers to survive rotation and
@@ -57,6 +63,9 @@ before memory or disk is allocated.
 - Losing the password to the only full backup makes its secrets unrecoverable.
 - Argon2id parameters are stored alongside the hash/ciphertext to allow gradual
   strengthening without invalidating older data.
+- Startup verifies that every referenced key version exists before declaring the
+  secret store ready. Missing material fails closed and identifies only the key
+  version, never secret metadata or ciphertext.
 - Rotating the master key re-encrypts API keys but does not change sessions or
   agent tokens during normal operation. Restoration removes all administrative
   sessions and retains agent-token verifiers and revocation metadata.

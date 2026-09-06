@@ -22,3 +22,7 @@ measured again in that milestone.
 
 Cryptographic libraries will be added only with the milestone that exercises their
 approved contracts.
+
+For every dependency-changing milestone, CI verifies a clean `go mod tidy` and
+runs a pinned `govulncheck ./...`; each direct module's license and purpose are
+recorded here before acceptance.

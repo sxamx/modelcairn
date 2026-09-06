@@ -11,10 +11,18 @@
   `m=19456 KiB`, `t=2`, `p=1`; el instalador podrá aumentar el coste si la VM cumple
   el objetivo de 100–500 ms sin superar el presupuesto de memoria.
 - Cifrado de API keys: XChaCha20-Poly1305 con clave de 256 bits, nonce aleatorio de
-  24 bytes y datos asociados que incluyen versión, ID de instalación, ID y versión
-  de credencial.
-- Clave maestra: 32 bytes del CSPRNG del sistema, archivo separado de SQLite, modo
-  `0600`, propietario del servicio. Rotación versionada y transaccional.
+  24 bytes y datos asociados que incluyen versión de formato, ID de instalación,
+  ID y versión del recurso secreto, y versión de clave maestra. El secreto existe
+  independientemente de las credenciales, por lo que la identidad de una
+  credencial no forma parte del contexto de cifrado.
+- Claves maestras: cada versión contiene 32 bytes del CSPRNG del sistema y se
+  guarda fuera de SQLite en un llavero versionado, modo `0600` y propietario del
+  servicio. La rotación escribe y sincroniza la clave nueva antes de recifrar las
+  filas en una transacción. Las versiones antiguas permanecen hasta que ninguna
+  fila las referencie, haciendo recuperable una interrupción.
+
+El protocolo durable de rotación se define en
+[Propiedad de SQLite y durabilidad del llavero](../contratos/storage/propiedad-y-llavero-v1.es.md).
 - Tokens de agente: 32 bytes aleatorios codificados para transporte; se muestra el
   valor una vez y se almacena SHA-256 del token completo. Su entropía aleatoria de
   256 bits evita depender de la clave maestra y permite que sus verificadores
@@ -56,6 +64,9 @@ antes de reservar memoria o disco.
 - Perder la contraseña del único backup completo hace irrecuperables sus secretos.
 - Los parámetros Argon2id se guardan junto al hash/ciphertext para permitir aumento
   progresivo sin invalidar datos anteriores.
+- Al arrancar se comprueba que exista cada versión de clave referenciada antes de
+  declarar listo el almacén. Si falta material, falla de forma cerrada e identifica
+  solo la versión de clave, nunca metadatos del secreto ni ciphertext.
 - Rotar la clave maestra recifra API keys, pero no cambia sesiones ni tokens de
   agente durante operación normal. Restaurar elimina todas las sesiones
   administrativas y conserva los verificadores y metadatos de revocación de tokens
