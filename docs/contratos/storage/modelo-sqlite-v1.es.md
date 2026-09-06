@@ -2,9 +2,9 @@
 
 [English](modelo-sqlite-v1.md)
 
-El archivo [schema-v1.sql](schema-v1.sql) es el contrato físico inicial. No será
-copiado directamente como migración: el Hito 2 lo convertirá en migraciones
-versionadas y pruebas.
+El archivo [schema-v1.sql](schema-v1.sql) sigue siendo el contrato físico inicial
+legible. La migración `0001_initial.sql` del Hito 2 implementa ese contrato bajo un
+checksum SHA-256 inmutable y pruebas ejecutables del ciclo de vida.
 
 ## Reglas transaccionales
 

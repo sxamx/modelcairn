@@ -9,10 +9,13 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/sxamx/modelcairn/internal/buildinfo"
 	server "github.com/sxamx/modelcairn/internal/httpserver"
+	"github.com/sxamx/modelcairn/internal/storage"
 )
 
 const (
@@ -48,6 +51,7 @@ func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	flags.SetOutput(stderr)
 	address := flags.String("listen", defaultAddress, "HTTP listen address")
 	shutdownTimeout := flags.Duration("shutdown-timeout", defaultShutdownTimeout, "graceful shutdown timeout")
+	dataDir := flags.String("data-dir", defaultDataDirectory(), "private ModelCairn data directory")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}
@@ -62,6 +66,17 @@ func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 
 	logger := slog.New(slog.NewJSONHandler(stdout, nil))
 	probe := server.NewReadinessProbe()
+	installation, err := storage.OpenInstallation(ctx, *dataDir)
+	if err != nil {
+		logger.Error("installation startup failed", "code", storageErrorCode(err), "error", err)
+		return 1
+	}
+	defer func() {
+		if err := installation.Close(); err != nil {
+			logger.Error("installation close failed", "error", err)
+		}
+	}()
+	probe.Set(server.ComponentPersistence, true, "")
 	httpServer := server.New(*address, probe, logger)
 	listener, err := net.Listen("tcp", *address)
 	if err != nil {
@@ -92,10 +107,28 @@ func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	}
 }
 
+func defaultDataDirectory() string {
+	if configured := os.Getenv("MODELCAIRN_DATA_DIR"); configured != "" {
+		return configured
+	}
+	base, err := os.UserConfigDir()
+	if err != nil {
+		return filepath.Join(".", ".modelcairn")
+	}
+	return filepath.Join(base, "modelcairn")
+}
+
+func storageErrorCode(err error) string {
+	if errors.Is(err, storage.ErrInstallationInUse) {
+		return "installation_in_use"
+	}
+	return "installation_unavailable"
+}
+
 func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "ModelCairn — lightweight self-hosted AI provider gateway")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  modelcairn serve [--listen address] [--shutdown-timeout duration]")
+	fmt.Fprintln(w, "  modelcairn serve [--listen address] [--shutdown-timeout duration] [--data-dir path]")
 	fmt.Fprintln(w, "  modelcairn version")
 }

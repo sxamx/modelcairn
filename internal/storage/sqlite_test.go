@@ -18,6 +18,13 @@ func contractSchema(t *testing.T) string {
 	return string(contents)
 }
 
+func applyContractSchema(ctx context.Context, db *sql.DB, schema string) error {
+	if _, err := db.ExecContext(ctx, schema); err != nil {
+		return fmt.Errorf("apply sqlite schema contract: %w", err)
+	}
+	return nil
+}
+
 func openContractDatabase(t *testing.T) *sql.DB {
 	t.Helper()
 	db, err := OpenSQLite(context.Background(), filepath.Join(t.TempDir(), "contract.db"))
@@ -25,7 +32,7 @@ func openContractDatabase(t *testing.T) *sql.DB {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if err := ApplySchema(context.Background(), db, contractSchema(t)); err != nil {
+	if err := applyContractSchema(context.Background(), db, contractSchema(t)); err != nil {
 		t.Fatalf("apply contract schema: %v", err)
 	}
 	return db
@@ -57,7 +64,7 @@ func TestWALAllowsReaderDuringUncommittedWrite(t *testing.T) {
 		t.Fatalf("open writer: %v", err)
 	}
 	defer writer.Close()
-	if err := ApplySchema(context.Background(), writer, contractSchema(t)); err != nil {
+	if err := applyContractSchema(context.Background(), writer, contractSchema(t)); err != nil {
 		t.Fatalf("apply schema: %v", err)
 	}
 	reader, err := OpenSQLite(context.Background(), path)

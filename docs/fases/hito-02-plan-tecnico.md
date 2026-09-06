@@ -7,6 +7,13 @@
   operable through CLI and tests
 - Prerequisite: Milestone 1 accepted
 
+## Progress
+
+- Delivery item 1 — database lifecycle and migrations: accepted. Evidence is in
+  [Milestone 2 database lifecycle evidence](../evidencia/hito-02-item-01-storage-lifecycle.md).
+- Delivery item 2 — resource repositories and audit: ready to start after item 1
+  is integrated.
+
 ## Delivery order
 
 1. **Database lifecycle and migrations.** Replace the spike schema loader with
