@@ -2,9 +2,9 @@
 
 [Español](modelo-sqlite-v1.es.md)
 
-The [schema-v1.sql](schema-v1.sql) file is the initial physical contract. It will
-not be copied directly as a migration: Milestone 2 will convert it into versioned
-migrations and tests.
+The [schema-v1.sql](schema-v1.sql) file remains the readable initial physical
+contract. Milestone 2 migration `0001_initial.sql` implements that contract under
+an immutable SHA-256 checksum and executable lifecycle tests.
 
 ## Transactional rules
 

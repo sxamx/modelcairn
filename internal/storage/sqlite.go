@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -11,9 +12,9 @@ import (
 
 const defaultBusyTimeout = 5 * time.Second
 
-// OpenSQLite opens a single-process SQLite database with the invariants required
-// by the Phase 1 contract. Milestone 2 will replace the single-connection spike
-// limit with a measured repository concurrency policy.
+// OpenSQLite opens SQLite with ModelCairn's required connection invariants. Code
+// that owns installation state must use OpenInstallation so the process lock is
+// acquired before this function is reached.
 func OpenSQLite(ctx context.Context, path string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -37,11 +38,52 @@ func OpenSQLite(ctx context.Context, path string) (*sql.DB, error) {
 	return db, nil
 }
 
-// ApplySchema applies the complete documentation contract to an empty spike
-// database. Versioned migrations replace this helper in Milestone 2.
-func ApplySchema(ctx context.Context, db *sql.DB, schema string) error {
-	if _, err := db.ExecContext(ctx, schema); err != nil {
-		return fmt.Errorf("apply sqlite schema: %w", err)
+// Installation is the exclusive owner of one local data directory. Closing it
+// closes SQLite before releasing the operating-system lock.
+type Installation struct {
+	db   *sql.DB
+	lock *Lock
+}
+
+// OpenInstallation exclusively owns dataDir, migrates its database, and checks
+// integrity before returning it to the caller.
+func OpenInstallation(ctx context.Context, dataDir string) (*Installation, error) {
+	lock, err := AcquireLock(dataDir)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	db, err := OpenSQLite(ctx, filepath.Join(dataDir, "modelcairn.db"))
+	if err != nil {
+		_ = lock.Close()
+		return nil, err
+	}
+	if err := Migrate(ctx, db); err != nil {
+		_ = db.Close()
+		_ = lock.Close()
+		return nil, err
+	}
+	if err := CheckIntegrity(ctx, db); err != nil {
+		_ = db.Close()
+		_ = lock.Close()
+		return nil, err
+	}
+	if err := CheckSchemaCompatibility(ctx, db); err != nil {
+		_ = db.Close()
+		_ = lock.Close()
+		return nil, err
+	}
+	return &Installation{db: db, lock: lock}, nil
+}
+
+// DB returns the installation database. The caller must not close it directly.
+func (i *Installation) DB() *sql.DB { return i.db }
+
+// Close releases durable resources in the required order.
+func (i *Installation) Close() error {
+	dbErr := i.db.Close()
+	lockErr := i.lock.Close()
+	if dbErr != nil {
+		return fmt.Errorf("close sqlite: %w", dbErr)
+	}
+	return lockErr
 }
