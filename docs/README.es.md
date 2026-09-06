@@ -46,6 +46,7 @@ documento viejo del prototipo no prevalece sobre este índice.
 
 - [Gestión del proyecto](governance/project-management.es.md)
 - [Política e inventario de dependencias](dependencies.es.md)
+- [Procedimiento de benchmark de recursos](benchmarks.es.md)
 
 ## Publicación
 

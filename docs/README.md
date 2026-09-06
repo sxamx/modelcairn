@@ -46,6 +46,7 @@ override this index.
 
 - [Project management](governance/project-management.md)
 - [Dependency policy and inventory](dependencies.md)
+- [Resource benchmark procedure](benchmarks.md)
 
 ## Publication
 

@@ -29,6 +29,13 @@ jobs:
           node docs/contratos/storage/schema-v1.contract.test.cjs
       - name: Benchmark smoke test
         run: go test -run '^$' -bench '^BenchmarkHealthz$' -benchtime=100x ./internal/httpserver
+      - name: Empty-server resource budget smoke test
+        env:
+          DURATION_SECONDS: "10"
+          SAMPLE_INTERVAL_SECONDS: "1"
+          MAX_RSS_KIB: "131072"
+          OUTPUT_FILE: /tmp/modelcairn-benchmark.md
+        run: bash scripts/benchmark-idle.sh
       - name: Verify module files
         run: |
           go mod tidy

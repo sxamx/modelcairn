@@ -1,0 +1,34 @@
+# Procedimiento de benchmark de recursos
+
+[English](benchmarks.md)
+
+El Hito 1 usa `scripts/benchmark-idle.sh` para medir el servidor Linux vacío. El
+script construye un binario reducido, espera `/healthz`, muestrea `VmRSS`, escribe
+un informe Markdown como evidencia y falla si se supera el presupuesto configurado.
+
+CI ejecuta una medición de humo de diez segundos con un límite de 128 MiB. Este
+límite usa deliberadamente la mitad del presupuesto provisional de 256 MiB en
+estado estable y reserva espacio para módulos posteriores. Detecta regresiones
+grandes del esqueleto, pero **no** constituye evidencia
+representativa para la VM objetivo de 1 GB. El Hito 1 se cierra únicamente después
+de que la ejecución predeterminada de 15 minutos pase en la VM de referencia
+documentada:
+
+```sh
+MAX_RSS_KIB=131072 bash scripts/benchmark-idle.sh
+```
+
+El directorio generado `benchmark-results/` se ignora deliberadamente. Después de
+su aprobación se copiará a la documentación un informe representativo revisado y
+redactado. El informe público nunca debe contener hostnames, direcciones IP,
+usuarios ni credenciales de proveedores.
+
+El muestreo lee RSS y swap del proceso desde `/proc`; las mediciones tienen la
+granularidad del intervalo configurado y no incluyen la page cache del kernel ni
+procesos hijos. El script también registra memoria y swap antes/después del
+muestreo, los procesos residentes más grandes antes del arranque, la versión exacta
+del binario y la configuración del servidor vacío. También compila un artefacto de
+prueba enlazado con SQLite y registra su tamaño y RSS pico durante la inicialización
+del esquema. Esa cifra es conservadora porque incluye el harness de pruebas de Go;
+el coste enlazado al producto se medirá otra vez cuando la persistencia forme parte
+del arranque.
