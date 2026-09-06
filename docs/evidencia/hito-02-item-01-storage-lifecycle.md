@@ -3,8 +3,8 @@
 [Español](hito-02-item-01-storage-lifecycle.es.md)
 
 - Scope: delivery item 1 and issue #8
-- State: implementation and independent QA complete; CI and representative Linux
-  execution are the publication gates
+- State: accepted; implementation, independent QA, CI, and representative Linux
+  execution complete
 
 ## Implemented behavior
 
@@ -37,3 +37,16 @@ Independent QA initially found one high and three medium findings. The
 implementation corrected all four; the second review reported no remaining
 critical or high finding. A suggested future-version safeguard was also
 implemented before publication.
+
+## Publication gates
+
+The first pull-request run exposed a timing-dependent shutdown test: under the
+race detector, a fixed delay cancelled startup while migration 1 was still
+running. The test was changed to wait for the observable listening state before
+cancellation and passed 50 local repetitions. The replacement CI run passed the
+race suite, documentation checks, and both Linux cross-builds.
+
+On the representative 1 GB Linux AMD64 VM, the corrected revision passed the
+complete race suite and ten repetitions of the lock, migration, drift, rollback,
+and interrupted-owner subset. The VM checkout was then returned cleanly to its
+main branch.

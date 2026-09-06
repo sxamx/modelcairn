@@ -3,8 +3,8 @@
 [English](hito-02-item-01-storage-lifecycle.md)
 
 - Alcance: punto de entrega 1 e issue #8
-- Estado: implementación y QA independiente completos; CI y la ejecución Linux
-  representativa son las puertas de publicación
+- Estado: aceptado; implementación, QA independiente, CI y ejecución Linux
+  representativa completos
 
 ## Comportamiento implementado
 
@@ -36,3 +36,16 @@ tiene CGO desactivado.
 La primera QA independiente encontró un hallazgo alto y tres medios. Los cuatro
 fueron corregidos; la segunda revisión no encontró hallazgos críticos o altos. Una
 protección sugerida para futuras versiones también se implementó antes de publicar.
+
+## Puertas de publicación
+
+El primer run del pull request reveló una prueba de apagado dependiente del tiempo:
+bajo el race detector, una espera fija canceló el arranque mientras todavía se
+ejecutaba la migración 1. La prueba pasó a esperar el estado observable de escucha
+antes de cancelar y superó 50 repeticiones locales. El CI de reemplazo pasó race,
+documentación y ambas compilaciones cruzadas Linux.
+
+En la VM representativa Linux AMD64 de 1 GB, la revisión corregida pasó la suite
+completa con race y diez repeticiones del subconjunto de bloqueo, migraciones,
+deriva, rollback y muerte del propietario. Después se devolvió el checkout de la
+VM, limpio, a su rama main.

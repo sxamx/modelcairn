@@ -7,6 +7,13 @@
   web, operable mediante CLI y pruebas
 - Prerrequisito: Hito 1 aceptado
 
+## Progreso
+
+- Punto de entrega 1 — ciclo de base de datos y migraciones: aceptado. La evidencia
+  está en [Evidencia del ciclo de base de datos del Hito 2](../evidencia/hito-02-item-01-storage-lifecycle.es.md).
+- Punto de entrega 2 — repositorios de recursos y auditoría: preparado para
+  comenzar después de integrar el punto 1.
+
 ## Orden de entrega
 
 1. **Ciclo de base de datos y migraciones.** Sustituir el cargador del spike por
