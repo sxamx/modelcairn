@@ -50,7 +50,15 @@ sqlite_test_binary="$work_directory/storage-spike.test"
 sqlite_time_file="$work_directory/storage-spike.time"
 sqlite_test_output="$work_directory/storage-spike.output"
 go test -c -o "$sqlite_test_binary" ./internal/storage
-/usr/bin/time -f '%M' -o "$sqlite_time_file" "$sqlite_test_binary" -test.v -test.run '^TestSQLitePragmasAndSchema$' -test.count=1 >"$sqlite_test_output"
+if ! (
+  cd internal/storage
+  /usr/bin/time -f '%M' -o "$sqlite_time_file" "$sqlite_test_binary" \
+    -test.v -test.run '^TestSQLitePragmasAndSchema$' -test.count=1
+) >"$sqlite_test_output" 2>&1; then
+  cat "$sqlite_test_output" >&2
+  echo "SQLite initialization probe failed" >&2
+  exit 1
+fi
 grep -q -- '^--- PASS: TestSQLitePragmasAndSchema' "$sqlite_test_output" || { cat "$sqlite_test_output" >&2; echo "SQLite probe test did not run" >&2; exit 1; }
 sqlite_binary_bytes="$(stat -c %s "$sqlite_test_binary")"
 sqlite_peak_rss_kib="$(cat "$sqlite_time_file")"
