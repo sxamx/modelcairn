@@ -35,6 +35,7 @@ memory_available_before_kib="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
 swap_total_kib="$(awk '/^SwapTotal:/ {print $2}' /proc/meminfo)"
 swap_free_before_kib="$(awk '/^SwapFree:/ {print $2}' /proc/meminfo)"
 resident_services="$(ps -eo comm=,rss= --sort=-rss | sed -n '1,15p')"
+[[ -n "$resident_services" ]] || { echo "could not capture resident process inventory" >&2; exit 1; }
 (( max_rss_kib <= memory_total_kib )) || { echo "peak budget exceeds total system memory" >&2; exit 2; }
 reserved_margin_kib=$((memory_total_kib - max_rss_kib))
 
@@ -127,9 +128,9 @@ cat >"$output_file" <<EOF
 
 ## Largest resident processes before ModelCairn
 
-```text
+~~~text
 $resident_services
-```
+~~~
 EOF
 
 cat "$output_file"
