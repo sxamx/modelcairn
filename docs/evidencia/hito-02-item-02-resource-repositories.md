@@ -3,7 +3,7 @@
 [Español](hito-02-item-02-resource-repositories.es.md)
 
 - Scope: delivery item 2 and issue #9
-- State: implementation and independent QA complete; CI remains the publication gate
+- State: accepted; implementation, independent QA, and CI complete
 
 ## Implemented behavior
 
@@ -38,3 +38,8 @@ Independent QA found two blocking consistency errors and one weak regression tes
 an out-of-contract audit action, contradictory token reactivation, and a fixed
 test clock that could hide timestamp replacement. All were corrected. The final
 review reported no remaining functional blocker.
+
+## Publication gate
+
+Pull-request CI passed the race-enabled complete suite, documentation and schema
+contracts, module-file check, resource smoke test, and Linux AMD64/ARM64 builds.

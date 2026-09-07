@@ -3,7 +3,7 @@
 [English](hito-02-item-02-resource-repositories.md)
 
 - Alcance: punto de entrega 2 e issue #9
-- Estado: implementación y QA independiente completos; CI sigue como puerta de publicación
+- Estado: aceptado; implementación, QA independiente y CI completos
 
 ## Comportamiento implementado
 
@@ -39,3 +39,8 @@ La QA independiente encontró dos errores bloqueantes de coherencia y una prueba
 regresión débil: acción de auditoría fuera del contrato, reactivación contradictoria
 del token y reloj fijo que podía ocultar el reemplazo del timestamp. Los tres se
 corrigieron. La revisión final no informó bloqueantes funcionales pendientes.
+
+## Puerta de publicación
+
+El CI del pull request pasó la suite completa con race, contratos de documentación
+y schema, verificación de módulos, prueba de recursos y builds Linux AMD64/ARM64.
