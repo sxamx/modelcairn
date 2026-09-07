@@ -36,6 +36,11 @@ autentica los bytes del secreto; sus primeros 12 bytes se codifican en base64url
 sin relleno, con el prefijo `mc_fp_`. Solo es un identificador visual, no un
 verificador de contraseña ni un token de autenticación.
 
+`installation_state.key_check` es HMAC-SHA-256 con la clave maestra activa sobre
+el dominio ASCII `modelcairn/master-key-check/v1`, un byte cero y los bytes del ID
+de instalación. Permite que una instalación vacía rechace una clave sustituida;
+no es material de clave ni una credencial exportable.
+
 ### Publicación
 
 El directorio del llavero usa modo `0700`. Cada archivo inmutable
@@ -51,6 +56,19 @@ crea sin seguir enlaces. Una clave nueva se publica mediante estos límites dura
 6. reabrir y descifrar cada fila para verificar;
 7. eliminar una clave antigua solo después de que una consulta confirmada demuestre
    que ninguna fila la referencia y sincronizar después el directorio.
+
+En Linux, los límites 3–4 usan un renombrado que no reemplaza seguido de `fsync`
+del directorio. Windows usa `MoveFileEx` sin reemplazo y con
+`MOVEFILE_WRITE_THROUGH`, porque su API de archivos generalmente no expone `fsync`
+para directorios; en ambos casos el archivo temporal de la clave se sincroniza
+antes de publicarlo.
+
+En Unix, el directorio de datos, el llavero y los archivos de clave deben pertenecer
+al UID efectivo del servicio además de usar los modos exigidos. En Windows,
+ModelCairn aplica una DACL protegida que concede control total únicamente a la
+identidad del servicio, Local System y Administradores integrados, verifica que el
+propietario de la clave sea la identidad del servicio y rechaza cualquier permiso
+adicional antes de leer sus bytes.
 
 Una interrupción previa al commit deja una clave nueva sin referencias; una
 interrupción posterior deja claves requeridas y obsoletas. El arranque verifica

@@ -43,8 +43,8 @@ func TestInstallationBootstrapsAndRepeatedStartupIsNoop(t *testing.T) {
 	if err := second.DB().QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 1 {
-		t.Fatalf("migration count = %d, want 1", count)
+	if count != 2 {
+		t.Fatalf("migration count = %d, want 2", count)
 	}
 }
 
@@ -153,7 +153,7 @@ func TestFutureMigrationFailsWithoutSchemaChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	sum := sha256.Sum256([]byte("future"))
-	if _, err := db.ExecContext(ctx, "INSERT INTO schema_migrations VALUES(2, ?, '2026-01-01T00:00:00Z')", hex.EncodeToString(sum[:])); err != nil {
+	if _, err := db.ExecContext(ctx, "INSERT INTO schema_migrations VALUES(3, ?, '2026-01-01T00:00:00Z')", hex.EncodeToString(sum[:])); err != nil {
 		t.Fatal(err)
 	}
 	if err := Migrate(ctx, db); err == nil || !strings.Contains(err.Error(), "unsupported schema version") {
@@ -194,7 +194,7 @@ func TestDriftIsRejectedBeforeAFutureMigrationCanRun(t *testing.T) {
 	}
 	// Simulate a future binary containing v2. The pre-migration check must reject
 	// the drift while the synthetic v2 marker remains unapplied.
-	migrations = append(migrations, migration{version: 2, checksum: strings.Repeat("a", 64), sql: "CREATE TABLE future_marker(id INTEGER) STRICT"})
+	migrations = append(migrations, migration{version: 3, checksum: strings.Repeat("a", 64), sql: "CREATE TABLE future_marker(id INTEGER) STRICT"})
 	if err := migrateWithSet(ctx, db, migrations); err == nil {
 		t.Fatal("drifted v1 schema was accepted before v2")
 	}

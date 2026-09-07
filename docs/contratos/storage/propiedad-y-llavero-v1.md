@@ -33,6 +33,11 @@ installation ID bytes as salt, `modelcairn/secret-fingerprint/v1` as info, and
 are encoded as unpadded base64url with prefix `mc_fp_`. This is a display-only
 identifier, not a password verifier or an authentication token.
 
+`installation_state.key_check` is HMAC-SHA-256 under the active master key over
+the ASCII domain `modelcairn/master-key-check/v1`, a zero byte, and the
+installation ID bytes. It lets an empty installation reject a substituted key;
+it is neither key material nor an exportable credential.
+
 ### Publication
 
 The keyring directory has mode `0700`. Each immutable `v<version>.key` file has
@@ -48,6 +53,17 @@ links. A new key is published through these durable boundaries:
 6. reopen and decrypt every row as verification;
 7. remove an old key only after a committed query proves no row references it,
    then sync the keyring directory.
+
+On Linux, boundaries 3–4 use a no-replace rename followed by directory `fsync`.
+Windows uses a no-replace `MoveFileEx` with `MOVEFILE_WRITE_THROUGH` because its
+filesystem API does not generally expose directory `fsync`; the temporary key
+file is flushed before either publication mechanism.
+
+On Unix, the data directory, keyring, and key files must be owned by the effective
+service UID in addition to their required modes. On Windows, ModelCairn applies a
+protected DACL granting full control only to the service identity, Local System,
+and built-in Administrators, verifies the key owner against the service identity,
+and rejects any additional allow entry before reading key bytes.
 
 An interruption before database commit leaves an unreferenced new key; an
 interruption after commit leaves both required and obsolete keys. Startup verifies

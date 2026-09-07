@@ -15,6 +15,7 @@ import (
 
 	"github.com/sxamx/modelcairn/internal/buildinfo"
 	server "github.com/sxamx/modelcairn/internal/httpserver"
+	"github.com/sxamx/modelcairn/internal/redact"
 	"github.com/sxamx/modelcairn/internal/storage"
 )
 
@@ -76,7 +77,9 @@ func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 			logger.Error("installation close failed", "error", err)
 		}
 	}()
+	logger = slog.New(redact.NewHandler(slog.NewJSONHandler(stdout, nil), installation.Secrets().Redactor()))
 	probe.Set(server.ComponentPersistence, true, "")
+	probe.Set(server.ComponentSecretStore, true, "")
 	httpServer := server.New(*address, probe, logger)
 	listener, err := net.Listen("tcp", *address)
 	if err != nil {
