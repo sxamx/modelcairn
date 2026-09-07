@@ -11,8 +11,10 @@
 
 - Punto de entrega 1 — ciclo de base de datos y migraciones: aceptado. La evidencia
   está en [Evidencia del ciclo de base de datos del Hito 2](../evidencia/hito-02-item-01-storage-lifecycle.es.md).
-- Punto de entrega 2 — repositorios de recursos y auditoría: preparado para
-  comenzar después de integrar el punto 1.
+- Punto de entrega 2 — repositorios de recursos y auditoría: aceptado localmente
+  bajo el [contrato de repositorios](../contratos/storage/resource-repositories-v1.es.md),
+  con [evidencia ejecutable](../evidencia/hito-02-item-02-resource-repositories.es.md).
+- Punto de entrega 3 — clave maestra y secretos: preparado después de integrar el punto 2.
 
 ## Orden de entrega
 
