@@ -14,6 +14,8 @@ un plan de retirada.
 | Biblioteca estándar de Go | build y ejecución | CLI, ciclo HTTP, logging, sincronización y pruebas |
 | `modernc.org/sqlite` v1.58.0 | build y ejecución desde Hito 2 | Driver SQLite sin CGO; permite compilaciones cruzadas Linux AMD64/ARM64 y usa licencia BSD-3-Clause |
 | `golang.org/x/sys` v0.47.0 | build y ejecución desde Hito 2 | Bloqueos de archivo nativos y no bloqueantes en Windows; ya era transitiva, pasa a directa y usa licencia BSD-3-Clause |
+| `golang.org/x/crypto` v0.56.0 | Cifrado de secretos desde Hito 2 | Implementación oficial de Go de XChaCha20-Poly1305; BSD-3-Clause; evita implementar el cifrador por nuestra cuenta |
+| `golang.org/x/vuln` v1.7.0 | Solo CI y desarrollo | `govulncheck` fijado para analizar vulnerabilidades alcanzables; BSD-3-Clause; no se enlaza al servidor |
 
 Los módulos transitivos quedan fijados en `go.sum`; CI ejecuta `go mod tidy` y
 rechaza cambios no confirmados en los archivos del módulo. El Hito 2 enlaza la
@@ -24,6 +26,12 @@ recursos del hito.
 
 Las bibliotecas criptográficas se añadirán únicamente en el hito que pruebe sus
 contratos aprobados.
+
+El núcleo de cifrado está en construcción y todavía no se conecta al arranque.
+Su microbenchmark informa asignaciones para secretos de 32 y 16.384 bytes;
+quedan pendientes la medición en la VM representativa y la aceptación del almacén
+completo. `x/crypto` podrá retirarse si la biblioteca estándar ofrece el mismo
+formato XChaCha20-Poly1305 sin invalidar secretos persistidos.
 
 En cada hito que cambie dependencias, CI verifica `go mod tidy` limpio y ejecuta
 un `govulncheck ./...` fijado; la licencia y el propósito de cada módulo directo se

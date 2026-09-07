@@ -19,6 +19,25 @@ el estado del bloqueo. Las pruebas inician contendientes servicio/CLI en ambos
 
 ## Llavero privado
 
+### Codificación del secreto
+
+Los datos asociados del cifrado v1 comienzan con los bytes ASCII de
+`modelcairn/secret/v1` y un byte cero. Siguen el ID de instalación y el del secreto:
+cada uno lleva su longitud en bytes como entero sin signo de cuatro bytes
+big-endian, seguido de los bytes del ID. Las versiones del recurso y de la clave
+se codifican después como enteros sin signo de ocho bytes big-endian. Los IDs no
+están vacíos y tienen hasta 128 bytes; las versiones son positivas. Cambiar esta
+codificación requiere una migración explícita del formato.
+
+La clave del fingerprint usa HKDF-SHA-256 con la clave maestra de 32 bytes como
+entrada, los bytes del ID de instalación como salt, la cadena
+`modelcairn/secret-fingerprint/v1` como info y 32 bytes de salida. HMAC-SHA-256
+autentica los bytes del secreto; sus primeros 12 bytes se codifican en base64url
+sin relleno, con el prefijo `mc_fp_`. Solo es un identificador visual, no un
+verificador de contraseña ni un token de autenticación.
+
+### Publicación
+
 El directorio del llavero usa modo `0700`. Cada archivo inmutable
 `v<version>.key` usa modo `0600`, contiene exactamente 32 bytes aleatorios y se
 crea sin seguir enlaces. Una clave nueva se publica mediante estos límites durables:

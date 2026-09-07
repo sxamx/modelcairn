@@ -18,6 +18,23 @@ that exactly one owner opens the database.
 
 ## Private keyring
 
+### Secret encoding
+
+The v1 cipher's associated data starts with the ASCII bytes
+`modelcairn/secret/v1` followed by a zero byte. Next come installation ID and
+secret ID, each encoded as a four-byte unsigned big-endian byte length followed
+by the ID bytes. Resource version and key version follow as eight-byte unsigned
+big-endian integers. IDs are nonempty and at most 128 bytes; versions are positive.
+Changing this encoding requires an explicit format migration.
+
+The fingerprint key uses HKDF-SHA-256 with the 32-byte master key as input,
+installation ID bytes as salt, `modelcairn/secret-fingerprint/v1` as info, and
+32 output bytes. HMAC-SHA-256 authenticates the secret bytes; its first 12 bytes
+are encoded as unpadded base64url with prefix `mc_fp_`. This is a display-only
+identifier, not a password verifier or an authentication token.
+
+### Publication
+
 The keyring directory has mode `0700`. Each immutable `v<version>.key` file has
 mode `0600`, contains exactly 32 random bytes, and is created without following
 links. A new key is published through these durable boundaries:

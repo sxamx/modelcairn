@@ -14,7 +14,9 @@
 - Delivery item 2 — resource repositories and audit: accepted locally under the
   [resource repository contract](../contratos/storage/resource-repositories-v1.md),
   with [executable evidence](../evidencia/hito-02-item-02-resource-repositories.md).
-- Delivery item 3 — master-key and secret store: ready after item 2 is integrated.
+- Delivery item 3 — master-key and secret store: in progress. The encryption
+  core has tests; durable keyring, transactional rotation, startup verification,
+  and interruption tests are not yet implemented. This item is not accepted.
 
 ## Delivery order
 

@@ -13,6 +13,8 @@ maintenance and license review, resource-impact evidence, and a removal plan.
 | Go standard library | build and runtime | CLI, HTTP lifecycle, logging, synchronization, and tests |
 | `modernc.org/sqlite` v1.58.0 | build and runtime from Milestone 2 | CGO-free SQLite driver; enables Linux AMD64/ARM64 cross-builds and is BSD-3-Clause licensed |
 | `golang.org/x/sys` v0.47.0 | build and runtime from Milestone 2 | Native non-blocking file locks on Windows; already required transitively, promoted to a direct dependency, and BSD-3-Clause licensed |
+| `golang.org/x/crypto` v0.56.0 | secret encryption from Milestone 2 | Official Go XChaCha20-Poly1305 implementation; BSD-3-Clause; avoids implementing the cipher ourselves |
+| `golang.org/x/vuln` v1.7.0 | CI and development only | Pinned `govulncheck` for reachable vulnerability analysis; BSD-3-Clause; not linked into the server |
 
 Transitive modules are locked in `go.sum`; CI runs `go mod tidy` and rejects an
 uncommitted module-file change. Milestone 2 links persistence into application
@@ -22,6 +24,12 @@ the milestone's resource gate.
 
 Cryptographic libraries will be added only with the milestone that exercises their
 approved contracts.
+
+The secret cipher is under construction, not yet wired into startup. Its
+microbenchmark reports allocation cost for 32-byte and 16,384-byte secrets;
+representative VM measurements and complete-store acceptance remain pending.
+`x/crypto` can be removed if a standard-library implementation provides the same
+XChaCha20-Poly1305 format without invalidating persisted secrets.
 
 For every dependency-changing milestone, CI verifies a clean `go mod tidy` and
 runs a pinned `govulncheck ./...`; each direct module's license and purpose are
