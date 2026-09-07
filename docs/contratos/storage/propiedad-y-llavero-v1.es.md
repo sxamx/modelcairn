@@ -76,3 +76,31 @@ todas las versiones referenciadas antes de readiness y solo puede limpiar versio
 sin referencias. Si falta una versión referenciada, falla cerrado. Las pruebas de
 corte cubren cada límite numerado, incluidos sync de directorio y limpieza, y
 verifican que ciphertext y fingerprint correspondan siempre a la versión confirmada.
+
+### Implementación de rotación y recuperación
+
+`RotateMasterKey` serializa las mutaciones, procesa secretos fila por fila y
+confirma la prueba de clave y auditoría de éxito junto con el cifrado y los
+fingerprints. Mantiene las versiones lógicas y fechas de cada secreto. Las claves
+nuevas superan la versión activa y todas las versiones huérfanas publicadas.
+SQLite usa `synchronous=FULL`; también se sincroniza el padre del llavero.
+
+Un commit de resultado incierto o una verificación posterior fallida deshabilita
+el almacén hasta reabrirlo. Una versión devuelta distinta de cero indica que la
+base confirmó el cambio; un error posterior puede corresponder a verificación o
+limpieza. `CollectUnusedKeys` vuelve a validar la clave activa en disco y todas
+las filas, conserva cada versión referenciada (incluso no activa) y elimina solo
+versiones sin referencias y archivos regulares `.new-<32 hex minúsculas>.tmp`
+bajo propiedad exclusiva de la instalación. No toca nombres desconocidos.
+
+Una instalación existente con prueba de clave NULL falla cerrada. La columna
+nullable permite migrar el esquema, pero el arranque no fabrica una prueba
+ausente para una instalación existente. Una instalación nueva confirma identidad
+y prueba juntas.
+
+Doce puntos de terminación de procesos cubren publicación, recifrado parcial,
+commit, verificación, borrado de claves, limpieza de temporales y sincronización
+final. Demuestran recuperación de procesos, no simulan pérdida eléctrica ni el
+controlador de almacenamiento. Linux usa fsync de directorios; Windows publica
+con renombrado write-through y la durabilidad de limpieza queda limitada por su
+API de archivos.

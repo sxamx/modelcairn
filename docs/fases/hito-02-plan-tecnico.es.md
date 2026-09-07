@@ -15,8 +15,9 @@
   bajo el [contrato de repositorios](../contratos/storage/resource-repositories-v1.es.md),
   con [evidencia ejecutable](../evidencia/hito-02-item-02-resource-repositories.es.md).
 - Punto de entrega 3 — clave maestra y secretos: en curso. El núcleo de cifrado
-  tiene pruebas; faltan el llavero durable, la rotación transaccional, la
-  verificación al arrancar y las pruebas de interrupción. Este punto no está aceptado.
+  tiene pruebas; están implementados llavero, verificación de arranque y rotación.
+  Véase [evidencia de rotación y validaciones pendientes](../evidencia/hito-02-rotation.es.md).
+  Este punto todavía no está aceptado.
 
 ## Orden de entrega
 

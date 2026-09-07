@@ -71,3 +71,29 @@ all referenced versions before readiness and may garbage-collect only unreferenc
 versions. A missing referenced version fails closed. Kill-point tests cover every
 numbered boundary, including directory sync and garbage collection, and verify
 that ciphertext and fingerprint always correspond to the committed key version.
+
+### Rotation implementation and recovery
+
+`RotateMasterKey` serializes mutations, iterates secrets one row at a time, and
+commits the key check and success audit with ciphertext and fingerprints. Logical
+secret resource versions and timestamps remain unchanged. New versions exceed
+both the active version and every published orphan version. SQLite uses
+`synchronous=FULL`. Key publication also syncs the parent of the keyring.
+
+An error with an uncertain commit outcome or failed post-commit verification
+disables store operations until reopening. A nonzero returned version means the
+database committed; a later error can describe verification or cleanup failure.
+`CollectUnusedKeys` revalidates the active key on disk and all committed rows,
+retains every referenced version (including a nonactive one), and removes only
+unreferenced version files and regular `.new-<32 lowercase hex digits>.tmp`
+files under exclusive installation ownership. Unrecognized names are untouched.
+
+An existing installation with a NULL key check fails closed. The nullable migration
+column supports schema upgrade, but startup never manufactures missing proof for
+an existing installation. A new installation commits identity and proof together.
+
+Twelve process-kill checkpoints cover publication, partial re-encryption, commit,
+verification, key deletion, temporary cleanup and final sync. These tests prove
+process-crash recovery, not simulated power loss or storage-controller behavior.
+Linux uses directory fsync; Windows publication uses write-through rename, while
+directory cleanup durability remains constrained by the Windows filesystem API.

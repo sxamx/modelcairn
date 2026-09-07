@@ -40,6 +40,7 @@ type SecretStore struct {
 	installationID   string
 	activeKeyVersion int64
 	activeKey        []byte
+	unavailable      bool
 	redactor         *redact.Redactor
 	registrationMu   sync.Mutex
 	registrations    map[string]func()
@@ -51,6 +52,9 @@ func (s *SecretStore) GetMetadata(ctx context.Context, name string) (SecretMetad
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	if s.unavailable {
+		return SecretMetadata{}, errKeyMaterialUnavailable
+	}
 	return scanSecretMetadata(s.db.QueryRowContext(ctx, `SELECT name,fingerprint,resource_version,key_version,created_at,updated_at
 		FROM secrets WHERE name=?`, name))
 }
@@ -58,6 +62,9 @@ func (s *SecretStore) GetMetadata(ctx context.Context, name string) (SecretMetad
 func (s *SecretStore) ListMetadata(ctx context.Context) ([]SecretMetadata, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	if s.unavailable {
+		return nil, errKeyMaterialUnavailable
+	}
 	rows, err := s.db.QueryContext(ctx, `SELECT name,fingerprint,resource_version,key_version,created_at,updated_at
 		FROM secrets ORDER BY name`)
 	if err != nil {
@@ -104,10 +111,12 @@ func (s *SecretStore) Put(ctx context.Context, input PutSecret, actor Actor) (Se
 	if !secretNamePattern.MatchString(input.Name) || input.ExpectedVersion < 0 {
 		return SecretMetadata{}, &RepositoryError{Code: CodeInvalidResource}
 	}
-	// sealSecret validates byte length and UTF-8 without including the rejected
-	// value in any error.
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	// Serialize persistence and registration with rotation and other mutations.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.unavailable {
+		return SecretMetadata{}, errKeyMaterialUnavailable
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return SecretMetadata{}, fmt.Errorf("begin secret mutation: %w", err)
@@ -140,8 +149,11 @@ func (s *SecretStore) Delete(ctx context.Context, name string, expectedVersion i
 	if !secretNamePattern.MatchString(name) || expectedVersion < 1 {
 		return &RepositoryError{Code: CodeInvalidResource}
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.unavailable {
+		return errKeyMaterialUnavailable
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin secret deletion: %w", err)
@@ -187,6 +199,9 @@ func (s *SecretStore) putTx(ctx context.Context, tx *sql.Tx, input PutSecret) (S
 	now := time.Now().UTC()
 	stamp := now.Format(time.RFC3339Nano)
 	secretID, err := newUUID()
+	if err != nil {
+		return SecretMetadata{}, "", err
+	}
 	resourceVersion := int64(1)
 	created := stamp
 	if input.ExpectedVersion == 0 {
@@ -250,25 +265,44 @@ func (s *SecretStore) Use(ctx context.Context, name string, callback func([]byte
 	if !secretNamePattern.MatchString(name) || callback == nil {
 		return &RepositoryError{Code: CodeInvalidResource}
 	}
+	plain, err := s.resolveValue(ctx, name)
+	if err != nil {
+		return err
+	}
+	defer clear(plain)
+	// Keep the value redacted throughout the callback even if it changes or
+	// deletes the stored secret. Do not hold the store lock across caller code.
+	remove, err := s.redactor.Register(plain)
+	if err != nil {
+		return err
+	}
+	defer remove()
+	return callback(plain)
+}
+
+func (s *SecretStore) resolveValue(ctx context.Context, name string) ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	if s.unavailable {
+		return nil, errKeyMaterialUnavailable
+	}
 	var id string
 	var keyVersion, resourceVersion int64
 	var nonce, ciphertext []byte
 	err := s.db.QueryRowContext(ctx, `SELECT id,key_version,nonce,ciphertext,resource_version FROM secrets WHERE name=?`, name).
 		Scan(&id, &keyVersion, &nonce, &ciphertext, &resourceVersion)
 	if errors.Is(err, sql.ErrNoRows) {
-		return &RepositoryError{Code: CodeNotFound}
+		return nil, &RepositoryError{Code: CodeNotFound}
 	}
 	if err != nil {
-		return fmt.Errorf("resolve encrypted secret: %w", err)
+		return nil, fmt.Errorf("resolve encrypted secret: %w", err)
 	}
 	key := s.activeKey
 	clearKey := false
 	if keyVersion != s.activeKeyVersion {
 		key, err = s.keyring.load(keyVersion)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		clearKey = true
 	}
@@ -277,10 +311,9 @@ func (s *SecretStore) Use(ctx context.Context, name string, callback func([]byte
 	}
 	plain, err := openSecret(key, nonce, ciphertext, secretContext{s.installationID, id, resourceVersion, keyVersion})
 	if err != nil {
-		return fmt.Errorf("secret authentication failed")
+		return nil, fmt.Errorf("secret authentication failed")
 	}
-	defer clear(plain)
-	return callback(plain)
+	return plain, nil
 }
 
 func openSecretStore(ctx context.Context, db *sql.DB, keys *keyring) (*SecretStore, error) {
@@ -301,10 +334,8 @@ func openSecretStore(ctx context.Context, db *sql.DB, keys *keyring) (*SecretSto
 	}
 	store := newSecretStore(db, keys, installationID, activeVersion, activeKey)
 	if len(keyCheck) == 0 {
-		if err := store.finishLegacyBootstrap(ctx); err != nil {
-			store.close()
-			return nil, err
-		}
+		store.close()
+		return nil, errKeyMaterialUnavailable
 	} else {
 		expected, err := masterKeyCheck(activeKey, installationID)
 		if err != nil || !hmac.Equal(expected, keyCheck) {
@@ -370,30 +401,6 @@ func newSecretStore(db *sql.DB, keys *keyring, installationID string, version in
 	}
 }
 
-func (s *SecretStore) finishLegacyBootstrap(ctx context.Context) error {
-	var secrets int
-	if err := s.db.QueryRowContext(ctx, "SELECT count(*) FROM secrets").Scan(&secrets); err != nil {
-		return fmt.Errorf("check legacy key state: %w", err)
-	}
-	if secrets != 0 {
-		return fmt.Errorf("%w: unverified legacy key state", errKeyMaterialUnavailable)
-	}
-	check, err := masterKeyCheck(s.activeKey, s.installationID)
-	if err != nil {
-		return err
-	}
-	result, err := s.db.ExecContext(ctx, `UPDATE installation_state SET key_check=?, updated_at=?
-		WHERE singleton=1 AND key_check IS NULL`, check, time.Now().UTC().Format(time.RFC3339Nano))
-	if err != nil {
-		return fmt.Errorf("commit installation key check: %w", err)
-	}
-	changed, err := result.RowsAffected()
-	if err != nil || changed != 1 {
-		return fmt.Errorf("commit installation key check: state changed concurrently")
-	}
-	return nil
-}
-
 func (s *SecretStore) verifyAll(ctx context.Context) error {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, key_version, algorithm, nonce, ciphertext,
 		fingerprint, resource_version FROM secrets ORDER BY id`)
@@ -450,6 +457,9 @@ func (s *SecretStore) verifyAll(ctx context.Context) error {
 
 func (s *SecretStore) close() {
 	if s != nil {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		s.unavailable = true
 		s.registrationMu.Lock()
 		for id, remove := range s.registrations {
 			remove()
@@ -493,4 +503,8 @@ func (s *SecretStore) Redactor() *redact.Redactor { return s.redactor }
 func (s *SecretStore) InstallationID() string { return s.installationID }
 
 // ActiveKeyVersion is non-secret operational metadata.
-func (s *SecretStore) ActiveKeyVersion() int64 { return s.activeKeyVersion }
+func (s *SecretStore) ActiveKeyVersion() int64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.activeKeyVersion
+}

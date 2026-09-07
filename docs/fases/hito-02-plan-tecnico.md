@@ -15,8 +15,9 @@
   [resource repository contract](../contratos/storage/resource-repositories-v1.md),
   with [executable evidence](../evidencia/hito-02-item-02-resource-repositories.md).
 - Delivery item 3 — master-key and secret store: in progress. The encryption
-  core has tests; durable keyring, transactional rotation, startup verification,
-  and interruption tests are not yet implemented. This item is not accepted.
+  core, keyring, startup verification and transactional rotation are implemented.
+  See [rotation evidence and pending gates](../evidencia/hito-02-rotation.md).
+  This item is not accepted yet.
 
 ## Delivery order
 

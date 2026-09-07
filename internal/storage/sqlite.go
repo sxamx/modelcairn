@@ -28,6 +28,7 @@ func OpenSQLite(ctx context.Context, path string) (*sql.DB, error) {
 	for _, statement := range []string{
 		"PRAGMA foreign_keys = ON",
 		"PRAGMA journal_mode = WAL",
+		"PRAGMA synchronous = FULL",
 		fmt.Sprintf("PRAGMA busy_timeout = %d", defaultBusyTimeout.Milliseconds()),
 	} {
 		if _, err := db.ExecContext(ctx, statement); err != nil {

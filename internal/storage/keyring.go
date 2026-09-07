@@ -22,12 +22,25 @@ const (
 
 var errKeyMaterialUnavailable = errors.New("key_material_unavailable")
 
-type keyring struct{ dir string }
+type keyring struct {
+	dir string
+	// boundary is an internal test seam, never configured by environment or CLI.
+	boundary func(string)
+}
+
+func (k *keyring) checkpoint(name string) {
+	if k.boundary != nil {
+		k.boundary(name)
+	}
+}
 
 func openKeyring(dataDir string) (*keyring, error) {
 	dir := filepath.Join(dataDir, keyringName)
 	if err := ensurePrivateDirectory(dir); err != nil {
 		return nil, fmt.Errorf("prepare keyring: %w", err)
+	}
+	if err := syncDirectory(dataDir); err != nil {
+		return nil, fmt.Errorf("sync keyring parent: %w", err)
 	}
 	return &keyring{dir: dir}, nil
 }
@@ -57,12 +70,14 @@ func (k *keyring) create(version int64) ([]byte, error) {
 		return nil, fmt.Errorf("create private key temporary: %w", err)
 	}
 	cleanup := true
+	k.checkpoint("temporary-created")
 	defer func() {
 		if cleanup {
 			_ = os.Remove(temporary)
 		}
 	}()
-	if err := file.Chmod(0o600); err == nil {
+	err = file.Chmod(0o600)
+	if err == nil {
 		err = securePrivateFile(file, temporary)
 	}
 	if err == nil {
@@ -78,14 +93,17 @@ func (k *keyring) create(version int64) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("write private key: %w", err)
 	}
+	k.checkpoint("file-synced")
 	final := filepath.Join(k.dir, keyFilename(version))
 	if err := renameNoReplace(temporary, final); err != nil {
 		return nil, fmt.Errorf("publish master key version %d: %w", version, err)
 	}
 	cleanup = false
+	k.checkpoint("key-renamed")
 	if err := syncDirectory(k.dir); err != nil {
 		return nil, fmt.Errorf("sync keyring: %w", err)
 	}
+	k.checkpoint("directory-synced")
 	published = true
 	return key, nil
 }
