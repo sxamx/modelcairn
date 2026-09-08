@@ -2,7 +2,7 @@
 
 [Español](hito-02-rotation.es.md)
 
-Status: implemented and locally tested; full issue #10 acceptance remains pending.
+Status: implemented; local tests, CI, and representative execution passed.
 
 `RotateMasterKey` publishes a private key durably, re-encrypts one row at a time
 inside a transaction, updates fingerprints and installation authentication, and
@@ -28,7 +28,19 @@ tests and implementation changes address those findings. The earlier key-file
 permission error shadowing was also corrected. Full local Go tests, vet and
 documentation/schema validation passed during this work.
 
-Limits: killing processes does not simulate power loss. Linux runtime and race
-validation are assigned to CI; representative VM execution requires Tailscale
-reauthentication. VM memory measurements and the complete issue acceptance gate
-are not claimed by this checkpoint. CLI exposure belongs to the later CLI item.
+CI reran tests with the race detector, validated documentation and schema, built
+Linux AMD64/ARM64, and found no reachable vulnerabilities. On the representative
+998,465,536-byte RAM VM on September 8, 2026:
+
+- the server remained up for 120 seconds at 11,476 KiB average and peak RSS with
+  no swap; `/healthz` returned 200 and `/readyz` returned the expected 503 without
+  applied configuration;
+- targeted commit, rollback, twelve-interruption, empty-installation, and
+  fail-closed tests completed successfully at 16,496 KiB maximum RSS and zero
+  swap;
+- the test binary represented commit `6873aa9` and was checksum-verified after
+  transfer before execution.
+
+Limits: process termination does not simulate power loss. CLI exposure belongs to
+the CLI delivery item. This evidence accepts the master-key and secret-store item,
+not Milestone 2 as a whole.

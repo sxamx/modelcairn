@@ -114,12 +114,17 @@ inventario de dependencias. Los spikes contractuales ya verifican el comportamie
 de SQLite y el compromiso, cancelación y desconexión de SSE. El Hito 1 quedó
 completado el 6 de septiembre después de aprobar CI y de que la ejecución revisada
 de 15 minutos en la VM representativa de 1 GB informara 6.328 KiB de RSS pico y
-cero swap del proceso. El Hito 2 es el siguiente.
+cero swap del proceso. El Hito 2 está en curso.
 
 El Hito 2 quedó preparado el 6 de septiembre con un plan técnico ordenado y
 contratos exactos para propiedad del proceso, rotación de claves interrumpida,
 tokens de plan, parsing acotado, redacción, auditoría y borradores de recursos de
 routing.
+
+La implementación del Hito 2 comenzó el 6 de septiembre. Al 8 de septiembre se
+aceptaron el ciclo de base de datos, los repositorios con auditoría y el almacén
+de secretos con rotación recuperable. Este último pasó CI y una ejecución en la
+VM representativa sin swap; siguen parsing, CLI e integración final.
 
 ## Etapa F — Validación de sistema y seguridad (pendiente)
 
@@ -141,3 +146,4 @@ Incluye incorporar la licencia elegida en la Etapa C, completar la guía de cont
 | 2026-09-05 | Etapa E e Hito 1 iniciados | Esqueleto Go, pruebas, CI, compilaciones cruzadas y revisión independiente de código |
 | 2026-09-06 | Hito 1 completado | Spikes SQLite y streaming, CI verde, compilaciones cruzadas y benchmark representativo revisado |
 | 2026-09-06 | Hito 2 preparado | Contratos de persistencia, configuración y secretos, orden de entrega y QA independiente |
+| 2026-09-08 | Primeros tres puntos del Hito 2 aceptados | Persistencia, repositorios y secretos cifrados; CI y medición representativa sin swap |

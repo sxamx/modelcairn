@@ -2,7 +2,7 @@
 
 [Español](fase-01-plan-de-implementacion.es.md)
 
-- Status: accepted; Milestones 0 and 1 complete, Milestone 2 next
+- Status: accepted; Milestones 0 and 1 complete, Milestone 2 in progress
 - Delivery rule: every milestone includes code, tests, and documentation; a visual
   demonstration alone does not make it complete
 
@@ -42,7 +42,9 @@ Common rules are defined in [Risks and quality gates](fase-01-riesgos-y-puertas.
 
 ## Milestone 2 — Persistence, configuration, and secrets
 
-Status: **ready**. See the [technical delivery plan](hito-02-plan-tecnico.md).
+Status: **in progress**. The first three delivery items are accepted; bounded
+parsing, the configuration CLI, and final integration remain. See the
+[technical delivery plan](hito-02-plan-tecnico.md).
 
 - SQLite migrations and repositories.
 - YAML schema, validate/plan/apply/export.

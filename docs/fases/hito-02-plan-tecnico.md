@@ -2,7 +2,7 @@
 
 [Español](hito-02-plan-tecnico.es.md)
 
-- Status: ready for implementation
+- Status: implementation in progress
 - Outcome: complete persisted configuration without routing execution or web UI,
   operable through CLI and tests
 - Prerequisite: Milestone 1 accepted
@@ -14,10 +14,9 @@
 - Delivery item 2 — resource repositories and audit: accepted locally under the
   [resource repository contract](../contratos/storage/resource-repositories-v1.md),
   with [executable evidence](../evidencia/hito-02-item-02-resource-repositories.md).
-- Delivery item 3 — master-key and secret store: in progress. The encryption
-  core, keyring, startup verification and transactional rotation are implemented.
-  See [rotation evidence and pending gates](../evidencia/hito-02-rotation.md).
-  This item is not accepted yet.
+- Delivery item 3 — master key and secret store: accepted. It includes encryption,
+  a private keyring, startup verification, shared redaction, and recoverable
+  rotation. See the [local, CI, and representative evidence](../evidencia/hito-02-rotation.md).
 
 ## Delivery order
 
