@@ -11,6 +11,7 @@ CREATE TABLE installation_state (
   singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
   installation_id TEXT NOT NULL UNIQUE,
   active_key_version INTEGER NOT NULL CHECK(active_key_version > 0),
+  key_check BLOB CHECK(key_check IS NULL OR length(key_check) = 32),
   config_revision INTEGER NOT NULL DEFAULT 1 CHECK(config_revision > 0),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL

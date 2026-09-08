@@ -2,7 +2,7 @@
 
 [English](hito-02-plan-tecnico.md)
 
-- Estado: preparado para implementación
+- Estado: implementación en curso
 - Salida: configuración persistida completa sin ejecución de routing ni interfaz
   web, operable mediante CLI y pruebas
 - Prerrequisito: Hito 1 aceptado
@@ -14,7 +14,9 @@
 - Punto de entrega 2 — repositorios de recursos y auditoría: aceptado localmente
   bajo el [contrato de repositorios](../contratos/storage/resource-repositories-v1.es.md),
   con [evidencia ejecutable](../evidencia/hito-02-item-02-resource-repositories.es.md).
-- Punto de entrega 3 — clave maestra y secretos: preparado después de integrar el punto 2.
+- Punto de entrega 3 — clave maestra y secretos: aceptado. Incluye cifrado,
+  llavero privado, verificación de arranque, redacción compartida y rotación con
+  recuperación. Véase la [evidencia local, CI y representativa](../evidencia/hito-02-rotation.es.md).
 
 ## Orden de entrega
 

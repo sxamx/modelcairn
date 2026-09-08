@@ -49,6 +49,9 @@ func ensurePrivateDirectory(path string) error {
 	if err := os.Chmod(path, 0o700); err != nil {
 		return fmt.Errorf("secure data directory: %w", err)
 	}
+	if err := securePrivateDirectory(path); err != nil {
+		return fmt.Errorf("secure data directory ownership: %w", err)
+	}
 	return nil
 }
 
