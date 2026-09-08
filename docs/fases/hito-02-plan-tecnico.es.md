@@ -17,6 +17,8 @@
 - Punto de entrega 3 — clave maestra y secretos: aceptado. Incluye cifrado,
   llavero privado, verificación de arranque, redacción compartida y rotación con
   recuperación. Véase la [evidencia local, CI y representativa](../evidencia/hito-02-rotation.es.md).
+- Punto de entrega 4 — parsing y validación de configuración: en revisión. La
+  implementación y las pruebas locales están completas; falta cerrar QA y CI.
 
 ## Orden de entrega
 

@@ -17,6 +17,8 @@
 - Delivery item 3 — master key and secret store: accepted. It includes encryption,
   a private keyring, startup verification, shared redaction, and recoverable
   rotation. See the [local, CI, and representative evidence](../evidencia/hito-02-rotation.md).
+- Delivery item 4 — configuration parsing and validation: under review. The
+  implementation and local tests are complete; QA and CI remain to be closed.
 
 ## Delivery order
 
