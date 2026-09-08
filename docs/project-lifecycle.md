@@ -101,9 +101,9 @@ contracts for process ownership, interrupted key rotation, plan tokens, bounded
 configuration parsing, redaction, auditing, and routing-resource drafts.
 
 Milestone 2 implementation began on September 6. As of September 8, database
-lifecycle, audited repositories, and the encrypted secret store with recoverable
-rotation are accepted. The last item passed CI and representative VM execution
-without swap; parsing, CLI, and final integration remain.
+lifecycle, audited repositories, the encrypted secret store with recoverable
+rotation, and the configuration parser are accepted. These items passed CI and
+representative VM execution without swap; CLI and final integration remain.
 
 ## Stage F - System and security validation (pending)
 

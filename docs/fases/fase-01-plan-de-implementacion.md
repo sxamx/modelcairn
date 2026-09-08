@@ -42,8 +42,8 @@ Common rules are defined in [Risks and quality gates](fase-01-riesgos-y-puertas.
 
 ## Milestone 2 — Persistence, configuration, and secrets
 
-Status: **in progress**. The first three delivery items are accepted; bounded
-parsing, the configuration CLI, and final integration remain. See the
+Status: **in progress**. The first four delivery items are accepted; the
+configuration CLI and final integration remain. See the
 [technical delivery plan](hito-02-plan-tecnico.md).
 
 - SQLite migrations and repositories.

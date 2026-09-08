@@ -122,9 +122,9 @@ tokens de plan, parsing acotado, redacción, auditoría y borradores de recursos
 routing.
 
 La implementación del Hito 2 comenzó el 6 de septiembre. Al 8 de septiembre se
-aceptaron el ciclo de base de datos, los repositorios con auditoría y el almacén
-de secretos con rotación recuperable. Este último pasó CI y una ejecución en la
-VM representativa sin swap; siguen parsing, CLI e integración final.
+aceptaron el ciclo de base de datos, los repositorios con auditoría, el almacén
+de secretos con rotación recuperable y el parser de configuración. Estos puntos
+pasaron CI y ejecución en la VM representativa sin swap; siguen CLI e integración final.
 
 ## Etapa F — Validación de sistema y seguridad (pendiente)
 
