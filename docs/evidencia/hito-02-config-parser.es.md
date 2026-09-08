@@ -2,7 +2,7 @@
 
 [English](hito-02-config-parser.md)
 
-Estado: QA independiente aprobada; pendiente de CI antes de la aceptación.
+Estado: aceptada; QA independiente, CI y ejecución representativa aprobadas.
 
 `internal/config` convierte exactamente un documento YAML o JSON en un único
 modelo tipado. Antes de canonizar rechaza entradas mayores de 8 MiB, más de 64
@@ -26,4 +26,5 @@ La cobertura local de `internal/config` fue 83,4%.
 Límites: la resolución DNS y protección frente a cambios de DNS/redirects pertenece
 al cliente de salida del Hito 4. La integración con plan/apply pertenece a los
 siguientes puntos del Hito 2. La tercera revisión independiente cerró los hallazgos
-anteriores sin bloqueos; falta CI antes de aceptar este punto.
+anteriores sin bloqueos y CI confirmó carreras, vulnerabilidades alcanzables,
+contratos, recursos y compilaciones Linux AMD64/ARM64.

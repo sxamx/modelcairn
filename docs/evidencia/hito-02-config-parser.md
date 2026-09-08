@@ -2,7 +2,7 @@
 
 [Español](hito-02-config-parser.es.md)
 
-Status: independent QA approved; CI remains before acceptance.
+Status: accepted; independent QA, CI, and representative execution passed.
 
 `internal/config` turns exactly one YAML or JSON document into a single typed
 model. Before canonicalization it rejects inputs larger than 8 MiB, more than 64
@@ -26,4 +26,5 @@ Local `internal/config` coverage was 83.4%.
 Limits: DNS resolution and protection against DNS/redirect changes belong to the
 Milestone 4 egress client. Plan/apply integration belongs to the following
 Milestone 2 items. The third independent review closed the earlier findings with
-no blockers; CI remains before acceptance.
+no blockers, and CI confirmed race detection, reachable vulnerabilities,
+contracts, resources, and Linux AMD64/ARM64 builds.
