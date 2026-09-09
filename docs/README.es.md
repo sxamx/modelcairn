@@ -18,6 +18,7 @@
 
 - [JSON Schema de configuración](contratos/config/modelcairn-config-v1alpha1.schema.json)
 - [Semántica de apply](contratos/config/semantica-apply-v1alpha1.es.md)
+- [Contrato de CLI offline](contratos/cli-v1.es.md)
 - [Configuración de ejemplo](contratos/config/example-v1alpha1.yaml)
 - [OpenAPI administrativa](contratos/api/admin-v1.openapi.yaml)
 - [Matriz Chat Completions](contratos/compatibilidad-chat-completions-v1.es.md)

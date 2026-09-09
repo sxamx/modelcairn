@@ -1,6 +1,6 @@
 # ModelCairn
 
-> Status: Phase 1 incremental implementation; Milestone 2 ready.
+> Status: Phase 1 incremental implementation; Milestone 2 in progress.
 > The recovered prototype is kept outside this repository as a reference.
 
 [Español](README.es.md)
@@ -43,12 +43,23 @@ ModelCairn is distributed under the [Apache License 2.0](LICENSE) and includes a
 
 ## Development
 
-Milestone 1 is complete and Milestone 2 is ready. With Go installed:
+Milestone 1 is complete and Milestone 2 is in progress. With Go installed:
 
 ```sh
 go test ./...
 go run ./cmd/modelcairn serve
 ```
+
+The offline configuration workflow is also available during development:
+
+```sh
+go run ./cmd/modelcairn config validate config.yaml
+go run ./cmd/modelcairn config plan --data-dir ./data --out plan.json config.yaml
+go run ./cmd/modelcairn config apply --data-dir ./data --plan plan.json config.yaml
+```
+
+See the [offline CLI contract](docs/contratos/cli-v1.md) for configuration,
+secret-management, safety, and exit-code behavior.
 
 The development server listens on `127.0.0.1:8080` by default. `/healthz`
 reports process liveness; `/readyz` remains unavailable until persistence,

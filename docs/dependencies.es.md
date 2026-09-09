@@ -13,8 +13,9 @@ un plan de retirada.
 |---|---|---|
 | Biblioteca estándar de Go | build y ejecución | CLI, ciclo HTTP, logging, sincronización y pruebas |
 | `modernc.org/sqlite` v1.58.0 | build y ejecución desde Hito 2 | Driver SQLite sin CGO; permite compilaciones cruzadas Linux AMD64/ARM64 y usa licencia BSD-3-Clause |
-| `golang.org/x/sys` v0.47.0 | build y ejecución desde Hito 2 | Bloqueos de archivo nativos y no bloqueantes en Windows; ya era transitiva, pasa a directa y usa licencia BSD-3-Clause |
+| `golang.org/x/sys` v0.48.0 | build y ejecución desde Hito 2 | Bloqueos de archivo nativos y no bloqueantes en Windows; ya era transitiva, pasa a directa y usa licencia BSD-3-Clause |
 | `golang.org/x/crypto` v0.56.0 | Cifrado de secretos desde Hito 2 | Implementación oficial de Go de XChaCha20-Poly1305; BSD-3-Clause; evita implementar el cifrador por nuestra cuenta |
+| `golang.org/x/term` v0.46.0 | CLI de secretos desde Hito 2 | Lectura portable sin eco de secretos en terminales; BSD-3-Clause; evita mostrar API keys durante su ingreso interactivo |
 | `gopkg.in/yaml.v3` v3.0.1 | Parsing de configuración desde Hito 2 | Parser YAML con árbol inspeccionable; permite rechazar aliases, tags, claves duplicadas y claves no string antes de canonizar; MIT/Apache-2.0 |
 | `golang.org/x/vuln` v1.7.0 | Solo CI y desarrollo | `govulncheck` fijado para analizar vulnerabilidades alcanzables; BSD-3-Clause; no se enlaza al servidor |
 
@@ -30,6 +31,8 @@ El almacén cifrado y su rotación están aceptados con medición representativa
 XChaCha20-Poly1305 sin invalidar secretos persistidos. `yaml.v3` se mantiene
 encapsulado en `internal/config` y puede sustituirse sin cambiar el modelo interno;
 la suite hostil y de round-trip define el comportamiento que debe conservarse.
+`x/term` queda limitado a la frontera CLI y puede retirarse si la biblioteca
+estándar ofrece lectura portable de contraseñas sin eco.
 
 En cada hito que cambie dependencias, CI verifica `go mod tidy` limpio y ejecuta
 un `govulncheck ./...` fijado; la licencia y el propósito de cada módulo directo se

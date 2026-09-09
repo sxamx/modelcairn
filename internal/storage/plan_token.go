@@ -166,12 +166,12 @@ func (s *SecretStore) verifyPlanTokenLocked(token string, binding PlanBinding, n
 		return planClaims{}, err
 	}
 	if actual.Digest != binding.Digest {
-		return planClaims{}, ErrInvalidPlan
+		return claims, ErrInvalidPlan
 	}
 	want, _ := json.Marshal(binding)
 	got, _ := json.Marshal(actual)
 	if !bytes.Equal(want, got) {
-		return planClaims{}, &RepositoryError{Code: CodeVersionConflict}
+		return claims, &RepositoryError{Code: CodeVersionConflict}
 	}
 	return claims, nil
 }

@@ -47,6 +47,18 @@ func (s *SecretStore) executePlan(ctx context.Context, token string, clock func(
 	now := clock()
 	claims, err := s.verifyPlanTokenLocked(token, binding, now)
 	if err != nil {
+		if IsRepositoryCode(err, CodeVersionConflict) && claims.Nonce != "" {
+			nonce, decodeErr := base64.RawURLEncoding.Strict().DecodeString(claims.Nonce)
+			if decodeErr == nil {
+				hash := sha256.Sum256(nonce)
+				var exists int
+				if queryErr := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM consumed_plan_tokens WHERE nonce_hash=?)", hash[:]).Scan(&exists); queryErr != nil {
+					return queryErr
+				} else if exists != 0 {
+					return ErrPlanAlreadyUsed
+				}
+			}
+		}
 		return err
 	}
 	nonce, err := base64.RawURLEncoding.Strict().DecodeString(claims.Nonce)
