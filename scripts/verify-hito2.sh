@@ -34,12 +34,23 @@ cleanup() {
 }
 trap cleanup EXIT
 
-commit="$(git rev-parse --verify HEAD)"
-version="$(git describe --tags --always --dirty)"
-build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-build_package="github.com/sxamx/modelcairn/internal/buildinfo"
-go build -trimpath -ldflags="-s -w -X ${build_package}.Version=${version} -X ${build_package}.Commit=${commit} -X ${build_package}.Date=${build_date}" -o "$binary" ./cmd/modelcairn
+if [[ -n "${MODELCAIRN_BINARY:-}" ]]; then
+  [[ -x "$MODELCAIRN_BINARY" ]] || { echo "MODELCAIRN_BINARY must be executable" >&2; exit 2; }
+  cp "$MODELCAIRN_BINARY" "$binary"
+else
+  command -v go >/dev/null || { echo "go is required unless MODELCAIRN_BINARY is set" >&2; exit 2; }
+  commit="$(git rev-parse --verify HEAD)"
+  version="$(git describe --tags --always --dirty)"
+  build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  build_package="github.com/sxamx/modelcairn/internal/buildinfo"
+  go build -trimpath -ldflags="-s -w -X ${build_package}.Version=${version} -X ${build_package}.Commit=${commit} -X ${build_package}.Date=${build_date}" -o "$binary" ./cmd/modelcairn
+fi
 binary_bytes="$(stat -c %s "$binary")"
+if command -v go >/dev/null; then
+  go_runtime="$(go version)"
+else
+  go_runtime="not installed; prebuilt binary supplied"
+fi
 
 canary="mc-$(date +%s%N)-$RANDOM-$RANDOM"
 printf '%s\n' "$canary" | "$binary" secret set --data-dir "$data_directory" example-key-secret >>"$command_log"
@@ -119,7 +130,7 @@ cat >"$output_file" <<EOF
 - Architecture: $(uname -m)
 - Logical CPUs: $(getconf _NPROCESSORS_ONLN)
 - Total memory: $(awk '/^MemTotal:/ {print $2}' /proc/meminfo) KiB
-- Go: $(go version)
+- Go: $go_runtime
 - Binary: $($binary version)
 - Stripped binary size: ${binary_bytes} bytes
 - Configured SQLite database size before service: ${database_bytes} bytes

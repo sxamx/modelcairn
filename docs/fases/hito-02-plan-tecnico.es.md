@@ -25,8 +25,8 @@
 
 ## Orden de entrega
 
-El punto 6 es el último pendiente del Hito 2. La [base de planes y autenticación](../evidencia/hito-02-plan-foundation.es.md)
-del punto 5 ya está aceptada.
+El punto 6 está en verificación: la [compuerta integral y medición representativa](../evidencia/hito-02-integracion-recursos.es.md)
+aprobaron; falta el QA agrupado de cierre. La base del punto 5 ya está aceptada.
 
 1. **Ciclo de base de datos y migraciones.** Sustituir el cargador del spike por
    migraciones incrustadas y monotónicas; verificar checksums, WAL, integridad,

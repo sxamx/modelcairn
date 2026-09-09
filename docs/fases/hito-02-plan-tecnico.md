@@ -25,8 +25,8 @@
 
 ## Delivery order
 
-Item 6 is the final pending part of Milestone 2. The item 5
-[plan and authentication foundation](../evidencia/hito-02-plan-foundation.md) is accepted.
+Item 6 is under verification: its [product gate and representative measurement](../evidencia/hito-02-integracion-recursos.md)
+passed, with grouped closure QA remaining. The item 5 foundation is accepted.
 
 1. **Database lifecycle and migrations.** Replace the spike schema loader with
    embedded, monotonic migrations; verify checksums, WAL, integrity, exclusive
