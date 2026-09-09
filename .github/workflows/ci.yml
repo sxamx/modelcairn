@@ -38,6 +38,14 @@ jobs:
           MAX_RSS_KIB: "131072"
           OUTPUT_FILE: /tmp/modelcairn-benchmark.md
         run: bash scripts/benchmark-idle.sh
+      - name: Milestone 2 product integration gate
+        env:
+          DURATION_SECONDS: "5"
+          SAMPLE_INTERVAL_SECONDS: "1"
+          MAX_RSS_KIB: "131072"
+          MAX_DATA_BYTES: "16777216"
+          OUTPUT_FILE: /tmp/modelcairn-hito2.md
+        run: bash scripts/verify-hito2.sh
       - name: Verify module files
         run: |
           go mod tidy
