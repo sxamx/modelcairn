@@ -43,7 +43,8 @@ comprueba el round trip canónico, un apply sin cambios, exclusión entre servic
 CLI y ausencia de un secreto canario. Después mide tiempo hasta `/healthz`, RSS,
 swap, tamaño del binario, SQLite y el directorio de datos. CI ejecuta una prueba de
 humo corta; el cierre del hito conserva además un informe de la VM representativa.
-Si la VM no tiene Go, `MODELCAIRN_BINARY` permite medir un binario Linux precompilado.
+Si la VM no tiene Go, `MODELCAIRN_BINARY` permite medir un binario Linux precompilado;
+`MODELCAIRN_EXPECTED_COMMIT` es obligatorio y se contrasta con la versión incrustada.
 
 ```sh
 DURATION_SECONDS=120 OUTPUT_FILE=benchmark-results/hito-02.md \

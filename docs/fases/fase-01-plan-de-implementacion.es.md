@@ -43,8 +43,8 @@ Las reglas comunes se definen en [Riesgos y puertas de calidad](fase-01-riesgos-
 
 ## Hito 2 — Persistencia, configuración y secretos
 
-Estado: **en curso**. Los cuatro primeros puntos de entrega están aceptados; faltan
-la CLI de configuración e integración final. Véase el
+Estado: **en curso**. Los cinco primeros puntos de entrega están aceptados; la
+integración final está en verificación. Véase el
 [plan técnico de entrega](hito-02-plan-tecnico.es.md).
 
 - Migraciones y repositorios SQLite.
