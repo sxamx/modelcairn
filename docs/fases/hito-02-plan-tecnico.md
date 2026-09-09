@@ -2,7 +2,7 @@
 
 [Español](hito-02-plan-tecnico.es.md)
 
-- Status: implementation in progress
+- Status: completed and accepted on September 9, 2026
 - Outcome: complete persisted configuration without routing execution or web UI,
   operable through CLI and tests
 - Prerequisite: Milestone 1 accepted
@@ -25,8 +25,8 @@
 
 ## Delivery order
 
-Item 6 is under verification: its [product gate and representative measurement](../evidencia/hito-02-integracion-recursos.md)
-passed, with grouped closure QA remaining. The item 5 foundation is accepted.
+All six items are accepted. The [product gate and representative measurement](../evidencia/hito-02-integracion-recursos.md)
+passed, and grouped closure QA retains no critical or high findings.
 
 1. **Database lifecycle and migrations.** Replace the spike schema loader with
    embedded, monotonic migrations; verify checksums, WAL, integrity, exclusive

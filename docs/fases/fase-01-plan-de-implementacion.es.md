@@ -2,7 +2,7 @@
 
 [English](fase-01-plan-de-implementacion.md)
 
-- Estado: aceptado; Hitos 0 y 1 completados, Hito 2 en curso
+- Estado: aceptado; Hitos 0, 1 y 2 completados, Hito 3 es el siguiente
 - Regla de entrega: cada hito incluye código, pruebas y documentación; no se marca
   completo por una demostración visual
 
@@ -43,8 +43,7 @@ Las reglas comunes se definen en [Riesgos y puertas de calidad](fase-01-riesgos-
 
 ## Hito 2 — Persistencia, configuración y secretos
 
-Estado: **en curso**. Los cinco primeros puntos de entrega están aceptados; la
-integración final está en verificación. Véase el
+Estado: **completado y aceptado el 9 de septiembre de 2026**. Véase el
 [plan técnico de entrega](hito-02-plan-tecnico.es.md).
 
 - Migraciones y repositorios SQLite.
