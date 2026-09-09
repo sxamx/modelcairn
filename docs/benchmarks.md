@@ -41,7 +41,8 @@ checks canonical round-trip, a no-op apply, service/CLI exclusion, and absence o
 secret canary. It then measures time to `/healthz`, RSS, swap, and binary, SQLite,
 and data-directory sizes. CI runs a short smoke gate; milestone closure also keeps
 a report from the representative VM.
-When the VM does not have Go, `MODELCAIRN_BINARY` accepts a prebuilt Linux binary.
+When the VM does not have Go, `MODELCAIRN_BINARY` accepts a prebuilt Linux binary;
+`MODELCAIRN_EXPECTED_COMMIT` is required and checked against its embedded version.
 
 ```sh
 DURATION_SECONDS=120 OUTPUT_FILE=benchmark-results/hito-02.md \
