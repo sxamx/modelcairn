@@ -20,12 +20,13 @@
 - Delivery item 4 — configuration parsing and validation: accepted. It includes
   limits, a typed model, graph validation, redacted export, QA, CI, and
   [representative measurement](../evidencia/hito-02-config-parser.md).
+- Delivery item 5 — plan and atomic apply CLI: accepted. It includes transactional
+  integration, the offline CLI, representative execution, CI, and grouped QA.
 
 ## Delivery order
 
-Item 5 is under verification: the [plan and authentication foundation](../evidencia/hito-02-plan-foundation.md)
-is connected to persistence and the offline CLI implements configuration and
-secret workflows. Representative execution, CI, and grouped QA remain before acceptance.
+Item 6 is the final pending part of Milestone 2. The item 5
+[plan and authentication foundation](../evidencia/hito-02-plan-foundation.md) is accepted.
 
 1. **Database lifecycle and migrations.** Replace the spike schema loader with
    embedded, monotonic migrations; verify checksums, WAL, integrity, exclusive

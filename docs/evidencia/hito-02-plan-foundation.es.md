@@ -2,8 +2,8 @@
 
 [English](hito-02-plan-foundation.md)
 
-Estado: CLI e integración implementadas; punto de entrega 5 en verificación.
-Registro: 2026-09-08.
+Estado: punto de entrega 5 aceptado.
+Registro: 2026-09-09.
 
 ## Implementado
 
@@ -71,15 +71,19 @@ Registro: 2026-09-08.
 - QA estático independiente encontró el problema del reloj y aceptó la
   corrección y sus pruebas. No ejecutó pruebas de forma independiente porque su
   sandbox Windows impedía establecer los permisos del directorio temporal.
+- El QA agrupado de la CLI detectó truncamiento silencioso, salida de metadatos sin
+  redacción, límites incompatibles de plan, detección imprecisa de terminal y un
+  código incorrecto de conflicto. Los cinco defectos quedaron corregidos y cubiertos.
+- El CI del commit `ca37d12` aprobó formato, vet, vulnerabilidades alcanzables,
+  suite completa, contratos, benchmarks, presupuesto de recursos, módulos y las
+  compilaciones Linux AMD64/ARM64.
 
-## Integración pendiente
+## Límite conservador aceptado
 
-Esto todavía no acepta el punto de entrega 5. Faltan CI sobre el bloque completo y
-el QA agrupado final. Las funciones internas deben usar solo la
+Las funciones internas deben usar solo la
 transacción recibida, sin abrir operaciones de base de datos adicionales ni
 volver a entrar en SecretStore. La integración oficial pasa por `config.Manager`;
-los consumidores directos no deben construir mutaciones sin validar. CI y QA de
-la CLI completa siguen pendientes para la entrega posterior.
+los consumidores directos no deben construir mutaciones sin validar.
 
 v1alpha1 conserva las restricciones de relaciones de SQLite durante todo apply.
 Las proyecciones omiten las columnas relacionales que no cambian, por lo que se
