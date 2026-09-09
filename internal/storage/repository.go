@@ -166,6 +166,9 @@ func (r *Repository) Put(ctx context.Context, input PutResource, actor Actor) (R
 	if mutationErr == nil {
 		mutationErr = insertAudit(ctx, tx, r.now(), actor, auditRecord{Action: actionFor(input.ExpectedVersion), Kind: input.Kind, ResourceID: item.ID, Result: "success", Version: item.ResourceVersion})
 	}
+	if mutationErr == nil {
+		mutationErr = bumpConfigRevisionTx(ctx, tx, r.now())
+	}
 	if mutationErr != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return Resource{}, fmt.Errorf("mutation failed (%v) and rollback failed: %w", mutationErr, rollbackErr)
@@ -272,6 +275,9 @@ func (r *Repository) Delete(ctx context.Context, kind ResourceKind, name string,
 	}
 	if err == nil {
 		err = insertAudit(ctx, tx, r.now(), actor, auditRecord{Action: "resource.delete", Kind: kind, ResourceID: id, Result: "success", Version: current})
+	}
+	if err == nil {
+		err = bumpConfigRevisionTx(ctx, tx, r.now())
 	}
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
@@ -437,7 +443,10 @@ func upsertTyped(ctx context.Context, tx *sql.Tx, id string, kind ResourceKind, 
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, "INSERT INTO provider_accounts VALUES(?,?) ON CONFLICT(resource_id) DO UPDATE SET provider_id=excluded.provider_id", id, provider)
+		if _, err = tx.ExecContext(ctx, "INSERT INTO provider_accounts VALUES(?,?) ON CONFLICT(resource_id) DO NOTHING", id, provider); err != nil {
+			return mapConstraint(err)
+		}
+		_, err = tx.ExecContext(ctx, "UPDATE provider_accounts SET provider_id=? WHERE resource_id=? AND provider_id<>?", provider, id, provider)
 		return mapConstraint(err)
 	case KindProviderConnection:
 		var s providerConnectionSpec
@@ -448,7 +457,10 @@ func upsertTyped(ctx context.Context, tx *sql.Tx, id string, kind ResourceKind, 
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `INSERT INTO provider_connections VALUES(?,?,?,?,?) ON CONFLICT(resource_id) DO UPDATE SET provider_id=excluded.provider_id,base_url=excluded.base_url,allow_private_network=excluded.allow_private_network,enabled=excluded.enabled`, id, provider, s.BaseURL, s.AllowPrivate, s.Enabled)
+		if _, err = tx.ExecContext(ctx, `INSERT INTO provider_connections VALUES(?,?,?,?,?) ON CONFLICT(resource_id) DO UPDATE SET base_url=excluded.base_url,allow_private_network=excluded.allow_private_network,enabled=excluded.enabled`, id, provider, s.BaseURL, s.AllowPrivate, s.Enabled); err != nil {
+			return mapConstraint(err)
+		}
+		_, err = tx.ExecContext(ctx, "UPDATE provider_connections SET provider_id=? WHERE resource_id=? AND provider_id<>?", provider, id, provider)
 		return mapConstraint(err)
 	case KindEgress:
 		var s egressSpec
@@ -482,7 +494,10 @@ func upsertTyped(ctx context.Context, tx *sql.Tx, id string, kind ResourceKind, 
 		if s.Enabled {
 			status = "active"
 		}
-		_, err = tx.ExecContext(ctx, `INSERT INTO credentials(resource_id,provider_account_id,egress_id,secret_id,status) VALUES(?,?,?,?,?) ON CONFLICT(resource_id) DO UPDATE SET provider_account_id=excluded.provider_account_id,egress_id=excluded.egress_id,secret_id=excluded.secret_id,status=excluded.status,blocked_reason=NULL`, id, account, egress, secret, status)
+		if _, err = tx.ExecContext(ctx, `INSERT INTO credentials(resource_id,provider_account_id,egress_id,secret_id,status) VALUES(?,?,?,?,?) ON CONFLICT(resource_id) DO UPDATE SET egress_id=excluded.egress_id,secret_id=excluded.secret_id,status=excluded.status,blocked_reason=NULL`, id, account, egress, secret, status); err != nil {
+			return mapConstraint(err)
+		}
+		_, err = tx.ExecContext(ctx, "UPDATE credentials SET provider_account_id=? WHERE resource_id=? AND provider_account_id<>?", account, id, account)
 		return mapConstraint(err)
 	case KindModel:
 		var s modelSpec
@@ -494,7 +509,10 @@ func upsertTyped(ctx context.Context, tx *sql.Tx, id string, kind ResourceKind, 
 			return err
 		}
 		capabilities, _ := json.Marshal(s.Capabilities)
-		_, err = tx.ExecContext(ctx, `INSERT INTO models VALUES(?,?,?,?,?) ON CONFLICT(resource_id) DO UPDATE SET connection_id=excluded.connection_id,provider_model_id=excluded.provider_model_id,capabilities_json=excluded.capabilities_json,enabled=excluded.enabled`, id, connection, s.ProviderModelID, string(capabilities), s.Enabled)
+		if _, err = tx.ExecContext(ctx, `INSERT INTO models VALUES(?,?,?,?,?) ON CONFLICT(resource_id) DO UPDATE SET provider_model_id=excluded.provider_model_id,capabilities_json=excluded.capabilities_json,enabled=excluded.enabled`, id, connection, s.ProviderModelID, string(capabilities), s.Enabled); err != nil {
+			return mapConstraint(err)
+		}
+		_, err = tx.ExecContext(ctx, "UPDATE models SET connection_id=? WHERE resource_id=? AND connection_id<>?", connection, id, connection)
 		return mapConstraint(err)
 	case KindDestination:
 		var s destinationSpec

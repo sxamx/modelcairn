@@ -2,7 +2,7 @@
 
 [Español](hito-02-plan-foundation.es.md)
 
-Status: internal foundation reviewed; delivery item 5 remains in progress.
+Status: persistence integration implemented; delivery item 5 remains in progress.
 Recorded: 2026-09-08.
 
 ## Implemented
@@ -23,12 +23,26 @@ Recorded: 2026-09-08.
   commit disables the open secret store until it is reopened.
 - The verification clock is read after acquiring locks and reading the snapshot,
   so waiting cannot extend a token's lifetime.
+- Planning now reads the configuration revision, resource identities and versions,
+  observed absences, and secret-name catalog in one SQLite snapshot. Its operation
+  digest covers canonical desired configuration and deletion permission.
+- Applying recomputes that snapshot under the transaction, rejects stale or
+  option-changed plans, orders dependency writes before dependent-first deletions and
+  increments the global configuration revision once. A true no-op consumes its
+  token without changing the configuration revision.
+- Full export reconstructs every persisted configuration resource and applies the
+  shared redactor at the output boundary.
 
 ## Verification
 
 - New token tests pass locally: altered signatures; authenticated invalid claims;
   cross-installation/key-rotation rejection; clock boundaries; snapshot conflicts;
   rollback; no-op reuse; concurrent double consumption; expiry during snapshot.
+- Persistence integration tests cover creation and export of the documented
+  ten-resource example, stale and option-changed plans, no-op revision behavior,
+  complete dependency-ordered deletion, reference migration before dependency
+  deletion, redacted plan serialization, rollback of
+  an unsafe intermediate relation, and preservation of historical destination IDs.
 - Local `go test ./... -skip '^TestKernelReleasesLockAfterOwnerProcessDies$'`
   and `go vet ./...` pass. The excluded existing Windows test encounters an
   access-denied error when terminating its helper process.
@@ -43,10 +57,21 @@ Recorded: 2026-09-08.
 ## Integration still required
 
 This is not a completed configuration CLI or an accepted delivery item 5.
-Connect real database snapshots and canonical operation digests to the executor;
-implement multi-resource mutations, revision changes and audit within its
-transaction; add plan files, interactive confirmation, bounded input, export,
-secret commands and integration tests. Callbacks must use the supplied transaction
+Add plan files, interactive confirmation, bounded CLI input, secret commands and
+end-to-end command tests. Callbacks must use the supplied transaction
 only, never open a second database operation or re-enter SecretStore. The executor
-does not automatically build a snapshot, mutate resources or increment revisions.
-CI and end-to-end CLI QA remain part of the subsequent delivery.
+is connected through `config.Manager`; direct callers still must not construct
+unvalidated storage mutations. CI and end-to-end CLI QA remain part of the
+subsequent delivery.
+
+v1alpha1 preserves SQLite's relationship guards throughout apply. Projection
+updates omit unchanged relational columns, so ordinary metadata, status and
+capability edits remain possible. A coordinated
+relationship change or a swap between values protected by a UNIQUE constraint can
+therefore be valid as a final graph but impossible as an intermediate SQLite state;
+the transaction rejects and rolls back it. Operators can express a replacement as
+an explicit replacement with a distinct constrained value, reference migration,
+and dependency-ordered deletion, which assigns a new identity
+where deletion was requested. Supporting identity-preserving swaps requires a
+separately reviewed transition design; this foundation does not weaken persistent
+constraints or rewrite historical destination relationships.
