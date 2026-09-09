@@ -34,9 +34,9 @@ prebuilt binary because the production VM does not install Go:
 
 | Measurement | Result | Enforced limit |
 |---|---:|---:|
-| Time to `/healthz` | 108 ms | informational |
-| Average RSS | 12,028 KiB | 131,072 KiB |
-| Peak RSS | 12,028 KiB | 131,072 KiB |
+| Time to `/healthz` | 86 ms | informational |
+| Average RSS | 11,768 KiB | 131,072 KiB |
+| Peak RSS | 11,768 KiB | 131,072 KiB |
 | Process swap | 0 KiB | 0 KiB expected |
 | Stripped binary | 11,624,608 bytes | informational |
 | Configured SQLite database | 270,336 bytes | within data limit |
@@ -53,6 +53,12 @@ CI runs the same gate for five seconds to catch regressions on every change. The
 run lasts 120 seconds. Limits are explicit parameters and execution fails when they
 are exceeded. The report retains no secret values, IP, hostname, credentials,
 personal paths, or VM identifiers.
+
+The measured binary declares public commit
+`db87b3e474b6087b37fe84e89869b8dc2e3f325e`; its SHA-256 is
+`3e2eb2746fffbf7f7af765279e6a3cf9547089c451ea9f932308c5071919d41e`.
+These fingerprints make the artifact reproducible and verifiable; they are not
+credentials or private identifiers.
 
 Grouped independent closure review is the only remaining gate before accepting
 item 6 and Milestone 2.
