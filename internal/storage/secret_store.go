@@ -16,12 +16,12 @@ import (
 var secretNamePattern = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
 
 type SecretMetadata struct {
-	Name            string
-	Fingerprint     string
-	ResourceVersion int64
-	KeyVersion      int64
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	Name            string    `json:"name"`
+	Fingerprint     string    `json:"fingerprint"`
+	ResourceVersion int64     `json:"resourceVersion"`
+	KeyVersion      int64     `json:"keyVersion"`
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
 type PutSecret struct {

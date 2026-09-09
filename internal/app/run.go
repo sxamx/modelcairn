@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"golang.org/x/term"
+
 	"github.com/sxamx/modelcairn/internal/buildinfo"
 	server "github.com/sxamx/modelcairn/internal/httpserver"
 	"github.com/sxamx/modelcairn/internal/redact"
@@ -26,6 +28,10 @@ const (
 
 // Run executes the CLI and returns a process exit code.
 func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	return run(ctx, args, os.Stdin, stdout, stderr, stdinIsTerminal(os.Stdin))
+}
+
+func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
 	if len(args) == 0 {
 		printUsage(stderr)
 		return 2
@@ -37,6 +43,10 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	case "version":
 		fmt.Fprintln(stdout, buildinfo.String())
 		return 0
+	case "config":
+		return runConfig(ctx, args[1:], stdin, stdout, stderr, interactive)
+	case "secret":
+		return runSecret(ctx, args[1:], stdin, stdout, stderr, interactive)
 	case "help", "-h", "--help":
 		printUsage(stdout)
 		return 0
@@ -45,6 +55,11 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		printUsage(stderr)
 		return 2
 	}
+}
+
+func stdinIsTerminal(input io.Reader) bool {
+	file, ok := input.(*os.File)
+	return ok && term.IsTerminal(int(file.Fd()))
 }
 
 func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int {
@@ -133,5 +148,13 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  modelcairn serve [--listen address] [--shutdown-timeout duration] [--data-dir path]")
+	fmt.Fprintln(w, "  modelcairn config validate <file>")
+	fmt.Fprintln(w, "  modelcairn config plan [--data-dir path] [--allow-delete] [--out file] <file>")
+	fmt.Fprintln(w, "  modelcairn config apply [--data-dir path] [--allow-delete] [--plan file] <file>")
+	fmt.Fprintln(w, "  modelcairn config export [--data-dir path]")
+	fmt.Fprintln(w, "  modelcairn secret set [--data-dir path] [--version n] <name>")
+	fmt.Fprintln(w, "  modelcairn secret metadata [--data-dir path] [name]")
+	fmt.Fprintln(w, "  modelcairn secret rotate [--data-dir path]")
+	fmt.Fprintln(w, "  modelcairn secret delete --version n [--data-dir path] <name>")
 	fmt.Fprintln(w, "  modelcairn version")
 }

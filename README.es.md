@@ -1,6 +1,6 @@
 # ModelCairn
 
-> Estado: implementación incremental de la Fase 1; Hito 2 preparado.
+> Estado: implementación incremental de la Fase 1; Hito 2 en curso.
 > El prototipo recuperado se conserva fuera de este repositorio como referencia.
 
 [English](README.md)
@@ -44,12 +44,23 @@ ModelCairn se distribuye bajo [Apache License 2.0](LICENSE) e incluye
 
 ## Desarrollo
 
-El Hito 1 está completo y el Hito 2 está preparado. Con Go instalado:
+El Hito 1 está completo y el Hito 2 está en curso. Con Go instalado:
 
 ```sh
 go test ./...
 go run ./cmd/modelcairn serve
 ```
+
+El flujo offline de configuración también está disponible durante el desarrollo:
+
+```sh
+go run ./cmd/modelcairn config validate config.yaml
+go run ./cmd/modelcairn config plan --data-dir ./data --out plan.json config.yaml
+go run ./cmd/modelcairn config apply --data-dir ./data --plan plan.json config.yaml
+```
+
+Consulte el [contrato de CLI offline](docs/contratos/cli-v1.es.md) para conocer
+los flujos de configuración y secretos, sus protecciones y códigos de salida.
 
 El servidor de desarrollo escucha en `127.0.0.1:8080` por defecto. `/healthz`
 informa que el proceso está vivo; `/readyz` permanece no disponible hasta que la

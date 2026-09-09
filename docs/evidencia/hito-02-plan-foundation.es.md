@@ -2,7 +2,7 @@
 
 [English](hito-02-plan-foundation.md)
 
-Estado: integración de persistencia implementada; punto de entrega 5 todavía en curso.
+Estado: CLI e integración implementadas; punto de entrega 5 en verificación.
 Registro: 2026-09-08.
 
 ## Implementado
@@ -35,6 +35,10 @@ Registro: 2026-09-08.
   token sin cambiar la revisión.
 - La exportación completa reconstruye todos los recursos persistidos y aplica el
   redactor compartido al entregar la salida.
+- La CLI incorpora `config validate/plan/apply/export` y
+  `secret set/metadata/rotate/delete`. Apply automatizado exige un archivo de plan;
+  el modo interactivo conserva el bloqueo desde el plan hasta la confirmación. La
+  entrada de secretos usa una terminal sin eco o stdin acotado.
 
 ## Verificación
 
@@ -47,6 +51,16 @@ Registro: 2026-09-08.
   borrado completo por dependencias, migración de una referencia antes de borrar
   su dependencia, serialización redactada del plan, rollback de
   una relación intermedia insegura y conservación de IDs de destinos históricos.
+- Las pruebas de comandos cubren validación sin crear estado, archivo de plan
+  exclusivo, aplicación y reutilización, exportación, confirmación y cancelación,
+  plan inválido antes de abrir estado y el ciclo completo de secretos sin exponerlos.
+- La puerta local pasa `go test ./...` (salvo la prueba de finalización de procesos
+  reservada para Linux), `go vet ./...`, validación de 86 documentos y `diff --check`.
+- El binario Linux AMD64 completó en la VM representativa el ciclo de secreto,
+  validación, plan, apply, export, consulta de metadatos y rotación. El canario no
+  apareció en los artefactos ni en el directorio de datos. La medición de `plan`
+  informó RSS máximo de 13.148 KiB, cero swap y 0,02 segundos; es una medición de
+  operación individual, no una prueba de carga.
 - Pasan `go test ./... -skip '^TestKernelReleasesLockAfterOwnerProcessDies$'` y
   `go vet ./...`. La prueba existente excluida encuentra acceso denegado en Windows
   al terminar su proceso auxiliar.
@@ -60,9 +74,8 @@ Registro: 2026-09-08.
 
 ## Integración pendiente
 
-Esto no completa la CLI ni acepta el punto de entrega 5. Falta incorporar archivos
-de plan, confirmación interactiva, entrada acotada en CLI, comandos de secretos y
-pruebas de comandos de extremo a extremo. Las funciones internas deben usar solo la
+Esto todavía no acepta el punto de entrega 5. Faltan CI sobre el bloque completo y
+el QA agrupado final. Las funciones internas deben usar solo la
 transacción recibida, sin abrir operaciones de base de datos adicionales ni
 volver a entrar en SecretStore. La integración oficial pasa por `config.Manager`;
 los consumidores directos no deben construir mutaciones sin validar. CI y QA de

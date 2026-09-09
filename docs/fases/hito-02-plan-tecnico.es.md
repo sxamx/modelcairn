@@ -23,9 +23,9 @@
 
 ## Orden de entrega
 
-El punto 5 está en curso: la [base de planes y autenticación](../evidencia/hito-02-plan-foundation.es.md)
-tiene pruebas y revisión independiente; falta conectarla a las operaciones reales
-y a la CLI. No se considera un punto de entrega adicional aceptado.
+El punto 5 está en verificación: la [base de planes y autenticación](../evidencia/hito-02-plan-foundation.es.md)
+está conectada a persistencia y la CLI offline implementa configuración y secretos.
+Faltan la ejecución representativa, CI y QA agrupado para aceptarlo.
 
 1. **Ciclo de base de datos y migraciones.** Sustituir el cargador del spike por
    migraciones incrustadas y monotónicas; verificar checksums, WAL, integridad,

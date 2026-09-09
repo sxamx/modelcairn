@@ -2,7 +2,7 @@
 
 [Español](hito-02-plan-foundation.es.md)
 
-Status: persistence integration implemented; delivery item 5 remains in progress.
+Status: CLI and persistence integration implemented; delivery item 5 under verification.
 Recorded: 2026-09-08.
 
 ## Implemented
@@ -32,6 +32,10 @@ Recorded: 2026-09-08.
   token without changing the configuration revision.
 - Full export reconstructs every persisted configuration resource and applies the
   shared redactor at the output boundary.
+- The CLI provides `config validate/plan/apply/export` and
+  `secret set/metadata/rotate/delete`. Automated apply requires a plan file;
+  interactive mode retains the installation lock from planning through
+  confirmation. Secret input uses a no-echo terminal or bounded stdin.
 
 ## Verification
 
@@ -43,6 +47,16 @@ Recorded: 2026-09-08.
   complete dependency-ordered deletion, reference migration before dependency
   deletion, redacted plan serialization, rollback of
   an unsafe intermediate relation, and preservation of historical destination IDs.
+- Command tests cover validation without state creation, exclusive plan-file
+  creation, apply and reuse, export, confirmation and cancellation, invalid plans
+  before state opening, and the complete secret lifecycle without disclosure.
+- The local gate passes `go test ./...` (apart from the process-termination test
+  reserved for Linux), `go vet ./...`, validation of 86 documents, and `diff --check`.
+- The Linux AMD64 binary completed the secret, validation, plan, apply, export,
+  metadata, and rotation cycle on the representative VM. The canary did not occur
+  in artifacts or the data directory. The `plan` operation measured 13,148 KiB
+  maximum RSS, zero swaps, and 0.02 seconds; this is a single-operation measurement,
+  not a load test.
 - Local `go test ./... -skip '^TestKernelReleasesLockAfterOwnerProcessDies$'`
   and `go vet ./...` pass. The excluded existing Windows test encounters an
   access-denied error when terminating its helper process.
@@ -56,9 +70,8 @@ Recorded: 2026-09-08.
 
 ## Integration still required
 
-This is not a completed configuration CLI or an accepted delivery item 5.
-Add plan files, interactive confirmation, bounded CLI input, secret commands and
-end-to-end command tests. Callbacks must use the supplied transaction
+This is not yet an accepted delivery item 5. Full-block CI and final grouped QA
+remain. Callbacks must use the supplied transaction
 only, never open a second database operation or re-enter SecretStore. The executor
 is connected through `config.Manager`; direct callers still must not construct
 unvalidated storage mutations. CI and end-to-end CLI QA remain part of the
