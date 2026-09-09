@@ -34,9 +34,9 @@ RAM, usando un binario precompilado porque la VM de producción no instala Go:
 
 | Medida | Resultado | Límite exigido |
 |---|---:|---:|
-| Tiempo hasta `/healthz` | 108 ms | informativo |
-| RSS promedio | 12.028 KiB | 131.072 KiB |
-| RSS pico | 12.028 KiB | 131.072 KiB |
+| Tiempo hasta `/healthz` | 86 ms | informativo |
+| RSS promedio | 11.768 KiB | 131.072 KiB |
+| RSS pico | 11.768 KiB | 131.072 KiB |
 | Swap del proceso | 0 KiB | 0 KiB esperado |
 | Binario reducido | 11.624.608 bytes | informativo |
 | Base SQLite configurada | 270.336 bytes | parte del límite de datos |
@@ -53,6 +53,12 @@ CI ejecuta la misma compuerta durante cinco segundos para detectar regresiones e
 cada cambio. La VM usa 120 segundos. Los límites son parámetros explícitos y la
 ejecución falla si los supera. El informe no conserva valores secretos, IP,
 hostname, credenciales, rutas personales ni identificadores de la VM.
+
+El binario medido declara el commit público
+`db87b3e474b6087b37fe84e89869b8dc2e3f325e` y su SHA-256 es
+`3e2eb2746fffbf7f7af765279e6a3cf9547089c451ea9f932308c5071919d41e`.
+Estas huellas permiten reproducir y verificar el artefacto; no son credenciales ni
+identificadores privados.
 
 La revisión independiente agrupada del cierre es la única puerta pendiente antes
 de aceptar el punto 6 y el Hito 2.
