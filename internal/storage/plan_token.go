@@ -1,0 +1,186 @@
+package storage
+
+import (
+	"bytes"
+	"crypto/hkdf"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"sort"
+	"strings"
+	"time"
+)
+
+const planPurpose = "modelcairn/plan-token/v1"
+const maxPlanTokenBytes = 8 << 20
+
+var ErrInvalidPlan = errors.New("invalid_plan")
+var ErrPlanExpired = errors.New("plan_expired")
+
+// ObservedResource binds both existing identities and observed absences. An
+// absent resource has an empty ID and version zero.
+type ObservedResource struct {
+	Kind    ResourceKind `json:"kind"`
+	Name    string       `json:"name"`
+	ID      string       `json:"id"`
+	Version int64        `json:"version"`
+}
+
+// PlanBinding describes the snapshot and requested operation. Digest must cover
+// the desired configuration AND operation options such as permission to delete.
+type PlanBinding struct {
+	Revision int64              `json:"revision"`
+	Digest   string             `json:"digest"`
+	Observed []ObservedResource `json:"observed"`
+}
+
+type planClaims struct {
+	Version        int         `json:"version"`
+	Purpose        string      `json:"purpose"`
+	InstallationID string      `json:"installationId"`
+	KeyVersion     int64       `json:"keyVersion"`
+	Binding        PlanBinding `json:"binding"`
+	Nonce          string      `json:"nonce"`
+	IssuedAt       int64       `json:"issuedAt"`
+	ExpiresAt      int64       `json:"expiresAt"`
+}
+
+// IssuePlanToken signs a bounded, purpose-specific plan without exposing key
+// material. The caller must obtain Binding from a consistent database snapshot.
+func (s *SecretStore) IssuePlanToken(binding PlanBinding, now time.Time) (string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.unavailable {
+		return "", errKeyMaterialUnavailable
+	}
+	binding, err := canonicalBinding(binding)
+	if err != nil {
+		return "", err
+	}
+	nonce := make([]byte, 32)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", errors.New("plan_randomness_unavailable")
+	}
+	claims := planClaims{1, planPurpose, s.installationID, s.activeKeyVersion, binding,
+		base64.RawURLEncoding.EncodeToString(nonce), now.Unix(), now.Add(10 * time.Minute).Unix()}
+	payload, err := json.Marshal(claims)
+	if err != nil {
+		return "", ErrInvalidPlan
+	}
+	encoded := base64.RawURLEncoding.EncodeToString(payload)
+	if len(encoded)+44 > maxPlanTokenBytes {
+		return "", ErrInvalidPlan
+	}
+	mac, err := s.planMAC(encoded)
+	if err != nil {
+		return "", err
+	}
+	return encoded + "." + base64.RawURLEncoding.EncodeToString(mac), nil
+}
+
+// verifyPlanTokenLocked authenticates before decoding claims. Its caller holds
+// s.mu through nonce consumption and transaction commit, preventing rotation
+// between verification and application. This function alone does not authorize
+// execution: the nonce must be consumed atomically with the configuration.
+func (s *SecretStore) verifyPlanTokenLocked(token string, binding PlanBinding, now time.Time) (planClaims, error) {
+	var claims planClaims
+	if s.unavailable {
+		return claims, errKeyMaterialUnavailable
+	}
+	if len(token) > maxPlanTokenBytes {
+		return claims, ErrInvalidPlan
+	}
+	encoded, signature, ok := strings.Cut(token, ".")
+	if !ok || len(signature) != 43 {
+		return claims, ErrInvalidPlan
+	}
+	mac, err := s.planMAC(encoded)
+	if err != nil {
+		return claims, err
+	}
+	provided, err := base64.RawURLEncoding.Strict().DecodeString(signature)
+	if err != nil || !hmac.Equal(mac, provided) {
+		return claims, ErrInvalidPlan
+	}
+	payload, err := base64.RawURLEncoding.Strict().DecodeString(encoded)
+	if err != nil || json.Unmarshal(payload, &claims) != nil {
+		return planClaims{}, ErrInvalidPlan
+	}
+	canonical, err := json.Marshal(claims)
+	if err != nil || !bytes.Equal(payload, canonical) {
+		return planClaims{}, ErrInvalidPlan
+	}
+	if claims.Version != 1 || claims.Purpose != planPurpose || claims.InstallationID != s.installationID || claims.KeyVersion != s.activeKeyVersion {
+		return planClaims{}, ErrInvalidPlan
+	}
+	nonce, err := base64.RawURLEncoding.Strict().DecodeString(claims.Nonce)
+	if err != nil || len(nonce) != 32 {
+		return planClaims{}, ErrInvalidPlan
+	}
+	// Bound arithmetic by comparing against the current clock before computing
+	// expiry, so hostile signed timestamps cannot overflow duration arithmetic.
+	if claims.IssuedAt > now.Add(30*time.Second).Unix() || claims.IssuedAt < 0 || claims.ExpiresAt <= claims.IssuedAt || claims.ExpiresAt-claims.IssuedAt != 600 {
+		return planClaims{}, ErrInvalidPlan
+	}
+	if now.Unix() >= claims.ExpiresAt {
+		return planClaims{}, ErrPlanExpired
+	}
+	binding, err = canonicalBinding(binding)
+	if err != nil {
+		return planClaims{}, err
+	}
+	actual, err := canonicalBinding(claims.Binding)
+	if err != nil {
+		return planClaims{}, err
+	}
+	if actual.Digest != binding.Digest {
+		return planClaims{}, ErrInvalidPlan
+	}
+	want, _ := json.Marshal(binding)
+	got, _ := json.Marshal(actual)
+	if !bytes.Equal(want, got) {
+		return planClaims{}, &RepositoryError{Code: CodeVersionConflict}
+	}
+	return claims, nil
+}
+
+func canonicalBinding(binding PlanBinding) (PlanBinding, error) {
+	digest, err := base64.RawURLEncoding.Strict().DecodeString(binding.Digest)
+	if err != nil || len(digest) != sha256.Size || binding.Revision < 1 {
+		return PlanBinding{}, ErrInvalidPlan
+	}
+	binding.Observed = append([]ObservedResource{}, binding.Observed...)
+	sort.Slice(binding.Observed, func(i, j int) bool {
+		if binding.Observed[i].Kind == binding.Observed[j].Kind {
+			return binding.Observed[i].Name < binding.Observed[j].Name
+		}
+		return binding.Observed[i].Kind < binding.Observed[j].Kind
+	})
+	for i, item := range binding.Observed {
+		if _, ok := validKinds[item.Kind]; !ok {
+			return PlanBinding{}, ErrInvalidPlan
+		}
+		if !secretNamePattern.MatchString(item.Name) || item.Version < 0 || (item.ID == "") != (item.Version == 0) || len(item.ID) > 128 {
+			return PlanBinding{}, ErrInvalidPlan
+		}
+		if i > 0 && item.Kind == binding.Observed[i-1].Kind && item.Name == binding.Observed[i-1].Name {
+			return PlanBinding{}, ErrInvalidPlan
+		}
+	}
+	return binding, nil
+}
+
+// Caller holds the store lock; the derived key is never retained or returned.
+func (s *SecretStore) planMAC(encoded string) ([]byte, error) {
+	key, err := hkdf.Key(sha256.New, s.activeKey, []byte(s.installationID), planPurpose, 32)
+	if err != nil {
+		return nil, ErrInvalidPlan
+	}
+	defer clear(key)
+	mac := hmac.New(sha256.New, key)
+	_, _ = mac.Write([]byte(encoded))
+	return mac.Sum(nil), nil
+}
