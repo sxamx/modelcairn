@@ -35,3 +35,16 @@ prueba enlazado con SQLite y registra su tamaño y RSS pico durante la inicializ
 del esquema. Esa cifra es conservadora porque incluye el harness de pruebas de Go;
 el coste enlazado al producto se medirá otra vez cuando la persistencia forme parte
 del arranque.
+
+## Compuerta del producto del Hito 2
+
+`scripts/verify-hito2.sh` configura la instalación real de ejemplo mediante la CLI,
+comprueba el round trip canónico, un apply sin cambios, exclusión entre servicio y
+CLI y ausencia de un secreto canario. Después mide tiempo hasta `/healthz`, RSS,
+swap, tamaño del binario, SQLite y el directorio de datos. CI ejecuta una prueba de
+humo corta; el cierre del hito conserva además un informe de la VM representativa.
+
+```sh
+DURATION_SECONDS=120 OUTPUT_FILE=benchmark-results/hito-02.md \
+  bash scripts/verify-hito2.sh
+```

@@ -33,3 +33,16 @@ empty-server configuration. It also compiles a SQLite-linked test artifact and
 records its size and peak RSS during schema initialization. That SQLite number is
 a conservative spike measurement because it includes the Go test harness; the
 product-linked cost will be measured again when persistence enters startup.
+
+## Milestone 2 product gate
+
+`scripts/verify-hito2.sh` configures the real example installation through the CLI,
+checks canonical round-trip, a no-op apply, service/CLI exclusion, and absence of a
+secret canary. It then measures time to `/healthz`, RSS, swap, and binary, SQLite,
+and data-directory sizes. CI runs a short smoke gate; milestone closure also keeps
+a report from the representative VM.
+
+```sh
+DURATION_SECONDS=120 OUTPUT_FILE=benchmark-results/hito-02.md \
+  bash scripts/verify-hito2.sh
+```
