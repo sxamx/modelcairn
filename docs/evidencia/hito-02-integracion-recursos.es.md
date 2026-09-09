@@ -2,8 +2,7 @@
 
 [English](hito-02-integracion-recursos.md)
 
-Estado: compuerta integral implementada y medición representativa aprobada; QA
-agrupado pendiente. Registro: 2026-09-09.
+Estado: punto 6 y Hito 2 aceptados. Registro: 2026-09-09.
 
 ## Cobertura del cierre
 
@@ -60,5 +59,8 @@ El binario medido declara el commit público
 Estas huellas permiten reproducir y verificar el artefacto; no son credenciales ni
 identificadores privados.
 
-La revisión independiente agrupada del cierre es la única puerta pendiente antes
-de aceptar el punto 6 y el Hito 2.
+El QA agrupado detectó una brecha alta: `stderr` podía escapar del escaneo del
+canario. También encontró trazabilidad incompleta del binario, estado documental
+antiguo y dos posibles falsos positivos. Las cinco observaciones se corrigieron en
+un solo bloque; la revisión focalizada confirmó el cierre sin defectos críticos o
+altos. CI volvió a aprobar la suite completa y ambas compilaciones.

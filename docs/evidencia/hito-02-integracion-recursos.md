@@ -2,8 +2,7 @@
 
 [Español](hito-02-integracion-recursos.es.md)
 
-Status: product gate implemented and representative measurement passed; grouped
-QA pending. Recorded: 2026-09-09.
+Status: item 6 and Milestone 2 accepted. Recorded: 2026-09-09.
 
 ## Closure coverage
 
@@ -60,5 +59,8 @@ The measured binary declares public commit
 These fingerprints make the artifact reproducible and verifiable; they are not
 credentials or private identifiers.
 
-Grouped independent closure review is the only remaining gate before accepting
-item 6 and Milestone 2.
+Grouped QA found one high gap: `stderr` could escape canary scanning. It also found
+incomplete binary traceability, stale status documentation, and two possible false
+positives. All five observations were corrected as one block; focused verification
+closed them with no critical or high defects. CI then passed the complete suite and
+both cross-builds again.

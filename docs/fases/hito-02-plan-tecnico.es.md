@@ -2,7 +2,7 @@
 
 [English](hito-02-plan-tecnico.md)
 
-- Estado: implementación en curso
+- Estado: completado y aceptado el 9 de septiembre de 2026
 - Salida: configuración persistida completa sin ejecución de routing ni interfaz
   web, operable mediante CLI y pruebas
 - Prerrequisito: Hito 1 aceptado
@@ -25,8 +25,8 @@
 
 ## Orden de entrega
 
-El punto 6 está en verificación: la [compuerta integral y medición representativa](../evidencia/hito-02-integracion-recursos.es.md)
-aprobaron; falta el QA agrupado de cierre. La base del punto 5 ya está aceptada.
+Los seis puntos están aceptados. La [compuerta integral y medición representativa](../evidencia/hito-02-integracion-recursos.es.md)
+aprobaron y el QA agrupado de cierre no mantiene hallazgos críticos ni altos.
 
 1. **Ciclo de base de datos y migraciones.** Sustituir el cargador del spike por
    migraciones incrustadas y monotónicas; verificar checksums, WAL, integridad,

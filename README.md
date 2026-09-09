@@ -1,6 +1,6 @@
 # ModelCairn
 
-> Status: Phase 1 incremental implementation; Milestone 2 in progress.
+> Status: Phase 1 incremental implementation; Milestone 2 complete.
 > The recovered prototype is kept outside this repository as a reference.
 
 [Español](README.es.md)
@@ -43,7 +43,7 @@ ModelCairn is distributed under the [Apache License 2.0](LICENSE) and includes a
 
 ## Development
 
-Milestone 1 is complete and Milestone 2 is in progress. With Go installed:
+Milestones 1 and 2 are complete; Milestone 3 is next. With Go installed:
 
 ```sh
 go test ./...

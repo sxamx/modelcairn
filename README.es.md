@@ -1,6 +1,6 @@
 # ModelCairn
 
-> Estado: implementación incremental de la Fase 1; Hito 2 en curso.
+> Estado: implementación incremental de la Fase 1; Hito 2 completado.
 > El prototipo recuperado se conserva fuera de este repositorio como referencia.
 
 [English](README.md)
@@ -44,7 +44,7 @@ ModelCairn se distribuye bajo [Apache License 2.0](LICENSE) e incluye
 
 ## Desarrollo
 
-El Hito 1 está completo y el Hito 2 está en curso. Con Go instalado:
+Los Hitos 1 y 2 están completos; el Hito 3 es el siguiente. Con Go instalado:
 
 ```sh
 go test ./...
