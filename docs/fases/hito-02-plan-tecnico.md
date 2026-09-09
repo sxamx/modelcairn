@@ -23,6 +23,10 @@
 
 ## Delivery order
 
+Item 5 is in progress: the [plan and authentication foundation](../evidencia/hito-02-plan-foundation.md)
+has tests and independent review; integration with real operations and the CLI
+remains pending. This is not an additional accepted delivery item.
+
 1. **Database lifecycle and migrations.** Replace the spike schema loader with
    embedded, monotonic migrations; verify checksums, WAL, integrity, exclusive
    ownership, interrupted startup, and clean-database bootstrap.
