@@ -2,10 +2,12 @@ package storage
 
 import (
 	"bytes"
+	"context"
 	"crypto/hkdf"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -48,6 +50,29 @@ type planClaims struct {
 	ExpiresAt      int64       `json:"expiresAt"`
 }
 
+// CreatePlanToken reads and signs one consistent database snapshot while key
+// rotation is excluded. The callback must use only the supplied transaction.
+func (s *SecretStore) CreatePlanToken(ctx context.Context, now time.Time, snapshot func(*sql.Tx) (PlanBinding, error)) (string, error) {
+	if snapshot == nil {
+		return "", ErrInvalidPlan
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.unavailable {
+		return "", errKeyMaterialUnavailable
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback()
+	binding, err := snapshot(tx)
+	if err != nil {
+		return "", err
+	}
+	return s.issuePlanTokenLocked(binding, now)
+}
+
 // IssuePlanToken signs a bounded, purpose-specific plan without exposing key
 // material. The caller must obtain Binding from a consistent database snapshot.
 func (s *SecretStore) IssuePlanToken(binding PlanBinding, now time.Time) (string, error) {
@@ -56,6 +81,10 @@ func (s *SecretStore) IssuePlanToken(binding PlanBinding, now time.Time) (string
 	if s.unavailable {
 		return "", errKeyMaterialUnavailable
 	}
+	return s.issuePlanTokenLocked(binding, now)
+}
+
+func (s *SecretStore) issuePlanTokenLocked(binding PlanBinding, now time.Time) (string, error) {
 	binding, err := canonicalBinding(binding)
 	if err != nil {
 		return "", err

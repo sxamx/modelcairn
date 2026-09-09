@@ -2,7 +2,7 @@
 
 [English](hito-02-plan-foundation.md)
 
-Estado: base interna revisada; punto de entrega 5 todavía en curso.
+Estado: integración de persistencia implementada; punto de entrega 5 todavía en curso.
 Registro: 2026-09-08.
 
 ## Implementado
@@ -26,6 +26,15 @@ Registro: 2026-09-08.
   token. Un commit de resultado incierto deshabilita el almacén hasta reabrirlo.
 - El reloj se consulta después de obtener los bloqueos y leer el estado, para que
   la espera no amplíe la duración del token.
+- El plan lee en un único estado SQLite la revisión, identidades y versiones,
+  ausencias observadas y catálogo de nombres de secretos. Su hash cubre la
+  configuración deseada canónica y el permiso de borrado.
+- Apply recalcula ese estado dentro de la transacción, rechaza planes obsoletos o
+  con opciones distintas, procesa escrituras por dependencias y luego borrados
+  desde consumidores a dependencias, e incrementa una vez la revisión global. Un noop real consume el
+  token sin cambiar la revisión.
+- La exportación completa reconstruye todos los recursos persistidos y aplica el
+  redactor compartido al entregar la salida.
 
 ## Verificación
 
@@ -33,6 +42,11 @@ Registro: 2026-09-08.
   rechazo entre instalaciones y tras rotación, límites de reloj, conflictos de
   estado, rollback, reutilización, doble consumo concurrente y vencimiento durante
   la lectura del estado.
+- Las pruebas de persistencia cubren creación y exportación del ejemplo documentado
+  de diez recursos, planes obsoletos y con opciones cambiadas, revisión en noop,
+  borrado completo por dependencias, migración de una referencia antes de borrar
+  su dependencia, serialización redactada del plan, rollback de
+  una relación intermedia insegura y conservación de IDs de destinos históricos.
 - Pasan `go test ./... -skip '^TestKernelReleasesLockAfterOwnerProcessDies$'` y
   `go vet ./...`. La prueba existente excluida encuentra acceso denegado en Windows
   al terminar su proceso auxiliar.
@@ -46,12 +60,22 @@ Registro: 2026-09-08.
 
 ## Integración pendiente
 
-Esto no completa la CLI ni acepta el punto de entrega 5. Falta conectar lecturas
-reales de la base de datos y hashes canónicos al ejecutor; implementar cambios
-multirrecurso, revisión y auditoría dentro de su transacción; incorporar archivos
-de plan, confirmación interactiva, entrada acotada, exportación, comandos de
-secretos y pruebas de integración. Las funciones internas deben usar solo la
+Esto no completa la CLI ni acepta el punto de entrega 5. Falta incorporar archivos
+de plan, confirmación interactiva, entrada acotada en CLI, comandos de secretos y
+pruebas de comandos de extremo a extremo. Las funciones internas deben usar solo la
 transacción recibida, sin abrir operaciones de base de datos adicionales ni
-volver a entrar en SecretStore. El ejecutor no construye el estado observado,
-modifica recursos ni incrementa revisiones automáticamente. CI y QA de la CLI
-completa siguen pendientes para la entrega posterior.
+volver a entrar en SecretStore. La integración oficial pasa por `config.Manager`;
+los consumidores directos no deben construir mutaciones sin validar. CI y QA de
+la CLI completa siguen pendientes para la entrega posterior.
+
+v1alpha1 conserva las restricciones de relaciones de SQLite durante todo apply.
+Las proyecciones omiten las columnas relacionales que no cambian, por lo que se
+pueden editar metadatos, estado y capacidades normalmente. Un cambio coordinado
+de relaciones o un intercambio entre valores con
+restricción UNIQUE puede ser válido como grafo final, pero imposible como estado
+intermedio de SQLite; la transacción lo rechaza y revierte. Se puede expresar un
+reemplazo con un valor restringido distinto, migración de referencias y borrado
+explícito por dependencias, lo cual asigna
+una identidad nueva donde se solicitó borrar. Mantener la identidad durante esos
+intercambios requiere un diseño de transición revisado por separado; esta base no
+debilita restricciones persistentes ni reescribe relaciones históricas de destinos.
