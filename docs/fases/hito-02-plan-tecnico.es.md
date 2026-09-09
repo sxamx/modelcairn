@@ -20,12 +20,13 @@
 - Punto de entrega 4 — parsing y validación de configuración: aceptado. Incluye
   límites, modelo tipado, validación de grafo, export redactado, QA, CI y
   [medición representativa](../evidencia/hito-02-config-parser.es.md).
+- Punto de entrega 5 — CLI de plan y apply atómico: aceptado. Incluye integración
+  transaccional, CLI offline, ejecución representativa, CI y QA agrupado.
 
 ## Orden de entrega
 
-El punto 5 está en verificación: la [base de planes y autenticación](../evidencia/hito-02-plan-foundation.es.md)
-está conectada a persistencia y la CLI offline implementa configuración y secretos.
-Faltan la ejecución representativa, CI y QA agrupado para aceptarlo.
+El punto 6 es el último pendiente del Hito 2. La [base de planes y autenticación](../evidencia/hito-02-plan-foundation.es.md)
+del punto 5 ya está aceptada.
 
 1. **Ciclo de base de datos y migraciones.** Sustituir el cargador del spike por
    migraciones incrustadas y monotónicas; verificar checksums, WAL, integridad,

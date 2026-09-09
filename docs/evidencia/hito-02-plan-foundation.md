@@ -2,8 +2,8 @@
 
 [Español](hito-02-plan-foundation.es.md)
 
-Status: CLI and persistence integration implemented; delivery item 5 under verification.
-Recorded: 2026-09-08.
+Status: delivery item 5 accepted.
+Recorded: 2026-09-09.
 
 ## Implemented
 
@@ -67,15 +67,19 @@ Recorded: 2026-09-08.
 - Independent static QA found the stale-clock issue; the correction and targeted
   regression tests were reviewed and accepted. QA did not independently execute
   tests because its Windows sandbox could not establish temporary-directory ACLs.
+- Grouped CLI QA found silent truncation, unredacted metadata, incompatible plan
+  limits, imprecise terminal detection, and an incorrect conflict exit code. All
+  five defects were corrected and covered by focused tests.
+- CI for commit `ca37d12` passed formatting, vet, reachable-vulnerability checks,
+  the full suite, contracts, benchmarks, the resource budget, module verification,
+  and Linux AMD64/ARM64 builds.
 
-## Integration still required
+## Accepted conservative limit
 
-This is not yet an accepted delivery item 5. Full-block CI and final grouped QA
-remain. Callbacks must use the supplied transaction
+Callbacks must use the supplied transaction
 only, never open a second database operation or re-enter SecretStore. The executor
 is connected through `config.Manager`; direct callers still must not construct
-unvalidated storage mutations. CI and end-to-end CLI QA remain part of the
-subsequent delivery.
+unvalidated storage mutations.
 
 v1alpha1 preserves SQLite's relationship guards throughout apply. Projection
 updates omit unchanged relational columns, so ordinary metadata, status and
