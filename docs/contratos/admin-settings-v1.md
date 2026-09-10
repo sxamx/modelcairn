@@ -88,6 +88,19 @@ and revision, reject expired or consumed tokens, and consume the token atomicall
 with the settings update and audit. Failed transactions do not consume the plan.
 Provider configuration tokens cannot authorize settings updates or vice versa.
 
+The token implementation uses `modelcairn/admin-settings-plan/v1` as both the
+authenticated claim purpose and HKDF context for administrative plans. Provider
+plans retain `modelcairn/plan-token/v1`. The operation selects its expected purpose
+before MAC verification; unverified token contents never select a key. Both flows
+share the existing installation/key-version bindings, ten-minute lifetime, nonce
+table and transactional consumption. A cross-purpose rejection consumes no nonce
+and cannot reach the mutation callback. The internal `AdminSettingsService` now
+connects plan/apply to canonical persistence and atomic, field-name-only audit.
+It distinguishes desired settings from its startup snapshot; reverting to effective
+values clears restartRequired even when the resource version differs. No-op applies
+consume their token without changing the settings version or update timestamp.
+HTTP authentication/CSRF and CLI integration remain separate, unfinished work.
+
 ## Failed login audit
 
 Persist aggregate minute buckets rather than one event per rejected login. Each

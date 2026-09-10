@@ -30,6 +30,14 @@ y lo valida otra vez. Insertar revisión uno es una primitiva transaccional del
 bootstrap: quien la llama debe crear administrador y auditoría tipada en esa misma
 transacción. Ningún flujo público puede confirmar solo uno de esos registros.
 
+`UpdateAdminSettingsTx` valida spec resuelto, comprueba versión observada, actualiza
+singleton e inserta auditoría tipada `admin_settings.apply` en la transacción que
+recibe. Nombres de campos modificados provienen de settings validados, sin valores.
+No-op conserva versión y updated_at y registra la operación. El servicio debe
+componerla con `ExecuteSettingsPlan` y revertir ante cualquier error. Las regresiones
+inyectan fallo de auditoría y demuestran rollback de settings y nonce, seguido de
+reintento exitoso. El servicio público plan/apply sigue pendiente.
+
 ## Sesiones
 
 La migración 0003 revoca todas las sesiones activas anteriores antes de añadir idle_seconds:

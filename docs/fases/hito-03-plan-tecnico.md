@@ -132,8 +132,18 @@ validates it again and fails closed on missing or corrupt state. Transactional
 revision-one insertion is available for composition with the future administrator
 bootstrap and audit; it is not a standalone bootstrap. Tests cover absence,
 validation, rollback, duplicate creation, canonical round trips and corruption.
-Versioned settings updates remain pending because their plan tokens must first gain
-cryptographic purpose isolation from provider-configuration plans.
+Versioned settings updates now have cryptographic purpose isolation from provider
+plans and an internal plan/apply service. Settings, nonce consumption and audit
+commit together. Integration tests cover altered and stale plans, replay, no-op,
+startup snapshots and reverting to effective values. The complete local Go suite
+and `go vet ./...` passed for this delivery, including the process-death lock test.
+HTTP/CLI integration is not yet implemented; these tests do not prove VM acceptance.
+
+Independent review of the plan/apply block found that replay after a changed apply
+returned version conflict instead of plan_already_used. The stale-revision path now
+authenticates the token before looking up its consumed nonce. Regression tests
+assert the exact replay error and reject invalid tokens. Independent recheck found
+no further defect; the complete Go suite and static analysis pass.
 
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,

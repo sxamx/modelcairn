@@ -32,6 +32,14 @@ it again. Revision-one insertion is a transaction primitive for bootstrap: its
 caller remains responsible for creating the administrator and typed audit in that
 same transaction. No public workflow may commit only one of those records.
 
+`UpdateAdminSettingsTx` now validates the resolved spec, checks the observed version,
+updates the singleton and inserts typed `admin_settings.apply` audit within its
+caller's transaction. Changed-field names come from validated settings; values are
+excluded. No-op preserves revision and updated_at while recording the operation.
+The service must compose it with `ExecuteSettingsPlan` and roll back on any error.
+Regression tests inject an audit failure and prove both settings and nonce roll
+back, followed by successful retry. The public plan/apply service remains pending.
+
 ## Sessions
 
 Migration 0003 revokes every pre-existing live session before adding idle_seconds;
