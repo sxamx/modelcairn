@@ -142,3 +142,30 @@ func TestAdminLoginAllowsOnlyOneDerivation(t *testing.T) {
 		t.Fatalf("derivations=%d", calls.Load())
 	}
 }
+
+func TestBusyLoginRejectsBeforeWaitingForDatabase(t *testing.T) {
+	i, admin := sessionFixture(t)
+	defer i.Close()
+	settings, err := ReadAdminSettings(context.Background(), i.DB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := NewAdminLoginService(i, settings.Spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// An existing login owns the admission permit while another operation owns DB.
+	s.derive <- struct{}{}
+	defer func() { <-s.derive }()
+	tx, err := i.DB().BeginTx(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, err = s.Login(ctx, netip.MustParseAddr("192.0.2.30"), admin.Username, []byte("a secure password"))
+	if !IsLoginCode(err, LoginThrottled) {
+		t.Fatalf("queued before admission: %v", err)
+	}
+}

@@ -174,6 +174,13 @@ activity advancement, backwards clocks, reset races, audit rollback, uniform
 failure, backoff, token buckets, bounded clients and one concurrent derivation.
 A grouped security review remains before building the HTTP boundary.
 
+Subsequent review corrected login admission: the exclusive permit is acquired
+before querying SQLite and retained until the attempt finishes. This prevents
+attempts from queuing for the connection before the concurrency limit. A regression
+holds SQLite and verifies that a busy login is rejected before waiting for it.
+Session tokens are limited to 43 characters before decoding.
+HTTP integration and its review remain pending.
+
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an

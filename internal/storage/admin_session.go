@@ -314,6 +314,9 @@ func newAdminToken() (string, [sha256.Size]byte, error) {
 	return token, sha256.Sum256([]byte(token)), nil
 }
 func decodeAdminToken(token string) ([sha256.Size]byte, error) {
+	if len(token) != base64.RawURLEncoding.EncodedLen(adminTokenBytes) {
+		return [sha256.Size]byte{}, ErrAdminSessionInvalid
+	}
 	raw, err := base64.RawURLEncoding.Strict().DecodeString(token)
 	if err != nil || len(raw) != adminTokenBytes {
 		return [sha256.Size]byte{}, ErrAdminSessionInvalid

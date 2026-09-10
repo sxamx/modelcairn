@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -159,6 +160,9 @@ func TestAdminSessionAuditFailureRollsBack(t *testing.T) {
 }
 
 func TestAdminSessionRejectsMalformedCredentials(t *testing.T) {
+	if _, err := decodeAdminToken(strings.Repeat("A", 1<<20)); !errors.Is(err, ErrAdminSessionInvalid) {
+		t.Fatal("oversized token accepted")
+	}
 	i, _ := sessionFixture(t)
 	defer i.Close()
 	ctx := context.Background()
