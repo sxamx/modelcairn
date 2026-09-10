@@ -52,6 +52,19 @@ back, followed by successful retry. The public plan/apply service remains pendin
 
 ## Sessions
 
+The persistent session layer generates independent 32-byte session and CSRF values
+and stores only SHA-256 hashes. Issuance rechecks id, username and auth_version in
+the transaction after password verification, captures idle_seconds and absolute
+expiry, and commits `admin.session_create` with the row. A reset race leaves no
+valid session.
+
+Every use checks the row, revocation, current auth_version, absolute expiry and the
+captured idle policy before advancing last_seen. Clock rollback never moves
+last_seen backwards. CSRF comparison is constant-time; rotation stores only the
+current hash and one previous hash for 60 seconds. Logout authenticates session and
+CSRF, then commits revocation with `admin.session_logout`. This layer does not decide
+Origin, cookies, login admission or HTTP responses.
+
 Migration 0003 revokes every pre-existing live session before adding idle_seconds;
 their original idle policy is unknown. Historical revoked rows may retain NULL.
 Authentication rejects NULL regardless of any other field. Newly issued sessions
