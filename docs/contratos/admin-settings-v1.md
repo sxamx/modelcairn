@@ -99,7 +99,9 @@ connects plan/apply to canonical persistence and atomic, field-name-only audit.
 It distinguishes desired settings from its startup snapshot; reverting to effective
 values clears restartRequired even when the resource version differs. No-op applies
 consume their token without changing the settings version or update timestamp.
-HTTP authentication/CSRF and CLI integration remain separate, unfinished work.
+The HTTP settings integration now connects GET, plan and apply with session/CSRF,
+the origin and transport boundary, bounded bodies and resolved responses. Apply
+revalidates its session inside its own transaction. The online CLI remains pending.
 
 ## Failed login audit
 

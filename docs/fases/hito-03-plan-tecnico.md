@@ -197,6 +197,17 @@ Plan/State still require caller authentication; a plan never replaces apply-time
 authorization. Future protected mutations must use the same transaction pattern,
 without calling DB or opening nested transactions from callbacks.
 
+The server now exposes the initial administrative flow: login, session/CSRF
+recovery, logout, and settings read/plan/apply. Login accepts only JSON up to 16
+KiB with unique known fields; settings accept JSON/YAML up to 64 KiB. Cookies use
+HttpOnly, SameSite Strict, root Path and transport-dependent Secure. Responses are
+no-store and logs record route templates rather than bodies or credentials. An
+installation awaiting bootstrap exposes health and readiness without registering
+administrative routes. An integration test covers login, CSRF rotation, read,
+plan, apply, transactional audit, logout and subsequent rejection. Grouped review,
+the login aggregate decision/implementation and the remaining milestone API are
+still outstanding.
+
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an
