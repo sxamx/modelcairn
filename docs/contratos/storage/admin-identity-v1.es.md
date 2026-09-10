@@ -50,6 +50,19 @@ reintento exitoso. El servicio público plan/apply sigue pendiente.
 
 ## Sesiones
 
+La capa persistente de sesiones genera valores independientes de 32 bytes para ID
+y CSRF y guarda únicamente SHA-256. Al emitir vuelve a comprobar id, username y
+auth_version dentro de la transacción posterior a la verificación de contraseña,
+captura idle_seconds y vencimiento absoluto e inserta `admin.session_create` en la
+misma confirmación. Una carrera con reset termina sin sesión válida.
+
+Cada uso comprueba fila, revocación, auth_version vigente, vencimiento absoluto e
+inactividad capturada antes de mover last_seen. Un reloj que retrocede no mueve
+last_seen hacia atrás. CSRF se compara en tiempo constante; la rotación guarda solo
+el hash actual y el anterior durante 60 segundos. Logout verifica sesión y CSRF y
+confirma revocación y `admin.session_logout` juntos. Esta capa no decide Origin,
+cookies, admisión de login ni respuestas HTTP.
+
 La migración 0003 revoca todas las sesiones activas anteriores antes de añadir idle_seconds:
 se desconoce su política original. Filas históricas revocadas pueden mantener NULL.
 Autenticación rechaza NULL independientemente del resto. Sesiones nuevas capturan
