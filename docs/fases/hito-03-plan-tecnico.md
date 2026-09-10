@@ -145,6 +145,13 @@ authenticates the token before looking up its consumed nonce. Regression tests
 assert the exact replay error and reject invalid tokens. Independent recheck found
 no further defect; the complete Go suite and static analysis pass.
 
+The next delivery adds canonical, pre-bounded Argon2id PHC handling plus local
+bootstrap and password reset. Bootstrap commits identity, settings and audit in one
+transaction and admits one concurrent winner. Reset atomically increments
+auth_version, revokes sessions and audits. Commands accept passwords only through a
+confirmed TTY or stdin and validate settings before creating installation state.
+The HTTP login/session boundary remains unimplemented.
+
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an

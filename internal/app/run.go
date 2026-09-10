@@ -47,6 +47,8 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return runConfig(ctx, args[1:], stdin, stdout, stderr, interactive)
 	case "secret":
 		return runSecret(ctx, args[1:], stdin, stdout, stderr, interactive)
+	case "admin":
+		return runAdmin(ctx, args[1:], stdin, stdout, stderr, interactive)
 	case "help", "-h", "--help":
 		printUsage(stdout)
 		return 0
@@ -156,5 +158,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  modelcairn secret metadata [--data-dir path] [name]")
 	fmt.Fprintln(w, "  modelcairn secret rotate [--data-dir path]")
 	fmt.Fprintln(w, "  modelcairn secret delete --version n [--data-dir path] <name>")
+	fmt.Fprintln(w, "  modelcairn admin bootstrap --username name --settings file [--data-dir path]")
+	fmt.Fprintln(w, "  modelcairn admin reset-password [--data-dir path]")
 	fmt.Fprintln(w, "  modelcairn version")
 }
