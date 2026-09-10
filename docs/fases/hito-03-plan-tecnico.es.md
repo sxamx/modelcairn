@@ -189,6 +189,23 @@ Una regresión bloquea SQLite y comprueba rechazo inmediato de un login ocupado.
 Los tokens de sesión se limitan a 43 caracteres antes de decodificarlos.
 La integración HTTP y su revisión siguen pendientes.
 
+La frontera HTTP interna ya comprueba transporte, Host, origen, proxy confiable
+de un salto y cookie única; aún falta conectarla a los handlers. Los encabezados
+malformados se conservan para rechazarlos, nunca se tratan como ausentes.
+Para mutaciones HTTP de ajustes se debe usar `AdminSettingsService.ApplySession`:
+comprueba sesión vigente, auth_version y CSRF dentro de la misma transacción que
+actividad, consumo del plan, ajustes y auditoría. La identidad auditada se deriva
+de esa sesión. `Apply` queda reservado al CLI local con bloqueo de instalación.
+Una validación previa en middleware sirve para rechazar temprano, pero no autoriza
+una escritura posterior. La hora se lee después de adquirir los bloqueos.
+Si reset confirma primero, la mutación se rechaza; si la mutación confirma primero,
+reset invalida la sesión después. Los fallos revierten también actividad y nonce.
+La regresión fuerza reset mientras apply espera, y comprueba rollback por fallo de
+auditoría y reutilización del plan tras ese fallo. Plan/State todavía requieren
+autenticación del caller; un plan nunca sustituye autorización al aplicarlo.
+Reutilizar esta composición transaccional en las futuras mutaciones protegidas,
+sin llamar a DB ni abrir transacciones adicionales desde sus callbacks.
+
 El hito completo sigue pendiente: servicios de identidad/sesión,
 handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo

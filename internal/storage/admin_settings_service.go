@@ -14,8 +14,8 @@ import (
 	"github.com/sxamx/modelcairn/internal/adminsettings"
 )
 
-// AdminSettingsService is an internal application service. Its caller must
-// authenticate/authorize first. The effective snapshot is captured at startup.
+// AdminSettingsService captures effective settings at startup. HTTP mutations
+// must use ApplySession; an identity obtained earlier is not authorization.
 type AdminSettingsService struct {
 	installation *Installation
 	effective    AdminSettingsRecord
@@ -93,13 +93,41 @@ func (s *AdminSettingsService) Apply(ctx context.Context, input []byte, token st
 	if err := validateActor(actor); err != nil {
 		return AdminSettingsApplyResult{}, err
 	}
+	// This entry point is reserved for the local CLI holding the installation
+	// lock. In particular, a caller-supplied admin ID must not bypass a session.
+	if actor.Type != "cli" {
+		return AdminSettingsApplyResult{}, ErrAdminSessionInvalid
+	}
+	return s.apply(ctx, input, token, func(*sql.Tx) (Actor, error) { return actor, nil })
+}
+
+// ApplySession checks current session, auth_version and CSRF within the same
+// transaction as settings, nonce consumption and audit. Read time after waiting
+// for the key lock and database connection so queueing cannot extend a session.
+func (s *AdminSettingsService) ApplySession(ctx context.Context, input []byte, token, sessionToken, csrfToken string) (AdminSettingsApplyResult, error) {
+	return s.apply(ctx, input, token, func(tx *sql.Tx) (Actor, error) {
+		session, err := useAdminSessionTx(ctx, tx, sessionToken, csrfToken, true, time.Now())
+		if err != nil {
+			return Actor{}, err
+		}
+		return Actor{Type: "admin", ID: session.Admin.ID}, nil
+	})
+}
+
+func (s *AdminSettingsService) apply(ctx context.Context, input []byte, token string, authorize func(*sql.Tx) (Actor, error)) (AdminSettingsApplyResult, error) {
 	doc, err := adminsettings.Parse(input, adminsettings.Update)
 	if err != nil {
 		return AdminSettingsApplyResult{}, err
 	}
 	var desired adminsettings.Resolved
 	var result AdminSettingsApplyResult
+	var actor Actor
 	err = s.installation.Secrets().ExecuteSettingsPlan(ctx, token, func(tx *sql.Tx) (PlanBinding, error) {
+		var err error
+		actor, err = authorize(tx)
+		if err != nil {
+			return PlanBinding{}, err
+		}
 		_, resolved, binding, err := settingsSnapshot(ctx, tx, doc)
 		desired = resolved
 		return binding, err

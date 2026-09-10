@@ -115,6 +115,25 @@ func UseAdminSession(ctx context.Context, i *Installation, sessionToken, csrfTok
 	if i == nil {
 		return AdminSessionContext{}, errors.New("installation_required")
 	}
+	tx, err := i.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return AdminSessionContext{}, err
+	}
+	defer tx.Rollback()
+	result, err := useAdminSessionTx(ctx, tx, sessionToken, csrfToken, requireCSRF, now)
+	if err != nil {
+		return AdminSessionContext{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return AdminSessionContext{}, errors.New("admin_session_commit_failed")
+	}
+	return result, nil
+}
+
+// useAdminSessionTx keeps authorization and activity in the caller's mutation
+// transaction. Never reuse the returned identity as authorization for a later
+// transaction. Any subsequent failure must roll back the entire transaction.
+func useAdminSessionTx(ctx context.Context, tx *sql.Tx, sessionToken, csrfToken string, requireCSRF bool, now time.Time) (AdminSessionContext, error) {
 	sessionHash, err := decodeAdminToken(sessionToken)
 	if err != nil {
 		return AdminSessionContext{}, ErrAdminSessionInvalid
@@ -127,11 +146,6 @@ func UseAdminSession(ctx context.Context, i *Installation, sessionToken, csrfTok
 		}
 		csrfHash = decoded
 	}
-	tx, err := i.DB().BeginTx(ctx, nil)
-	if err != nil {
-		return AdminSessionContext{}, err
-	}
-	defer tx.Rollback()
 	row, err := readLiveSession(ctx, tx, sessionHash, now)
 	if err != nil {
 		return AdminSessionContext{}, err
@@ -150,9 +164,6 @@ func UseAdminSession(ctx context.Context, i *Installation, sessionToken, csrfTok
 	}
 	if affected, _ := result.RowsAffected(); affected != 1 {
 		return AdminSessionContext{}, ErrAdminSessionInvalid
-	}
-	if err := tx.Commit(); err != nil {
-		return AdminSessionContext{}, errors.New("admin_session_commit_failed")
 	}
 	return AdminSessionContext{Admin: row.admin, ExpiresAt: minTime(row.absoluteExpiresAt, activityAt.Add(time.Duration(row.idleSeconds)*time.Second))}, nil
 }
