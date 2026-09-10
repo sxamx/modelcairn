@@ -159,6 +159,23 @@ incrementa auth_version, revoca sesiones y audita atómicamente. Los comandos so
 aceptan contraseña por TTY confirmado o stdin y validan settings antes de crear el
 directorio de instalación. La frontera de login/sesión HTTP aún no está implementada.
 
+Revisión de identidad local: se corrigió la exposición de argumentos rechazados
+en errores de CLI y se adelantó la validación de username a la creación del estado.
+Errores del lector de contraseña usan un código fijo. Las regresiones verifican
+que un argumento con una contraseña canario no aparezca en stdout/stderr y que un
+username inválido no cree la instalación. Esto no sustituye medir Argon2id en VM.
+
+Siguiente bloque implementable: almacenamiento de sesiones, sin exponer todavía
+login HTTP. Emitir 32 bytes aleatorios para sesión y CSRF, guardar solo hashes y
+recomprobar auth_version dentro de la transacción tras verificar la contraseña.
+Capturar idleSeconds y vencimiento absoluto al emitir; rechazar antes de actualizar
+last_seen si hay revocación, expiración, versión inválida o CSRF incorrecto.
+Rotar CSRF con un solo hash anterior durante 60 segundos. Probar reset concurrente,
+rollback de auditoría y sesiones que no reviven al aumentar idleSeconds.
+La admisión de login debe envolver toda derivación real o ficticia con un único
+permiso sin cola, más los límites globales y por cliente ya especificados.
+Mantener pendiente la exposición HTTP hasta decidir la retención de login fallido.
+
 El hito completo sigue pendiente: servicios de identidad/sesión,
 handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo

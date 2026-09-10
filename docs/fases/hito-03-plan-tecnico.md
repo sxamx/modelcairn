@@ -152,6 +152,22 @@ auth_version, revokes sessions and audits. Commands accept passwords only throug
 confirmed TTY or stdin and validate settings before creating installation state.
 The HTTP login/session boundary remains unimplemented.
 
+Local identity review corrected rejected-argument disclosure in CLI errors and
+moved username validation before installation creation. Password reader errors
+use a fixed code. Regressions ensure a password canary in rejected arguments never
+appears in stdout/stderr and an invalid username creates no installation state.
+This does not replace VM measurement of Argon2id.
+
+Next implementable block: session storage before exposing HTTP login. Generate
+32 random bytes for session and CSRF values, persist only hashes and recheck
+auth_version in the transaction after password verification. Capture idleSeconds
+and absolute expiry at issuance; reject revocation, expiry, invalid auth_version
+or invalid CSRF before touching last_seen. CSRF rotation retains one previous hash
+for 60 seconds. Test concurrent reset, audit rollback and non-revival after an idle
+policy increase. Login admission must cover real and dummy derivation with one
+non-queuing permit plus the specified global/per-client limits. Keep HTTP login
+unexposed until failed-login retention is decided.
+
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an

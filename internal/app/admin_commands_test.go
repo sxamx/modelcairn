@@ -83,3 +83,31 @@ func TestAdminCLIInteractiveRequiresTerminal(t *testing.T) {
 		t.Fatalf("code=%d err=%q", code, errOut)
 	}
 }
+
+func TestAdminCLIRejectsArgumentsWithoutEchoingValues(t *testing.T) {
+	canary := "private-password-canary"
+	for _, args := range [][]string{
+		{"admin", "bootstrap", "--password=" + canary},
+		{"admin", "reset-password", "--password=" + canary},
+		{"admin", canary},
+	} {
+		code, out, errOut := runCLI(t, args, "", false)
+		if code != 2 || strings.Contains(out+errOut, canary) {
+			t.Fatalf("argument disclosure: code=%d", code)
+		}
+	}
+}
+
+func TestAdminCLIRejectsInvalidUsernameBeforeCreatingState(t *testing.T) {
+	base := t.TempDir()
+	settings := filepath.Join(base, "settings.yaml")
+	writeSettingsFixture(t, settings)
+	dataDir := filepath.Join(base, "data")
+	code, _, _ := runCLI(t, []string{"admin", "bootstrap", "--username", strings.Repeat("x", 121), "--settings", settings, "--data-dir", dataDir}, "valid password", false)
+	if code != 2 {
+		t.Fatalf("code=%d", code)
+	}
+	if _, err := os.Stat(dataDir); !os.IsNotExist(err) {
+		t.Fatal("invalid username created state")
+	}
+}
