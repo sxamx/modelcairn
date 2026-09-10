@@ -91,6 +91,27 @@ func TestResolvedAlwaysOwnsNonNilProxySlice(t *testing.T) {
 	}
 }
 
+func TestStoredJSONMustBeExactCanonicalResolvedForm(t *testing.T) {
+	v := Defaults()
+	v.PublicOrigin = "http://127.0.0.1:8080"
+	encoded, err := CanonicalJSON(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := DecodeCanonicalJSON(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, v) {
+		t.Fatal("stored round trip")
+	}
+	for _, bad := range [][]byte{bytes.Replace(encoded, []byte(`"listen"`), []byte(`"unknown"`), 1), bytes.Replace(encoded, []byte(`"trustedProxyCidrs":[]`), []byte(`"trustedProxyCidrs":null`), 1), append([]byte(" "), encoded...), append(append([]byte{}, encoded...), byte('\n'))} {
+		if _, err := DecodeCanonicalJSON(bad); err == nil {
+			t.Fatalf("accepted noncanonical: %q", bad[:min(len(bad), 80)])
+		}
+	}
+}
+
 func TestStrictParsing(t *testing.T) {
 	tests := []struct {
 		name, input, code, path string

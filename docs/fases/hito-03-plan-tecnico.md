@@ -127,6 +127,14 @@ checking its raw bound could accept oversized input. Resolution now always owns 
 non-nil proxy slice and validates patch string bounds before normalization. Focused
 regressions and the independent recheck passed; no finding remained in this block.
 
+Settings persistence now reads only the exact canonical resolved representation,
+validates it again and fails closed on missing or corrupt state. Transactional
+revision-one insertion is available for composition with the future administrator
+bootstrap and audit; it is not a standalone bootstrap. Tests cover absence,
+validation, rollback, duplicate creation, canonical round trips and corruption.
+Versioned settings updates remain pending because their plan tokens must first gain
+cryptographic purpose isolation from provider-configuration plans.
+
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an
