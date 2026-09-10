@@ -25,6 +25,11 @@ específico de settings, sin otro mecanismo de consumo. Auditoría registra vers
 y nombres de campos modificados, nunca valores. Settings efectivos son el snapshot
 validado al arrancar, en memoria, no otra fila mutable.
 
+La persistencia de runtime decodifica únicamente JSON resuelto canónico byte a byte
+y lo valida otra vez. Insertar revisión uno es una primitiva transaccional del
+bootstrap: quien la llama debe crear administrador y auditoría tipada en esa misma
+transacción. Ningún flujo público puede confirmar solo uno de esos registros.
+
 ## Sesiones
 
 La migración 0003 revoca todas las sesiones activas anteriores antes de añadir idle_seconds:

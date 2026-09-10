@@ -134,6 +134,14 @@ resolución ahora siempre posee una lista no nula y valida límites antes de nor
 Pasaron regresiones focales y la reverificación independiente; no quedó ningún
 hallazgo pendiente en este bloque.
 
+La persistencia de settings ahora lee solo la representación resuelta canónica,
+la valida nuevamente y cierra acceso ante estado ausente o corrupto. La inserción
+transaccional de revisión uno puede componerse con el futuro bootstrap de administrador
+y su auditoría; no constituye un bootstrap independiente. Las pruebas cubren ausencia,
+validación, rollback, duplicados, round trip canónico y corrupción. La actualización
+versionada queda pendiente porque sus tokens primero necesitan aislamiento
+criptográfico de propósito respecto de planes de configuración de proveedores.
+
 El hito completo sigue pendiente: servicios de identidad/sesión, migraciones de
 producción, handlers HTTP, paridad CLI, tokens, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo

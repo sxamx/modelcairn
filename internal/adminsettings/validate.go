@@ -11,6 +11,9 @@ import (
 )
 
 func Validate(v Resolved) error {
+	if v.TrustedProxyCIDRs == nil {
+		return failure(CodeInvalidStructure, "$.spec.trustedProxyCidrs")
+	}
 	if !validString(v.PublicOrigin, 2048) {
 		return failure(CodeInvalidValue, "$.spec.publicOrigin")
 	}

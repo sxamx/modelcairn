@@ -27,6 +27,11 @@ consumption mechanism. Settings update audit contains versions and changed field
 names, never values. Effective settings are the validated startup snapshot in
 process memory, not a second mutable database row.
 
+Runtime persistence decodes only byte-for-byte canonical resolved JSON and validates
+it again. Revision-one insertion is a transaction primitive for bootstrap: its
+caller remains responsible for creating the administrator and typed audit in that
+same transaction. No public workflow may commit only one of those records.
+
 ## Sessions
 
 Migration 0003 revokes every pre-existing live session before adding idle_seconds;
