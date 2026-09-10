@@ -76,7 +76,7 @@ Session durations are captured at issuance: after restart the new durations appl
 only to newly issued sessions, not to existing ones. An already expired session
 cannot become valid because an operator increases idleSeconds.
 
-The [storage draft](storage/admin-identity-v1.md) specifies a new migration
+The [storage contract](storage/admin-identity-v1.md) specifies migration 0003
 containing an `admin_settings` singleton with a version,
 validated JSON document and updated timestamp. Never edit published migrations.
 Implement GET/plan/apply settings endpoints with the existing session/CSRF policy;

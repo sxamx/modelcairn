@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
@@ -43,8 +44,54 @@ func TestInstallationBootstrapsAndRepeatedStartupIsNoop(t *testing.T) {
 	if err := second.DB().QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 2 {
-		t.Fatalf("migration count = %d, want 2", count)
+	if count != 3 {
+		t.Fatalf("migration count = %d, want 3", count)
+	}
+}
+
+func TestAdminSettingsMigrationRevokesLegacySessions(t *testing.T) {
+	ctx := context.Background()
+	db, err := OpenSQLite(ctx, filepath.Join(t.TempDir(), "upgrade.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	migrations, err := embeddedMigrations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(migrations) != 3 {
+		t.Fatalf("migration count=%d, want 3", len(migrations))
+	}
+	if err := migrateWithSet(ctx, db, migrations[:2]); err != nil {
+		t.Fatal(err)
+	}
+	now := "2026-01-01T00:00:00Z"
+	if _, err := db.ExecContext(ctx, "INSERT INTO admin_users VALUES(?,?,?,1,?,?)", "admin", "admin", "test-phc", now, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO admin_sessions(id_hash,admin_id,auth_version,csrf_hash,csrf_previous_hash,csrf_rotated_at,created_at,last_seen_at,expires_at,revoked_at) VALUES(?, 'admin', 1, ?, NULL, ?, ?, ?, ?, NULL)`, make([]byte, 32), make([]byte, 32), now, now, now, "2026-01-02T00:00:00Z"); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateWithSet(ctx, db, migrations); err != nil {
+		t.Fatal(err)
+	}
+	var revoked sql.NullString
+	var idle sql.NullInt64
+	if err := db.QueryRowContext(ctx, "SELECT revoked_at,idle_seconds FROM admin_sessions").Scan(&revoked, &idle); err != nil {
+		t.Fatal(err)
+	}
+	if !revoked.Valid || idle.Valid {
+		t.Fatalf("legacy session revoked=%v idle=%v", revoked.Valid, idle.Valid)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO admin_sessions(id_hash,admin_id,auth_version,csrf_hash,csrf_rotated_at,created_at,last_seen_at,expires_at,revoked_at,idle_seconds) VALUES(?, 'admin', 1, ?, ?, ?, ?, ?, NULL, NULL)`, bytes.Repeat([]byte{1}, 32), make([]byte, 32), now, now, now, now); err == nil {
+		t.Fatal("unrevoked session without idle policy accepted")
+	}
+	if _, err := db.ExecContext(ctx, "INSERT INTO admin_settings VALUES(1,1,'{}',?)", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := CheckSchemaCompatibility(ctx, db); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -153,7 +200,7 @@ func TestFutureMigrationFailsWithoutSchemaChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	sum := sha256.Sum256([]byte("future"))
-	if _, err := db.ExecContext(ctx, "INSERT INTO schema_migrations VALUES(3, ?, '2026-01-01T00:00:00Z')", hex.EncodeToString(sum[:])); err != nil {
+	if _, err := db.ExecContext(ctx, "INSERT INTO schema_migrations VALUES(4, ?, '2026-01-01T00:00:00Z')", hex.EncodeToString(sum[:])); err != nil {
 		t.Fatal(err)
 	}
 	if err := Migrate(ctx, db); err == nil || !strings.Contains(err.Error(), "unsupported schema version") {
@@ -192,9 +239,9 @@ func TestDriftIsRejectedBeforeAFutureMigrationCanRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Simulate a future binary containing v2. The pre-migration check must reject
-	// the drift while the synthetic v2 marker remains unapplied.
-	migrations = append(migrations, migration{version: 3, checksum: strings.Repeat("a", 64), sql: "CREATE TABLE future_marker(id INTEGER) STRICT"})
+	// Simulate a future binary containing v4. The pre-migration check must reject
+	// the drift while the synthetic v4 marker remains unapplied.
+	migrations = append(migrations, migration{version: 4, checksum: strings.Repeat("a", 64), sql: "CREATE TABLE future_marker(id INTEGER) STRICT"})
 	if err := migrateWithSet(ctx, db, migrations); err == nil {
 		t.Fatal("drifted v1 schema was accepted before v2")
 	}

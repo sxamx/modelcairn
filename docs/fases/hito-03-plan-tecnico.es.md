@@ -2,7 +2,7 @@
 
 [English](hito-03-plan-tecnico.md)
 
-Estado: borrador técnico; implementación pendiente.
+Estado: implementación iniciada; pull request en borrador.
 La [especificación administrativa](../contratos/admin-runtime-v1.es.md) concreta
 transporte, autenticación y correspondencia HTTP; sus defaults esperan validación.
 Prerrequisito: Hito 2 aceptado. Este documento organiza el alcance aprobado;
@@ -97,10 +97,12 @@ resolvió 103 referencias OpenAPI y comprobó coincidencia entre listas de campo
 No demuestra validación semántica, comportamiento HTTP ni de base de datos. El
 verificador documental habitual comprueba la lista completa de campos sin añadir
 dependencias de runtime ni afirmar validación completa de JSON Schema.
-El [borrador de almacenamiento](../contratos/storage/admin-identity-v1.es.md) define
-la migración de settings/sesiones sin modificar migraciones publicadas. Su contrato
+El [contrato de almacenamiento](../contratos/storage/admin-identity-v1.es.md) define
+la migración de settings/sesiones sin modificar migraciones anteriores. Su contrato
 SQL pasó 19 comprobaciones de actualización, límites y rollback transaccional.
-No se instala en runtime; pruebas del ejecutor Go y HTTP quedan para implementación.
+La migración 0003 se instala con el ejecutor existente; pruebas Go y del contrato
+cubren actualización secuencial, compatibilidad y rollback. Pruebas HTTP quedan
+para implementación.
 Pendientes: integración final de contratos y decisión del operador sobre retención
 del histórico de login.
 
@@ -135,5 +137,5 @@ hallazgo pendiente en este bloque.
 El hito completo sigue pendiente: servicios de identidad/sesión, migraciones de
 producción, handlers HTTP, paridad CLI, tokens, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
-actual es borrador local, no release publicado ni fusionado. El diseño permite este
+está publicado como PR #20 en borrador, no release fusionado. El diseño permite este
 relevo concreto; no implica que todo el diseño de seguridad esté aceptado.

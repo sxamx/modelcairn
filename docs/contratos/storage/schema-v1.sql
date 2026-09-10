@@ -134,7 +134,21 @@ CREATE TABLE admin_sessions (
   created_at TEXT NOT NULL,
   last_seen_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
-  revoked_at TEXT
+  revoked_at TEXT,
+  idle_seconds INTEGER CHECK (
+    (idle_seconds IS NULL AND revoked_at IS NOT NULL)
+    OR (idle_seconds IS NOT NULL AND idle_seconds BETWEEN 300 AND 86400)
+  )
+) STRICT;
+
+CREATE TABLE admin_settings (
+  singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+  resource_version INTEGER NOT NULL CHECK(resource_version > 0),
+  spec_json TEXT NOT NULL
+    CHECK(length(CAST(spec_json AS BLOB)) <= 65536)
+    CHECK(json_valid(spec_json))
+    CHECK(json_type(spec_json) = 'object'),
+  updated_at TEXT NOT NULL
 ) STRICT;
 
 CREATE TABLE agent_tokens (
