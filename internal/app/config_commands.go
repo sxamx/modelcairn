@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sxamx/modelcairn/internal/adminauth"
+	"github.com/sxamx/modelcairn/internal/adminsettings"
 	"github.com/sxamx/modelcairn/internal/config"
 	"github.com/sxamx/modelcairn/internal/storage"
 )
@@ -265,6 +267,20 @@ func writeCLIError(stderr io.Writer, err error) int {
 	}
 	if storage.IsRepositoryCode(err, storage.CodeInvalidResource) || err.Error() == "invalid_secret" || err.Error() == "input_too_large" || err.Error() == "interactive_terminal_required" {
 		code = 2
+	}
+	if errors.Is(err, adminauth.ErrInvalidPassword) || errors.Is(err, adminauth.ErrInvalidParameters) || storage.IsRepositoryCode(err, storage.CodeInvalidUsername) {
+		code = 2
+	}
+	var settingsDiagnostic *adminsettings.Error
+	if errors.As(err, &settingsDiagnostic) {
+		code = 2
+		if len(settingsDiagnostic.Diagnostics) == 0 {
+			fmt.Fprintln(stderr, "invalid_admin_settings")
+		} else {
+			first := settingsDiagnostic.Diagnostics[0]
+			fmt.Fprintf(stderr, "%s at %s\n", first.Code, first.Path)
+		}
+		return code
 	}
 	var diagnostic *config.Error
 	if errors.As(err, &diagnostic) {

@@ -32,6 +32,16 @@ it again. Revision-one insertion is a transaction primitive for bootstrap: its
 caller remains responsible for creating the administrator and typed audit in that
 same transaction. No public workflow may commit only one of those records.
 
+The local identity service now composes that bootstrap: it validates username,
+settings and password before writing, derives Argon2id before opening the write
+transaction, then commits the administrator, settings and `admin.bootstrap`
+together. Exactly one concurrent attempt may win; partially formed installations
+fail closed for offline repair. `admin reset-password` takes exclusive ownership
+through the installation lock, reads persisted Argon2id parameters, derives outside
+the transaction, then commits the password, auth_version increment, all-session
+revocation and `admin.password_reset` together. Audit failure rolls everything back.
+Passwords enter through a confirmed TTY prompt or stdin, never argv.
+
 `UpdateAdminSettingsTx` now validates the resolved spec, checks the observed version,
 updates the singleton and inserts typed `admin_settings.apply` audit within its
 caller's transaction. Changed-field names come from validated settings; values are
@@ -66,4 +76,5 @@ Before runtime acceptance additionally test concurrent bootstrap, session policy
 capture, expired-session non-revival, transactional plan/audit failures, checksum
 compatibility and a real restart through the production runner. Go lifecycle tests
 already cover sequential upgrade, checksum/schema compatibility and repeat startup;
-HTTP enforcement and installation bootstrap remain future delivery work.
+HTTP enforcement remains future work; local bootstrap and reset now cover
+concurrency, rollback and secret-safe input.

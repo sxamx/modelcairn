@@ -152,6 +152,13 @@ ante revisión obsoleta se autentica el token antes de consultar el nonce consum
 La regresión comprueba el error exacto y rechaza tokens inválidos. La reverificación
 independiente no encontró nuevos defectos; la suite Go y el análisis estático pasan.
 
+La entrega siguiente incorpora Argon2id con PHC canónico y límites validados antes
+de derivar, además de bootstrap y reset locales. Bootstrap confirma identidad,
+settings y auditoría en una transacción y tiene un único ganador concurrente. Reset
+incrementa auth_version, revoca sesiones y audita atómicamente. Los comandos solo
+aceptan contraseña por TTY confirmado o stdin y validan settings antes de crear el
+directorio de instalación. La frontera de login/sesión HTTP aún no está implementada.
+
 El hito completo sigue pendiente: servicios de identidad/sesión,
 handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo

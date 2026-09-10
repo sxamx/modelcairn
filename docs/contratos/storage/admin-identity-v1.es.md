@@ -30,6 +30,16 @@ y lo valida otra vez. Insertar revisión uno es una primitiva transaccional del
 bootstrap: quien la llama debe crear administrador y auditoría tipada en esa misma
 transacción. Ningún flujo público puede confirmar solo uno de esos registros.
 
+El servicio local de identidad ya compone ese bootstrap: valida username, settings
+y contraseña antes de escribir, deriva Argon2id antes de abrir la transacción y
+confirma administrador, settings y `admin.bootstrap` juntos. Exactamente un intento
+concurrente puede ganar; una instalación parcialmente formada se rechaza para
+reparación offline. `admin reset-password` toma propiedad exclusiva mediante el
+lock de instalación, lee los parámetros Argon2id persistidos, deriva fuera de la
+transacción y confirma contraseña, incremento de auth_version, revocación de todas
+las sesiones y `admin.password_reset` juntos. Un fallo de auditoría revierte todo.
+La contraseña llega por TTY con confirmación o por stdin, nunca por argv.
+
 `UpdateAdminSettingsTx` valida spec resuelto, comprueba versión observada, actualiza
 singleton e inserta auditoría tipada `admin_settings.apply` en la transacción que
 recibe. Nombres de campos modificados provienen de settings validados, sin valores.
@@ -64,4 +74,5 @@ Antes de aceptar runtime, probar también bootstrap concurrente, política captu
 sesiones vencidas que no reviven, fallos transaccionales de plan/auditoría,
 compatibilidad de checksum y reinicio real mediante el ejecutor de producción.
 Las pruebas Go ya cubren actualización secuencial, compatibilidad y reapertura;
-enforcement HTTP y bootstrap de instalación quedan para entregas posteriores.
+enforcement HTTP queda para entregas posteriores; bootstrap y reset locales ya
+tienen cobertura de concurrencia, rollback y entrada sin exposición del secreto.
