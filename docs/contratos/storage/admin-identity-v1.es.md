@@ -63,6 +63,15 @@ el hash actual y el anterior durante 60 segundos. Logout verifica sesión y CSRF
 confirma revocación y `admin.session_logout` juntos. Esta capa no decide Origin,
 cookies, admisión de login ni respuestas HTTP.
 
+El servicio interno de login aplica antes de Argon2id cubetas global y por IP
+confiable, backoff creciente y un mapa con máximo y vencimiento configurados. Un
+canal de capacidad uno rechaza concurrencia sin cola y cubre toda derivación real o
+ficticia. Usuario ausente y contraseña incorrecta derivan y devuelven
+`invalid_credentials`; errores de PHC o persistencia devuelven indisponibilidad.
+Después del hash, la creación transaccional vuelve a comprobar auth_version.
+Éxito limpia backoff sin rellenar cubetas. El servicio mantiene estas estructuras
+solo en memoria y todavía no crea un endpoint HTTP ni persistencia de fallos.
+
 La migración 0003 revoca todas las sesiones activas anteriores antes de añadir idle_seconds:
 se desconoce su política original. Filas históricas revocadas pueden mantener NULL.
 Autenticación rechaza NULL independientemente del resto. Sesiones nuevas capturan

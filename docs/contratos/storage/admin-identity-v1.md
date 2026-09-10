@@ -65,6 +65,15 @@ current hash and one previous hash for 60 seconds. Logout authenticates session 
 CSRF, then commits revocation with `admin.session_logout`. This layer does not decide
 Origin, cookies, login admission or HTTP responses.
 
+The internal login service applies global and trusted-client-IP token buckets,
+progressive backoff and the configured bounded/expiring client map before Argon2id.
+A capacity-one permit rejects concurrency without a queue and covers every real or
+dummy derivation. Missing users and wrong passwords both derive and return
+`invalid_credentials`; PHC or persistence errors return unavailable. Transactional
+session creation rechecks auth_version after hashing. Success clears backoff without
+refilling buckets. The service keeps this state in memory and does not yet add an
+HTTP endpoint or failed-login persistence.
+
 Migration 0003 revokes every pre-existing live session before adding idle_seconds;
 their original idle policy is unknown. Historical revoked rows may retain NULL.
 Authentication rejects NULL regardless of any other field. Newly issued sessions
