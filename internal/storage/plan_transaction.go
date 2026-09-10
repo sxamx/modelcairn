@@ -25,6 +25,21 @@ func (s *SecretStore) ExecutePlan(ctx context.Context, token string,
 
 func (s *SecretStore) executePlan(ctx context.Context, token string, clock func() time.Time,
 	snapshot func(*sql.Tx) (PlanBinding, error), apply func(*sql.Tx) error) error {
+	return s.executePlanForPurpose(ctx, planPurpose, token, clock, snapshot, apply)
+}
+
+// ExecuteSettingsPlan preserves the same locking, rollback and single-use rules
+// as ExecutePlan, but accepts only administrative settings plans.
+func (s *SecretStore) ExecuteSettingsPlan(ctx context.Context, token string,
+	snapshot func(*sql.Tx) (PlanBinding, error), apply func(*sql.Tx) error) error {
+	return s.executePlanForPurpose(ctx, settingsPlanPurpose, token, time.Now, snapshot, apply)
+}
+
+func (s *SecretStore) executePlanForPurpose(ctx context.Context, purpose, token string, clock func() time.Time,
+	snapshot func(*sql.Tx) (PlanBinding, error), apply func(*sql.Tx) error) error {
+	if !validPlanPurpose(purpose) {
+		return ErrInvalidPlan
+	}
 	if snapshot == nil || apply == nil {
 		return ErrInvalidPlan
 	}
@@ -40,12 +55,27 @@ func (s *SecretStore) executePlan(ctx context.Context, token string, clock func(
 	defer tx.Rollback()
 	binding, err := snapshot(tx)
 	if err != nil {
+		if IsRepositoryCode(err, CodeVersionConflict) {
+			claims, authErr := s.authenticatePlanTokenForPurposeLocked(purpose, token, clock())
+			if authErr != nil {
+				return authErr
+			}
+			nonce, _ := base64.RawURLEncoding.Strict().DecodeString(claims.Nonce)
+			hash := sha256.Sum256(nonce)
+			var exists int
+			if queryErr := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM consumed_plan_tokens WHERE nonce_hash=?)", hash[:]).Scan(&exists); queryErr != nil {
+				return queryErr
+			}
+			if exists != 0 {
+				return ErrPlanAlreadyUsed
+			}
+		}
 		return err
 	}
 	// Read the clock after lock acquisition and snapshot work: time spent waiting
 	// must count against the token lifetime.
 	now := clock()
-	claims, err := s.verifyPlanTokenLocked(token, binding, now)
+	claims, err := s.verifyPlanTokenForPurposeLocked(purpose, token, binding, now)
 	if err != nil {
 		if IsRepositoryCode(err, CodeVersionConflict) && claims.Nonce != "" {
 			nonce, decodeErr := base64.RawURLEncoding.Strict().DecodeString(claims.Nonce)

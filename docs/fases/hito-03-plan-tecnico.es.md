@@ -139,11 +139,21 @@ la valida nuevamente y cierra acceso ante estado ausente o corrupto. La inserci�
 transaccional de revisión uno puede componerse con el futuro bootstrap de administrador
 y su auditoría; no constituye un bootstrap independiente. Las pruebas cubren ausencia,
 validación, rollback, duplicados, round trip canónico y corrupción. La actualización
-versionada queda pendiente porque sus tokens primero necesitan aislamiento
-criptográfico de propósito respecto de planes de configuración de proveedores.
+versionada ya tiene aislamiento criptográfico de propósito respecto de planes de
+proveedores y servicio interno plan/apply. Settings, consumo del nonce y auditoría
+se confirman juntos. Las pruebas integradas cubren planes alterados y obsoletos,
+reutilización, operaciones sin cambios, captura al iniciar y retorno a valores
+efectivos. Pasaron toda la suite Go local y `go vet ./...`, incluida la prueba de
+lock tras muerte de proceso. Falta integrar HTTP/CLI; no es aceptación en VM.
 
-El hito completo sigue pendiente: servicios de identidad/sesión, migraciones de
-producción, handlers HTTP, paridad CLI, tokens, mediciones VM y aceptación integrada.
+La revisión independiente del bloque plan/apply detectó que reutilizar un plan
+aplicado devolvía conflicto de versión en lugar de plan_already_used. Se corrigió:
+ante revisión obsoleta se autentica el token antes de consultar el nonce consumido.
+La regresión comprueba el error exacto y rechaza tokens inválidos. La reverificación
+independiente no encontró nuevos defectos; la suite Go y el análisis estático pasan.
+
+El hito completo sigue pendiente: servicios de identidad/sesión,
+handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
 está publicado como PR #20 en borrador, no release fusionado. El diseño permite este
 relevo concreto; no implica que todo el diseño de seguridad esté aceptado.

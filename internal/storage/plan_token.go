@@ -17,7 +17,24 @@ import (
 )
 
 const planPurpose = "modelcairn/plan-token/v1"
+const settingsPlanPurpose = "modelcairn/admin-settings-plan/v1"
 const maxPlanTokenBytes = 8 << 20
+
+type IssuedSettingsPlan struct {
+	Token     string
+	ExpiresAt time.Time
+}
+
+// CreateSettingsPlan returns issuer-owned expiry metadata, so application
+// services never have to parse opaque tokens to build their response.
+func (s *SecretStore) CreateSettingsPlan(ctx context.Context, snapshot func(*sql.Tx) (PlanBinding, error)) (IssuedSettingsPlan, error) {
+	now := time.Now()
+	token, err := s.CreateSettingsPlanToken(ctx, now, snapshot)
+	if err != nil {
+		return IssuedSettingsPlan{}, err
+	}
+	return IssuedSettingsPlan{Token: token, ExpiresAt: time.Unix(now.Unix()+600, 0).UTC()}, nil
+}
 
 var ErrInvalidPlan = errors.New("invalid_plan")
 var ErrPlanExpired = errors.New("plan_expired")
@@ -53,6 +70,16 @@ type planClaims struct {
 // CreatePlanToken reads and signs one consistent database snapshot while key
 // rotation is excluded. The callback must use only the supplied transaction.
 func (s *SecretStore) CreatePlanToken(ctx context.Context, now time.Time, snapshot func(*sql.Tx) (PlanBinding, error)) (string, error) {
+	return s.createPlanTokenForPurpose(ctx, planPurpose, now, snapshot)
+}
+
+// CreateSettingsPlanToken signs an administrative settings snapshot using a
+// separate derived key. Callers bind the settings revision and resolved digest.
+func (s *SecretStore) CreateSettingsPlanToken(ctx context.Context, now time.Time, snapshot func(*sql.Tx) (PlanBinding, error)) (string, error) {
+	return s.createPlanTokenForPurpose(ctx, settingsPlanPurpose, now, snapshot)
+}
+
+func (s *SecretStore) createPlanTokenForPurpose(ctx context.Context, purpose string, now time.Time, snapshot func(*sql.Tx) (PlanBinding, error)) (string, error) {
 	if snapshot == nil {
 		return "", ErrInvalidPlan
 	}
@@ -70,7 +97,7 @@ func (s *SecretStore) CreatePlanToken(ctx context.Context, now time.Time, snapsh
 	if err != nil {
 		return "", err
 	}
-	return s.issuePlanTokenLocked(binding, now)
+	return s.issuePlanTokenForPurposeLocked(purpose, binding, now)
 }
 
 // IssuePlanToken signs a bounded, purpose-specific plan without exposing key
@@ -85,6 +112,13 @@ func (s *SecretStore) IssuePlanToken(binding PlanBinding, now time.Time) (string
 }
 
 func (s *SecretStore) issuePlanTokenLocked(binding PlanBinding, now time.Time) (string, error) {
+	return s.issuePlanTokenForPurposeLocked(planPurpose, binding, now)
+}
+
+func (s *SecretStore) issuePlanTokenForPurposeLocked(purpose string, binding PlanBinding, now time.Time) (string, error) {
+	if !validPlanPurpose(purpose) {
+		return "", ErrInvalidPlan
+	}
 	binding, err := canonicalBinding(binding)
 	if err != nil {
 		return "", err
@@ -93,7 +127,7 @@ func (s *SecretStore) issuePlanTokenLocked(binding PlanBinding, now time.Time) (
 	if _, err := rand.Read(nonce); err != nil {
 		return "", errors.New("plan_randomness_unavailable")
 	}
-	claims := planClaims{1, planPurpose, s.installationID, s.activeKeyVersion, binding,
+	claims := planClaims{1, purpose, s.installationID, s.activeKeyVersion, binding,
 		base64.RawURLEncoding.EncodeToString(nonce), now.Unix(), now.Add(10 * time.Minute).Unix()}
 	payload, err := json.Marshal(claims)
 	if err != nil {
@@ -103,7 +137,7 @@ func (s *SecretStore) issuePlanTokenLocked(binding PlanBinding, now time.Time) (
 	if len(encoded)+44 > maxPlanTokenBytes {
 		return "", ErrInvalidPlan
 	}
-	mac, err := s.planMAC(encoded)
+	mac, err := s.planMACForPurpose(purpose, encoded)
 	if err != nil {
 		return "", err
 	}
@@ -115,7 +149,23 @@ func (s *SecretStore) issuePlanTokenLocked(binding PlanBinding, now time.Time) (
 // between verification and application. This function alone does not authorize
 // execution: the nonce must be consumed atomically with the configuration.
 func (s *SecretStore) verifyPlanTokenLocked(token string, binding PlanBinding, now time.Time) (planClaims, error) {
+	return s.verifyPlanTokenForPurposeLocked(planPurpose, token, binding, now)
+}
+
+func (s *SecretStore) verifyPlanTokenForPurposeLocked(purpose, token string, binding PlanBinding, now time.Time) (planClaims, error) {
+	claims, err := s.authenticatePlanTokenForPurposeLocked(purpose, token, now)
+	if err != nil {
+		return planClaims{}, err
+	}
+	return verifyPlanBinding(claims, binding)
+}
+
+// Authentication alone never authorizes mutation; binding and nonce checks follow.
+func (s *SecretStore) authenticatePlanTokenForPurposeLocked(purpose, token string, now time.Time) (planClaims, error) {
 	var claims planClaims
+	if !validPlanPurpose(purpose) {
+		return claims, ErrInvalidPlan
+	}
 	if s.unavailable {
 		return claims, errKeyMaterialUnavailable
 	}
@@ -126,7 +176,7 @@ func (s *SecretStore) verifyPlanTokenLocked(token string, binding PlanBinding, n
 	if !ok || len(signature) != 43 {
 		return claims, ErrInvalidPlan
 	}
-	mac, err := s.planMAC(encoded)
+	mac, err := s.planMACForPurpose(purpose, encoded)
 	if err != nil {
 		return claims, err
 	}
@@ -142,7 +192,7 @@ func (s *SecretStore) verifyPlanTokenLocked(token string, binding PlanBinding, n
 	if err != nil || !bytes.Equal(payload, canonical) {
 		return planClaims{}, ErrInvalidPlan
 	}
-	if claims.Version != 1 || claims.Purpose != planPurpose || claims.InstallationID != s.installationID || claims.KeyVersion != s.activeKeyVersion {
+	if claims.Version != 1 || claims.Purpose != purpose || claims.InstallationID != s.installationID || claims.KeyVersion != s.activeKeyVersion {
 		return planClaims{}, ErrInvalidPlan
 	}
 	nonce, err := base64.RawURLEncoding.Strict().DecodeString(claims.Nonce)
@@ -157,7 +207,11 @@ func (s *SecretStore) verifyPlanTokenLocked(token string, binding PlanBinding, n
 	if now.Unix() >= claims.ExpiresAt {
 		return planClaims{}, ErrPlanExpired
 	}
-	binding, err = canonicalBinding(binding)
+	return claims, nil
+}
+
+func verifyPlanBinding(claims planClaims, binding PlanBinding) (planClaims, error) {
+	binding, err := canonicalBinding(binding)
 	if err != nil {
 		return planClaims{}, err
 	}
@@ -204,7 +258,19 @@ func canonicalBinding(binding PlanBinding) (PlanBinding, error) {
 
 // Caller holds the store lock; the derived key is never retained or returned.
 func (s *SecretStore) planMAC(encoded string) ([]byte, error) {
-	key, err := hkdf.Key(sha256.New, s.activeKey, []byte(s.installationID), planPurpose, 32)
+	return s.planMACForPurpose(planPurpose, encoded)
+}
+
+func validPlanPurpose(purpose string) bool {
+	return purpose == planPurpose || purpose == settingsPlanPurpose
+}
+
+// The expected purpose comes from the operation, never from unverified claims.
+func (s *SecretStore) planMACForPurpose(purpose, encoded string) ([]byte, error) {
+	if !validPlanPurpose(purpose) {
+		return nil, ErrInvalidPlan
+	}
+	key, err := hkdf.Key(sha256.New, s.activeKey, []byte(s.installationID), purpose, 32)
 	if err != nil {
 		return nil, ErrInvalidPlan
 	}

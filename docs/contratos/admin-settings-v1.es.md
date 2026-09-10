@@ -85,6 +85,19 @@ rechaza tokens vencidos o consumidos y consume el plan atómicamente con actuali
 y auditoría. Una transacción fallida no consume el plan. Un plan de proveedores no
 autoriza settings, ni a la inversa.
 
+La implementación usa `modelcairn/admin-settings-plan/v1` como propósito autenticado
+y contexto HKDF de planes administrativos. Proveedores conserva
+`modelcairn/plan-token/v1`. La operación selecciona el propósito esperado antes de
+verificar el MAC; datos sin verificar nunca eligen una clave. Ambos flujos comparten
+identidad de instalación, versión de clave, vencimiento de diez minutos, tabla de
+nonces y consumo transaccional. Un rechazo de propósito no consume nonce ni alcanza
+la escritura. El servicio interno `AdminSettingsService` ya conecta plan/apply con
+persistencia canónica y auditoría atómica que registra nombres de campos, no valores.
+Distingue settings deseados de su captura al iniciar; volver a valores efectivos
+elimina restartRequired aunque difiera la versión. Apply sin cambios consume su
+token sin cambiar versión ni fecha de actualización de settings.
+La integración HTTP con autenticación/CSRF y la CLI siguen pendientes.
+
 ## Auditoría de login fallido
 
 Propuesta: persistir agregados por minuto en lugar de un evento por intento.
