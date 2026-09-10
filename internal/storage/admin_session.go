@@ -46,6 +46,7 @@ type sessionRow struct {
 	csrfHash          []byte
 	previousHash      []byte
 	csrfRotatedAt     time.Time
+	createdAt         time.Time
 	lastSeenAt        time.Time
 	absoluteExpiresAt time.Time
 	idleSeconds       int
@@ -57,7 +58,7 @@ func CreateAdminSession(ctx context.Context, i *Installation, verified VerifiedA
 	if i == nil {
 		return AdminSessionCredentials{}, errors.New("installation_required")
 	}
-	if verified.ID == "" || verified.Username == "" || verified.AuthVersion < 1 || idleSeconds < 300 || idleSeconds > 86400 || absoluteSeconds < 300 || absoluteSeconds > 604800 {
+	if verified.ID == "" || verified.Username == "" || verified.AuthVersion < 1 || idleSeconds < 300 || idleSeconds > 86400 || absoluteSeconds < 300 || absoluteSeconds > 604800 || idleSeconds > absoluteSeconds {
 		return AdminSessionCredentials{}, ErrAdminSessionStateInvalid
 	}
 	sessionToken, sessionHash, err := newAdminToken()
@@ -87,6 +88,9 @@ func CreateAdminSession(ctx context.Context, i *Installation, verified VerifiedA
 	createdAt, e1 := time.Parse(time.RFC3339Nano, created)
 	updatedAt, e2 := time.Parse(time.RFC3339Nano, updated)
 	if e1 != nil || e2 != nil {
+		return AdminSessionCredentials{}, ErrAdminSessionStateInvalid
+	}
+	if now.Before(createdAt) {
 		return AdminSessionCredentials{}, ErrAdminSessionStateInvalid
 	}
 	stamp := now.Format(time.RFC3339Nano)
@@ -177,7 +181,15 @@ func RotateAdminSessionCSRF(ctx context.Context, i *Installation, sessionToken s
 		return AdminSessionContext{}, err
 	}
 	now = now.UTC()
-	result, err := tx.ExecContext(ctx, "UPDATE admin_sessions SET csrf_previous_hash=csrf_hash,csrf_hash=?,csrf_rotated_at=?,last_seen_at=? WHERE id_hash=? AND revoked_at IS NULL", csrfHash[:], now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano), sessionHash[:])
+	activityAt := now
+	if activityAt.Before(row.lastSeenAt) {
+		activityAt = row.lastSeenAt
+	}
+	rotationAt := activityAt
+	if rotationAt.Before(row.csrfRotatedAt) {
+		rotationAt = row.csrfRotatedAt
+	}
+	result, err := tx.ExecContext(ctx, "UPDATE admin_sessions SET csrf_previous_hash=csrf_hash,csrf_hash=?,csrf_rotated_at=?,last_seen_at=? WHERE id_hash=? AND revoked_at IS NULL", csrfHash[:], rotationAt.Format(time.RFC3339Nano), activityAt.Format(time.RFC3339Nano), sessionHash[:])
 	if err != nil {
 		return AdminSessionContext{}, errors.New("admin_session_rotate_failed")
 	}
@@ -187,7 +199,7 @@ func RotateAdminSessionCSRF(ctx context.Context, i *Installation, sessionToken s
 	if err := tx.Commit(); err != nil {
 		return AdminSessionContext{}, errors.New("admin_session_commit_failed")
 	}
-	return AdminSessionContext{Admin: row.admin, ExpiresAt: minTime(row.absoluteExpiresAt, now.Add(time.Duration(row.idleSeconds)*time.Second)), CSRFToken: csrfToken}, nil
+	return AdminSessionContext{Admin: row.admin, ExpiresAt: minTime(row.absoluteExpiresAt, activityAt.Add(time.Duration(row.idleSeconds)*time.Second)), CSRFToken: csrfToken}, nil
 }
 
 func RevokeAdminSession(ctx context.Context, i *Installation, sessionToken, csrfToken string, now time.Time) error {
@@ -234,11 +246,11 @@ func RevokeAdminSession(ctx context.Context, i *Installation, sessionToken, csrf
 
 func readLiveSession(ctx context.Context, tx *sql.Tx, idHash [sha256.Size]byte, now time.Time) (sessionRow, error) {
 	var row sessionRow
-	var rotated, last, expires, created, updated string
+	var rotated, last, expires, created, updated, sessionCreated string
 	var revoked sql.NullString
 	var idle sql.NullInt64
 	var sessionAuth, currentAuth int64
-	err := tx.QueryRowContext(ctx, `SELECT s.id_hash,u.id,u.username,s.auth_version,u.auth_version,u.created_at,u.updated_at,s.csrf_hash,s.csrf_previous_hash,s.csrf_rotated_at,s.last_seen_at,s.expires_at,s.revoked_at,s.idle_seconds FROM admin_sessions s JOIN admin_users u ON u.id=s.admin_id WHERE s.id_hash=?`, idHash[:]).Scan(&row.idHash, &row.admin.ID, &row.admin.Username, &sessionAuth, &currentAuth, &created, &updated, &row.csrfHash, &row.previousHash, &rotated, &last, &expires, &revoked, &idle)
+	err := tx.QueryRowContext(ctx, `SELECT s.id_hash,u.id,u.username,s.auth_version,u.auth_version,u.created_at,u.updated_at,s.csrf_hash,s.csrf_previous_hash,s.csrf_rotated_at,s.created_at,s.last_seen_at,s.expires_at,s.revoked_at,s.idle_seconds FROM admin_sessions s JOIN admin_users u ON u.id=s.admin_id WHERE s.id_hash=?`, idHash[:]).Scan(&row.idHash, &row.admin.ID, &row.admin.Username, &sessionAuth, &currentAuth, &created, &updated, &row.csrfHash, &row.previousHash, &rotated, &sessionCreated, &last, &expires, &revoked, &idle)
 	if errors.Is(err, sql.ErrNoRows) {
 		return row, ErrAdminSessionInvalid
 	}
@@ -259,6 +271,10 @@ func readLiveSession(ctx context.Context, tx *sql.Tx, idHash [sha256.Size]byte, 
 	if e != nil {
 		return row, ErrAdminSessionStateInvalid
 	}
+	row.createdAt, e = time.Parse(time.RFC3339Nano, sessionCreated)
+	if e != nil {
+		return row, ErrAdminSessionStateInvalid
+	}
 	row.lastSeenAt, e = time.Parse(time.RFC3339Nano, last)
 	if e != nil {
 		return row, ErrAdminSessionStateInvalid
@@ -272,7 +288,7 @@ func readLiveSession(ctx context.Context, tx *sql.Tx, idHash [sha256.Size]byte, 
 	}
 	row.idleSeconds = int(idle.Int64)
 	now = now.UTC()
-	if row.lastSeenAt.Before(row.admin.CreatedAt) || !row.absoluteExpiresAt.After(row.admin.CreatedAt) || row.csrfRotatedAt.Before(row.admin.CreatedAt) {
+	if row.createdAt.Before(row.admin.CreatedAt) || row.lastSeenAt.Before(row.createdAt) || !row.absoluteExpiresAt.After(row.createdAt) || row.csrfRotatedAt.Before(row.createdAt) {
 		return row, ErrAdminSessionStateInvalid
 	}
 	if !now.Before(row.absoluteExpiresAt) || !now.Before(row.lastSeenAt.Add(time.Duration(row.idleSeconds)*time.Second)) {
@@ -285,7 +301,7 @@ func validCSRF(row sessionRow, provided [sha256.Size]byte, now time.Time) bool {
 	if subtle.ConstantTimeCompare(row.csrfHash, provided[:]) == 1 {
 		return true
 	}
-	return len(row.previousHash) == sha256.Size && !now.After(row.csrfRotatedAt.Add(previousCSRFWindow)) && subtle.ConstantTimeCompare(row.previousHash, provided[:]) == 1
+	return len(row.previousHash) == sha256.Size && !now.Before(row.csrfRotatedAt) && !now.After(row.csrfRotatedAt.Add(previousCSRFWindow)) && subtle.ConstantTimeCompare(row.previousHash, provided[:]) == 1
 }
 
 func newAdminToken() (string, [sha256.Size]byte, error) {

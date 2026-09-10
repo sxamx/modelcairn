@@ -168,6 +168,12 @@ policy increase. Login admission must cover real and dummy derivation with one
 non-queuing permit plus the specified global/per-client limits. Keep HTTP login
 unexposed until failed-login retention is decided.
 
+The persistent session and internal login layers now implement that handoff. Tests
+cover non-persistence of bearer values, use/logout, the CSRF window, expiry without
+activity advancement, backwards clocks, reset races, audit rollback, uniform
+failure, backoff, token buckets, bounded clients and one concurrent derivation.
+A grouped security review remains before building the HTTP boundary.
+
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an

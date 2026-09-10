@@ -176,6 +176,12 @@ La admisión de login debe envolver toda derivación real o ficticia con un úni
 permiso sin cola, más los límites globales y por cliente ya especificados.
 Mantener pendiente la exposición HTTP hasta decidir la retención de login fallido.
 
+La capa de sesiones y login interno ya implementa ese relevo. Las pruebas cubren
+valores bearer no persistidos, uso y logout, ventana CSRF, expiración sin avance de
+actividad, reloj hacia atrás, carrera con reset, rollback de auditoría, respuesta
+uniforme, backoff, cubetas, límite de clientes y una única derivación concurrente.
+Falta revisión de seguridad agrupada antes de construir la frontera HTTP.
+
 El hito completo sigue pendiente: servicios de identidad/sesión,
 handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo

@@ -169,3 +169,35 @@ func TestAdminSessionRejectsMalformedCredentials(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCSRFClockRollbackDoesNotExtendPreviousWindowOrMoveActivity(t *testing.T) {
+	ctx := context.Background()
+	i, admin := sessionFixture(t)
+	defer i.Close()
+	t0 := admin.CreatedAt.Add(time.Hour)
+	credentials, err := CreateAdminSession(ctx, i, VerifiedAdmin{ID: admin.ID, Username: admin.Username, AuthVersion: 1}, 300, 3600, t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rotated, err := RotateAdminSessionCSRF(ctx, i, credentials.SessionToken, t0.Add(2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := UseAdminSession(ctx, i, credentials.SessionToken, credentials.CSRFToken, true, t0.Add(time.Minute)); !errors.Is(err, ErrAdminSessionInvalid) {
+		t.Fatalf("previous CSRF accepted before its rotation time: %v", err)
+	}
+	if _, err := RotateAdminSessionCSRF(ctx, i, credentials.SessionToken, t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	var lastSeen string
+	if err := i.DB().QueryRow("SELECT last_seen_at FROM admin_sessions").Scan(&lastSeen); err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := time.Parse(time.RFC3339Nano, lastSeen)
+	if err != nil || !parsed.Equal(t0.Add(2*time.Minute)) {
+		t.Fatalf("last_seen=%v err=%v", parsed, err)
+	}
+	if _, err := UseAdminSession(ctx, i, credentials.SessionToken, rotated.CSRFToken, true, t0.Add(time.Minute)); !errors.Is(err, ErrAdminSessionInvalid) {
+		t.Fatal("superseded token survived a backwards-clock rotation")
+	}
+}
