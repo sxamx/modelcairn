@@ -97,7 +97,23 @@ func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	logger = slog.New(redact.NewHandler(slog.NewJSONHandler(stdout, nil), installation.Secrets().Redactor()))
 	probe.Set(server.ComponentPersistence, true, "")
 	probe.Set(server.ComponentSecretStore, true, "")
-	httpServer := server.New(*address, probe, logger)
+	settings, err := storage.ReadAdminSettings(ctx, installation.DB())
+	var httpServer *http.Server
+	if storage.IsRepositoryCode(err, storage.CodeNotFound) {
+		// A fresh installation remains reachable for health checks while local
+		// bootstrap is pending; no administrative routes are exposed yet.
+		httpServer = server.New(*address, probe, logger)
+	} else if err != nil {
+		logger.Error("administrative settings unavailable", "code", storageErrorCode(err))
+		return 1
+	} else {
+		probe.Set(server.ComponentConfiguration, true, "")
+		httpServer, err = server.NewAdmin(*address, probe, logger, installation, settings.Spec)
+		if err != nil {
+			logger.Error("administrative server initialization failed", "code", "configuration_invalid")
+			return 1
+		}
+	}
 	listener, err := net.Listen("tcp", *address)
 	if err != nil {
 		logger.Error("http server bind failed", "address", *address, "error", err)

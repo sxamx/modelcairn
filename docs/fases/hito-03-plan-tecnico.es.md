@@ -206,6 +206,17 @@ autenticación del caller; un plan nunca sustituye autorización al aplicarlo.
 Reutilizar esta composición transaccional en las futuras mutaciones protegidas,
 sin llamar a DB ni abrir transacciones adicionales desde sus callbacks.
 
+El servidor ya expone el recorrido administrativo inicial: login, recuperación
+de sesión/CSRF, logout y lectura/plan/apply de ajustes. Login acepta solo JSON de
+hasta 16 KiB con campos únicos y conocidos; los ajustes aceptan JSON/YAML hasta
+64 KiB. Las cookies aplican HttpOnly, SameSite Strict, Path raíz y Secure según el
+transporte. Las respuestas son no-store y los logs registran la plantilla de ruta,
+no cuerpos ni credenciales. Una instalación aún no inicializada expone health y
+readiness sin registrar rutas administrativas, para permitir bootstrap local.
+Una prueba integrada recorre login, rotación CSRF, lectura, plan, apply, auditoría
+transaccional, logout y rechazo posterior. Falta la revisión agrupada del bloque,
+la decisión/implementación de agregados de login y el resto de la API del hito.
+
 El hito completo sigue pendiente: servicios de identidad/sesión,
 handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo

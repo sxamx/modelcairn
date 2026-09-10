@@ -2,10 +2,14 @@ package httpserver
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/sxamx/modelcairn/internal/adminsettings"
+	"github.com/sxamx/modelcairn/internal/storage"
 )
 
 const (
@@ -65,6 +69,33 @@ func (p *ReadinessProbe) snapshot() (bool, map[string]componentState) {
 }
 
 func New(address string, readiness *ReadinessProbe, logger *slog.Logger) *http.Server {
+	server, _ := newServer(address, readiness, logger, nil)
+	return server
+}
+
+// NewAdmin enables the versioned administrative API using the effective startup
+// settings. Construction fails before listening if its security boundary cannot
+// be represented exactly.
+func NewAdmin(address string, readiness *ReadinessProbe, logger *slog.Logger, installation *storage.Installation, effective adminsettings.Resolved) (*http.Server, error) {
+	if installation == nil {
+		return nil, errors.New("installation_required")
+	}
+	login, err := storage.NewAdminLoginService(installation, effective)
+	if err != nil {
+		return nil, err
+	}
+	settings, err := storage.NewAdminSettingsService(installation)
+	if err != nil {
+		return nil, err
+	}
+	boundary, err := newAdminBoundary(effective)
+	if err != nil {
+		return nil, err
+	}
+	return newServer(address, readiness, logger, &adminAPI{installation: installation, login: login, settings: settings, boundary: boundary})
+}
+
+func newServer(address string, readiness *ReadinessProbe, logger *slog.Logger, admin *adminAPI) (*http.Server, error) {
 	if readiness == nil {
 		readiness = NewReadinessProbe()
 	}
@@ -86,13 +117,16 @@ func New(address string, readiness *ReadinessProbe, logger *slog.Logger) *http.S
 		}
 		writeJSON(w, status, map[string]any{"status": state, "components": components})
 	})
+	if admin != nil {
+		admin.routes(mux)
+	}
 
 	return &http.Server{
 		Addr:              address,
 		Handler:           requestLog(logger, mux),
 		ReadHeaderTimeout: readHeaderTimeout,
 		IdleTimeout:       idleTimeout,
-	}
+	}, nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
