@@ -2,6 +2,13 @@ openapi: 3.1.0
 info:
   title: ModelCairn Administration API
   version: 1.0.0-alpha.1
+  description: |
+    Draft Milestone 3 contract. Administrative responses use Cache-Control: no-store.
+    Login and mutations require the configured exact Origin; online CLI clients
+    supply it too. Authenticated operations require session and CSRF except
+    session/me, which requires the same-origin recovery checks in admin-runtime-v1.
+    Authentication failures return 401; Origin/CSRF failures return 403 before
+    business mutations. These boundary errors apply to all protected operations.
 servers:
   - url: /api/v1/admin
 security:
@@ -28,21 +35,63 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SessionContext' }
         '401': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+        '415': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
     delete:
       operationId: deleteSession
       responses:
         '204': { description: Session revoked and cookie cleared }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
   /session/me:
     get:
       security:
         - adminSession: []
       operationId: getCurrentSession
+      description: Cookie-authenticated CSRF recovery; requires matching Origin or Sec-Fetch-Site same-origin and rejects foreign Origin.
       responses:
         '200':
           description: Current administrator
           content: { application/json: { schema: { $ref: '#/components/schemas/SessionContext' } } }
         '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /settings:
+    get:
+      operationId: getAdminSettings
+      description: Desired settings for export plus effective runtime settings; never TLS key contents.
+      responses:
+        '200':
+          description: Consistent desired and effective settings snapshot
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminSettingsState' } } }
+  /settings/plan:
+    post:
+      operationId: planAdminSettings
+      description: Resolve omitted fields from observed settings, validate and bind the normalized result to a short-lived single-use settings-purpose token.
+      requestBody: { $ref: '#/components/requestBodies/AdminSettingsUpdate' }
+      responses:
+        '200':
+          description: Validated desired settings; no persistence or restart
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminSettingsPlan' } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+  /settings/apply:
+    post:
+      operationId: applyAdminSettings
+      description: Atomically consume plan, persist desired settings and audit; effective runtime settings remain unchanged until restart.
+      parameters:
+        - $ref: '#/components/parameters/PlanToken'
+      requestBody: { $ref: '#/components/requestBodies/AdminSettingsUpdate' }
+      responses:
+        '200':
+          description: Transaction-faithful result; no-op also consumes the plan
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminSettingsApplyResult' } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
   /resources/{kind}:
     parameters:
       - $ref: '#/components/parameters/Kind'
@@ -87,15 +136,18 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '412': { $ref: '#/components/responses/Error' }
+        '428': { $ref: '#/components/responses/Error' }
     delete:
       operationId: deleteResource
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       responses:
         '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '412': { $ref: '#/components/responses/Error' }
+        '428': { $ref: '#/components/responses/Error' }
   /config/validate:
     post:
       operationId: validateConfiguration
@@ -106,6 +158,8 @@ paths:
   /config/plan:
     post:
       operationId: planConfiguration
+      parameters:
+        - { name: allowDelete, in: query, schema: { type: boolean, default: false } }
       requestBody: { $ref: '#/components/requestBodies/Configuration' }
       responses:
         '200': { $ref: '#/components/responses/Plan' }
@@ -121,7 +175,43 @@ paths:
         '200': { $ref: '#/components/responses/ApplyResult' }
         '400': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /config/export:
+    get:
+      operationId: exportConfiguration
+      responses:
+        '200':
+          description: Canonical configuration without secret values
+          content:
+            application/json:
+              schema: { $ref: '../config/modelcairn-config-v1alpha1.schema.json' }
+  /secrets:
+    get:
+      operationId: listSecretMetadata
+      parameters:
+        - { name: cursor, in: query, schema: { type: string, maxLength: 512 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        '200':
+          description: Bounded page of redacted secret metadata ordered by immutable secret id. Cursor is an opaque continuation after the last id; pages are not a cross-request snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/SecretMetadata' } }
+                  nextCursor: { type: [string, 'null'], maxLength: 512 }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /secrets/{name}:
+    get:
+      operationId: getSecretMetadata
+      parameters:
+        - $ref: '#/components/parameters/Name'
+      responses:
+        '200': { $ref: '#/components/responses/SecretMetadata' }
+        '404': { $ref: '#/components/responses/Error' }
     put:
       operationId: setSecret
       parameters:
@@ -145,7 +235,9 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/SecretMetadata' }
         '201': { $ref: '#/components/responses/SecretMetadata' }
+        '400': { $ref: '#/components/responses/Error' }
         '412': { $ref: '#/components/responses/Error' }
+        '428': { $ref: '#/components/responses/Error' }
     delete:
       operationId: deleteSecret
       parameters:
@@ -153,7 +245,11 @@ paths:
         - $ref: '#/components/parameters/IfMatch'
       responses:
         '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '412': { $ref: '#/components/responses/Error' }
+        '428': { $ref: '#/components/responses/Error' }
   /agent-tokens/{name}/issue:
     post:
       operationId: issueAgentToken
@@ -166,7 +262,8 @@ paths:
               schema:
                 type: object
                 required: [token]
-                properties: { token: { type: string, writeOnly: true } }
+                additionalProperties: false
+                properties: { token: { type: string, readOnly: true, description: One-time intentional delivery to the authenticated issuer; never logged or recoverable later. } }
         '409': { $ref: '#/components/responses/Error' }
   /agent-tokens/{name}/revoke:
     post:
@@ -214,15 +311,33 @@ components:
         type: string
         enum: [providers, provider-accounts, provider-connections, credentials, egresses, models, destinations, strategies, routes, agent-tokens]
     Name: { name: name, in: path, required: true, schema: { type: string, pattern: '^[a-z][a-z0-9-]{0,62}$' } }
-    IfMatch: { name: If-Match, in: header, required: true, schema: { type: string } }
-    IfMatchOptional: { name: If-Match, in: header, required: false, schema: { type: string } }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Single strong quoted positive resource version. Missing returns 428, malformed (including wildcard or lists) 400, stale 412.
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+    IfMatchOptional:
+      name: If-Match
+      in: header
+      required: false
+      description: Omit only when creating a new secret; replacing an existing secret requires its current strong ETag.
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
     PlanToken:
       name: X-ModelCairn-Plan-Token
       in: header
       required: true
-      description: Opaque token returned by plan; binds the desired configuration to the observed resource versions and expiry.
+      description: Opaque token returned by the matching plan endpoint; binds operation purpose, normalized desired document, observed revision and expiry. Configuration and settings tokens are not interchangeable.
       schema: { type: string, minLength: 32 }
   requestBodies:
+    AdminSettingsUpdate:
+      required: true
+      description: At most 64 KiB; resourceVersion is the observed desired settings revision. Omitted spec fields preserve their current values.
+      content:
+        application/json:
+          schema: { $ref: '../config/admin-settings-v1alpha1.schema.json#/$defs/update' }
+        application/yaml:
+          schema: { $ref: '../config/admin-settings-v1alpha1.schema.json#/$defs/update' }
     Configuration:
       required: true
       content:
@@ -231,6 +346,13 @@ components:
         application/yaml:
           schema: { $ref: '../config/modelcairn-config-v1alpha1.schema.json' }
   responses:
+    RateLimited:
+      description: Login admission denied; retry after the indicated number of seconds.
+      headers:
+        Retry-After:
+          required: true
+          schema: { type: string, pattern: '^[1-9][0-9]*$' }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
     Error:
       description: Structured error
       content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
@@ -252,6 +374,35 @@ components:
       description: Redacted result of the atomic apply
       content: { application/json: { schema: { $ref: '#/components/schemas/ApplyResult' } } }
   schemas:
+    AdminSettingsState:
+      type: object
+      additionalProperties: false
+      required: [desired, effective, restartRequired]
+      properties:
+        desired: { $ref: '../config/admin-settings-v1alpha1.schema.json#/$defs/resolved' }
+        effective: { $ref: '../config/admin-settings-v1alpha1.schema.json#/$defs/resolved' }
+        restartRequired: { type: boolean }
+    AdminSettingsPlan:
+      type: object
+      additionalProperties: false
+      required: [desired, changedFields, planToken, expiresAt]
+      properties:
+        desired: { $ref: '../config/admin-settings-v1alpha1.schema.json#/$defs/resolved' }
+        changedFields:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          items: { type: string, enum: [publicOrigin, listen, transport, trustedProxyCidrs, tlsCertificatePath, tlsPrivateKeyPath, idleSeconds, absoluteSeconds, globalAttemptsPerMinute, globalBurst, clientAttemptsPerMinute, clientBurst, maxClientEntries, clientIdleSeconds, argonMemoryKiB, argonIterations] }
+        planToken: { type: string, minLength: 32 }
+        expiresAt: { type: string, format: date-time }
+    AdminSettingsApplyResult:
+      type: object
+      additionalProperties: false
+      required: [applied, appliedAt, settings]
+      properties:
+        applied: { type: boolean, const: true }
+        appliedAt: { type: string, format: date-time }
+        settings: { $ref: '#/components/schemas/AdminSettingsState' }
     Login:
       type: object
       additionalProperties: false

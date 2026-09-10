@@ -31,6 +31,12 @@
 - [Requirements traceability](fases/fase-01-trazabilidad.md)
 - [Risks and quality gates](fases/fase-01-riesgos-y-puertas.md)
 
+## Milestone 3 drafts — not yet accepted
+
+- [Technical delivery plan](fases/hito-03-plan-tecnico.md)
+- [Administrative runtime](contratos/admin-runtime-v1.md)
+- [Settings and login audit proposal](contratos/admin-settings-v1.md)
+
 ## Decisions
 
 - [ADR-0001: product name](decisiones/0001-nombre-del-producto.md)

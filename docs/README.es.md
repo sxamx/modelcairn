@@ -31,6 +31,12 @@
 - [Trazabilidad de requisitos](fases/fase-01-trazabilidad.es.md)
 - [Riesgos y puertas de calidad](fases/fase-01-riesgos-y-puertas.es.md)
 
+## Borradores del Hito 3 — pendientes de aceptación
+
+- [Plan técnico de entrega](fases/hito-03-plan-tecnico.es.md)
+- [Ejecución administrativa](contratos/admin-runtime-v1.es.md)
+- [Propuesta de settings y auditoría](contratos/admin-settings-v1.es.md)
+
 ## Decisiones
 
 - [ADR-0001: nombre](decisiones/0001-nombre-del-producto.es.md)
