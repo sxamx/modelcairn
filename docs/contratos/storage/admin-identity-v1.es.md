@@ -1,11 +1,11 @@
-# Almacenamiento de identidad administrativa — borrador Hito 3
+# Almacenamiento de identidad administrativa — Hito 3
 
 [English](admin-identity-v1.md)
 
-El [SQL propuesto](admin-identity-v1.draft.sql) es un contrato de diseño ejecutable,
-no una migración del programa. Las migraciones publicadas 0001 y 0002 no cambian.
-Tras aceptar el diseño, incorporar la siguiente migración secuencial al ejecutor
-transaccional existente y sus verificaciones de checksum y compatibilidad.
+La migración de producción `0003_admin_settings.sql` implementa este contrato con
+el ejecutor transaccional y verificaciones de checksum/compatibilidad existentes.
+Las migraciones publicadas 0001 y 0002 no cambian. La prueba ejecutable lee 0003
+directamente para evitar que una segunda copia SQL diverja de producción.
 
 ## Configuración
 
@@ -27,7 +27,7 @@ validado al arrancar, en memoria, no otra fila mutable.
 
 ## Sesiones
 
-El borrador revoca todas las sesiones activas anteriores antes de añadir idle_seconds:
+La migración 0003 revoca todas las sesiones activas anteriores antes de añadir idle_seconds:
 se desconoce su política original. Filas históricas revocadas pueden mantener NULL.
 Autenticación rechaza NULL independientemente del resto. Sesiones nuevas capturan
 duración no nula y vencimiento absoluto desde settings efectivos; CHECK impide filas
@@ -35,8 +35,8 @@ sin revocar y sin duración. Cambiar settings no cambia la política capturada. 
 migran contraseñas ni valores bearer.
 
 Un fallo revierte revocación y DDL. Tras aplicar correctamente, las sesiones antiguas
-deben autenticarse de nuevo. Este borrador no prueba el registro de migraciones Go ni
-las comprobaciones HTTP: requieren pruebas de implementación.
+deben autenticarse de nuevo. Las pruebas Go cubren el registro de migraciones;
+las comprobaciones HTTP requieren una entrega posterior.
 
 ## Auditoría y aceptación
 
@@ -50,3 +50,5 @@ actualización desde datos previos al Hito 3, revocación, límites de settings 
 Antes de aceptar runtime, probar también bootstrap concurrente, política capturada,
 sesiones vencidas que no reviven, fallos transaccionales de plan/auditoría,
 compatibilidad de checksum y reinicio real mediante el ejecutor de producción.
+Las pruebas Go ya cubren actualización secuencial, compatibilidad y reapertura;
+enforcement HTTP y bootstrap de instalación quedan para entregas posteriores.

@@ -1,10 +1,10 @@
-// Executable draft contract; does not exercise the production Go migration runner.
+// Executable SQL contract; Go lifecycle tests exercise the production migration runner.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
 const root = path.resolve(__dirname, "../../..");
-const draft = fs.readFileSync(path.join(__dirname, "admin-identity-v1.draft.sql"), "utf8");
+const migration = fs.readFileSync(path.join(root, "internal/storage/migrations/0003_admin_settings.sql"), "utf8");
 const now = "2026-01-01T00:00:00Z";
 function seeded() {
   const db = new DatabaseSync(":memory:");
@@ -23,7 +23,7 @@ function rejects(action) { assert.throws(action); checks++; }
 const db = seeded();
 try {
   db.exec("BEGIN");
-  db.exec(draft);
+  db.exec(migration);
   db.exec("COMMIT");
   const legacy = db.prepare("SELECT revoked_at,idle_seconds FROM admin_sessions").get();
   verify(legacy.revoked_at !== null && legacy.idle_seconds === null);
@@ -49,11 +49,11 @@ try {
 const rollback = seeded();
 try {
   rollback.exec("BEGIN");
-  rollback.exec(draft);
+  rollback.exec(migration);
   rejects(() => rollback.exec("INSERT INTO admin_settings VALUES(2,1,'{}','test')"));
   rollback.exec("ROLLBACK");
   verify(rollback.prepare("SELECT revoked_at FROM admin_sessions").get().revoked_at === null);
   verify(!rollback.prepare("PRAGMA table_info(admin_sessions)").all().some(c => c.name === "idle_seconds"));
   verify(!rollback.prepare("SELECT name FROM sqlite_schema WHERE name='admin_settings'").get());
 } finally { rollback.close(); }
-console.log(`Administrative identity draft SQL: ${checks} checks passed; production runner and HTTP not tested.`);
+console.log(`Administrative identity migration SQL: ${checks} checks passed; HTTP not tested.`);

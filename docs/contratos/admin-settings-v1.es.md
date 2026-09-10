@@ -74,8 +74,8 @@ Duraciones de sesión capturadas al emitir: tras reiniciar, los nuevos valores s
 afectan sesiones nuevas. Una sesión vencida no vuelve a ser válida porque el
 operador aumente idleSeconds.
 
-El [borrador de almacenamiento](storage/admin-identity-v1.es.md) define una migración
-nueva con singleton `admin_settings`, versión, documento JSON
+El [contrato de almacenamiento](storage/admin-identity-v1.es.md) define la migración
+0003 con singleton `admin_settings`, versión, documento JSON
 validado y timestamp. No modificar migraciones publicadas. Endpoints GET/plan/apply
 de settings usan sesión/CSRF. Tokens ligados a revisión, propósito distinto y digest
 del documento deseado completamente resuelto y normalizado, incluyendo valores

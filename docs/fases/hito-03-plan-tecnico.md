@@ -2,7 +2,7 @@
 
 [Español](hito-03-plan-tecnico.es.md)
 
-Status: technical draft; implementation pending. Prerequisite: accepted Milestone 2.
+Status: implementation started; draft pull request. Prerequisite: accepted Milestone 2.
 The [runtime contract](../contratos/admin-runtime-v1.md) defines transport,
 authentication and HTTP mapping. The [settings proposal](../contratos/admin-settings-v1.md)
 defines deployment settings and login auditing. Proposed defaults need validation;
@@ -85,15 +85,17 @@ The runtime/settings contracts now capture session durations at issuance and bin
 plans to the normalized desired-document digest with atomic single-use semantics.
 These are documentation corrections, not implemented or tested runtime behavior.
 The settings structural JSON Schema and GET/plan/apply OpenAPI definitions are now
-drafted. Local validation passed 95 positive/negative schema cases, resolved 103
+drafted. Local validation passed 95 positive/negative schema cases, resolved 111
 OpenAPI references and checked agreement between settings field lists. These checks
 do not prove semantic validation, HTTP behavior or database behavior. The regular
 documentation checker now checks settings field completeness, without adding a
 runtime dependency or claiming full JSON Schema validation.
-The [identity storage draft](../contratos/storage/admin-identity-v1.md) defines the
-settings/session migration without modifying published migrations. Its executable
+The [identity storage contract](../contratos/storage/admin-identity-v1.md) defines the
+settings/session migration without modifying older migrations. Its executable
 SQL contract passed 19 checks covering upgrade, bounds and transactional rollback.
-It is not installed by the runtime; Go runner and HTTP tests remain delivery work.
+Production migration 0003 is installed by the existing runner; Go lifecycle and
+contract tests cover sequential upgrade, schema compatibility and rollback. HTTP
+tests remain delivery work.
 Remaining prerequisites: final contract integration and the operator's login-history
 retention decision.
 
@@ -103,7 +105,7 @@ The first bounded implementation delivery is now present in
 `internal/adminsettings`: the shared administrative settings decoder, omission-aware
 resolver, canonical origin normalization and pure semantic validator use the
 settings/runtime contracts and JSON Schema above. It is independent of login-history
-retention: it does not expose login, activate the draft migration or silently choose
+retention: it does not expose login or silently choose
 that policy. This is dependency ordering, not removal of a Milestone 3 requirement.
 
 Acceptance for this delivery: initial defaults versus preserved update omissions;
@@ -114,7 +116,7 @@ tests. The implementation reuses existing dependencies and keeps file accessibil
 outside pure validation, so tests need neither a VM nor real credentials. Local
 verification on 2026-09-10 passed package tests, `go vet ./...`, all Go tests except
 the process-death lock test intentionally omitted in this Windows environment, the
-19-check draft SQL contract and
+19-check migration SQL contract and
 the documentation checker. This is implementation evidence, not VM acceptance.
 A single independent review should be grouped with the completed block rather than
 repeated for each edit.
@@ -126,8 +128,8 @@ non-nil proxy slice and validates patch string bounds before normalization. Focu
 regressions and the independent recheck passed; no finding remained in this block.
 
 The complete milestone remains unfinished. Outstanding implementation includes
-identity/session services, production migrations, HTTP handlers, CLI parity, tokens,
+identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an
-explicit operator decision. The current worktree is a local draft, not a published
-or merged release. The design work now supports this concrete implementation
+explicit operator decision. The branch is published as draft PR #20, not a merged
+release. The design work now supports this concrete implementation
 handoff; it does not justify claiming the whole security design is accepted.

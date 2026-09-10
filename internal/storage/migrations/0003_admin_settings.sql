@@ -1,6 +1,5 @@
--- Draft executable contract, NOT an installed runtime migration.
--- Apply after the published migrations, inside the migration runner transaction.
--- Existing sessions have no captured idle policy: revoke rather than guess it.
+-- Milestone 3: versioned administrative settings and captured session idle policy.
+-- Existing sessions predate that policy, so revoke them instead of guessing it.
 UPDATE admin_sessions
 SET revoked_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 WHERE revoked_at IS NULL;
