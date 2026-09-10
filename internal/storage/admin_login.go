@@ -83,6 +83,17 @@ func (s *AdminLoginService) Login(ctx context.Context, client netip.Addr, userna
 	if retry, ok := s.admission.allow(client, now); !ok {
 		return AdminSessionCredentials{}, &LoginError{Code: LoginThrottled, RetryAfter: retry}
 	}
+	if ctx.Err() != nil {
+		return AdminSessionCredentials{}, &LoginError{Code: LoginUnavailable}
+	}
+	// Bound the entire attempt before waiting for the single SQLite connection.
+	// Otherwise concurrent requests can queue behind persistence before admission.
+	select {
+	case s.derive <- struct{}{}:
+	default:
+		return AdminSessionCredentials{}, &LoginError{Code: LoginThrottled, RetryAfter: time.Second}
+	}
+	defer func() { <-s.derive }()
 	var verified VerifiedAdmin
 	var phc string
 	err := s.installation.DB().QueryRowContext(ctx, "SELECT id,username,password_phc,auth_version FROM admin_users WHERE username=?", username).Scan(&verified.ID, &verified.Username, &phc, &verified.AuthVersion)
@@ -94,17 +105,10 @@ func (s *AdminLoginService) Login(ctx context.Context, client netip.Addr, userna
 			return AdminSessionCredentials{}, &LoginError{Code: LoginUnavailable}
 		}
 	}
-	select {
-	case <-ctx.Done():
+	if ctx.Err() != nil {
 		return AdminSessionCredentials{}, &LoginError{Code: LoginUnavailable}
-	case s.derive <- struct{}{}:
-	default:
-		return AdminSessionCredentials{}, &LoginError{Code: LoginThrottled, RetryAfter: time.Second}
 	}
-	ok, err := func() (bool, error) {
-		defer func() { <-s.derive }()
-		return s.verify(password, phc)
-	}()
+	ok, err := s.verify(password, phc)
 	if err != nil {
 		return AdminSessionCredentials{}, &LoginError{Code: LoginUnavailable}
 	}

@@ -182,6 +182,13 @@ actividad, reloj hacia atrás, carrera con reset, rollback de auditoría, respue
 uniforme, backoff, cubetas, límite de clientes y una única derivación concurrente.
 Falta revisión de seguridad agrupada antes de construir la frontera HTTP.
 
+La revisión posterior corrigió la admisión de login: el permiso exclusivo ahora
+se adquiere antes de consultar SQLite y se mantiene hasta terminar el intento.
+Esto evita acumular intentos esperando la conexión antes del límite de concurrencia.
+Una regresión bloquea SQLite y comprueba rechazo inmediato de un login ocupado.
+Los tokens de sesión se limitan a 43 caracteres antes de decodificarlos.
+La integración HTTP y su revisión siguen pendientes.
+
 El hito completo sigue pendiente: servicios de identidad/sesión,
 handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
