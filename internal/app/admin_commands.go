@@ -27,23 +27,27 @@ func runAdmin(ctx context.Context, args []string, stdin io.Reader, stdout, stder
 	case "reset-password":
 		return runAdminResetPassword(ctx, args[1:], stdin, stdout, stderr, interactive)
 	default:
-		fmt.Fprintf(stderr, "unknown admin command %q\n", args[0])
+		fmt.Fprintln(stderr, "unknown admin command")
 		return 2
 	}
 }
 
 func runAdminBootstrap(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
 	flags := flag.NewFlagSet("admin bootstrap", flag.ContinueOnError)
-	flags.SetOutput(stderr)
+	flags.SetOutput(io.Discard)
 	dataDir := flags.String("data-dir", defaultDataDirectory(), "private ModelCairn data directory")
 	username := flags.String("username", "", "initial administrator username")
 	settingsPath := flags.String("settings", "", "initial AdminSettings YAML or JSON file")
 	if err := flags.Parse(args); err != nil {
+		fmt.Fprintln(stderr, "invalid admin bootstrap arguments; passwords must use terminal or stdin")
 		return 2
 	}
 	if flags.NArg() != 0 || *username == "" || *settingsPath == "" {
 		fmt.Fprintln(stderr, "usage: modelcairn admin bootstrap --username name --settings file [--data-dir path]")
 		return 2
+	}
+	if err := storage.ValidateAdminUsername(*username); err != nil {
+		return writeCLIError(stderr, err)
 	}
 	spec, err := readInitialAdminSettings(*settingsPath)
 	if err != nil {
@@ -68,9 +72,10 @@ func runAdminBootstrap(ctx context.Context, args []string, stdin io.Reader, stdo
 
 func runAdminResetPassword(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
 	flags := flag.NewFlagSet("admin reset-password", flag.ContinueOnError)
-	flags.SetOutput(stderr)
+	flags.SetOutput(io.Discard)
 	dataDir := flags.String("data-dir", defaultDataDirectory(), "private ModelCairn data directory")
 	if err := flags.Parse(args); err != nil {
+		fmt.Fprintln(stderr, "invalid admin reset-password arguments; passwords must use terminal or stdin")
 		return 2
 	}
 	if flags.NArg() != 0 {
@@ -122,7 +127,7 @@ func readPasswordInput(input io.Reader, stderr io.Writer, interactive, confirm b
 		fmt.Fprintln(stderr)
 		if err != nil {
 			clear(value)
-			return nil, err
+			return nil, errors.New("password_input_unavailable")
 		}
 		if confirm {
 			fmt.Fprint(stderr, "Confirm password: ")
@@ -144,7 +149,7 @@ func readPasswordInput(input io.Reader, stderr io.Writer, interactive, confirm b
 	value, err := io.ReadAll(io.LimitReader(input, adminauth.MaxPasswordBytes+3))
 	if err != nil {
 		clear(value)
-		return nil, err
+		return nil, errors.New("password_input_unavailable")
 	}
 	value = bytes.TrimSuffix(value, []byte("\n"))
 	value = bytes.TrimSuffix(value, []byte("\r"))

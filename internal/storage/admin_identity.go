@@ -25,7 +25,7 @@ type AdminIdentity struct {
 	UpdatedAt   time.Time
 }
 
-func validateUsername(username string) error {
+func ValidateAdminUsername(username string) error {
 	if !utf8.ValidString(username) || utf8.RuneCountInString(username) < 1 || utf8.RuneCountInString(username) > 120 {
 		return &RepositoryError{Code: CodeInvalidUsername}
 	}
@@ -42,7 +42,7 @@ func BootstrapAdmin(ctx context.Context, i *Installation, username string, passw
 	if i == nil {
 		return AdminIdentity{}, AdminSettingsRecord{}, errors.New("installation_required")
 	}
-	if err := validateUsername(username); err != nil {
+	if err := ValidateAdminUsername(username); err != nil {
 		return AdminIdentity{}, AdminSettingsRecord{}, err
 	}
 	if err := adminsettings.Validate(spec); err != nil {
