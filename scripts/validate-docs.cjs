@@ -46,4 +46,13 @@ if (schema.$defs.tombstone.properties.metadata.$ref !== "#/$defs/tombstoneMetada
   throw new Error("Absent resources must use tombstone metadata");
 }
 
-console.log(`Documentation contracts valid: ${markdownFiles.length} Markdown files, JSON Schema parsed.`);
+const settingsSchema = JSON.parse(fs.readFileSync(path.join(root, "docs", "contratos", "config", "admin-settings-v1alpha1.schema.json"), "utf8"));
+const settingsFields = Object.keys(settingsSchema.$defs.spec.properties).sort();
+const resolvedFields = [...settingsSchema.$defs.resolved.allOf[1].properties.spec.required].sort();
+if (JSON.stringify(settingsFields) !== JSON.stringify(resolvedFields)) {
+  throw new Error("Resolved settings must require every settings field");
+}
+for (const definition of ["initial", "update", "resolved"]) {
+  if (!settingsSchema.$defs[definition]) throw new Error(`Missing settings definition: ${definition}`);
+}
+console.log(`Documentation links valid: ${markdownFiles.length} Markdown files; configuration/settings schemas parsed and structural invariants checked (not full schema or runtime validation).`);

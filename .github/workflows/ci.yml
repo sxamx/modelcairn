@@ -29,6 +29,7 @@ jobs:
         run: |
           node scripts/validate-docs.cjs
           node docs/contratos/storage/schema-v1.contract.test.cjs
+          node docs/contratos/storage/admin-identity-v1.contract.test.cjs
       - name: Benchmark smoke test
         run: go test -run '^$' -bench '^BenchmarkHealthz$' -benchtime=100x ./internal/httpserver
       - name: Empty-server resource budget smoke test

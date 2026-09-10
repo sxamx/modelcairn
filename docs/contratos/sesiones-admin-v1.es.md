@@ -8,13 +8,17 @@
 - Contraseña mínima de 12 caracteres, sin máximo artificial menor de 1024 bytes;
   se procesa como UTF-8 y se almacena en formato PHC con Argon2id.
 - Respuesta de login uniforme para usuario inexistente y contraseña incorrecta.
-- Rate limit por origen y global, con espera creciente; nunca bloqueo permanente que
+- Rate limit por IP de cliente confiable y global, con espera creciente (no por
+  cabecera Origin del navegador); nunca bloqueo permanente que
   permita denegación de servicio trivial.
 - El ID de sesión contiene 32 bytes aleatorios; la base guarda solo su hash.
 - Login responde un `SessionContext` con administrador, expiración y token CSRF;
   `/session/me` permite obtener un token CSRF nuevo después de recargar la SPA.
 
 ## Cookie y CSRF
+
+La [especificación administrativa](admin-runtime-v1.es.md) define confianza en
+proxies, Origin, autenticación acotada y la excepción de recuperación de sesión.
 
 - Cookie `mc_session`: `HttpOnly`, `SameSite=Strict`, `Path=/`, sin `Domain`.
 - `Secure` es obligatorio cuando el acceso usa HTTPS. Fuera de localhost, el
@@ -26,7 +30,9 @@
   rota al iniciar sesión, al consultar `/session/me` y al cambiar privilegios. Para
   no romper otra pestaña durante una recarga, el hash anterior se acepta durante
   una ventana máxima de 60 segundos.
-  No se aceptan mutaciones GET.
+  No se aceptan mutaciones de recursos de negocio mediante GET. `/session/me`
+  requiere explícitamente cookie y comprobaciones de mismo origen de la
+  especificación administrativa para poder recuperar CSRF sin conocerlo antes.
 - CORS administrativo deshabilitado por defecto. Una futura excepción requiere
   allowlist exacta, nunca `*` con credenciales.
 
