@@ -181,6 +181,22 @@ holds SQLite and verifies that a busy login is rejected before waiting for it.
 Session tokens are limited to 43 characters before decoding.
 HTTP integration and its review remain pending.
 
+The internal HTTP boundary now checks transport, Host, origin, trusted single-hop
+proxy and unique session cookie; handler wiring remains outstanding. Malformed
+headers remain visible for rejection rather than being treated as absent.
+HTTP settings mutations must use `AdminSettingsService.ApplySession`: it checks
+the live session, auth_version and CSRF in the same transaction as activity, plan
+consumption, settings and audit. The audit identity comes from that session.
+`Apply` is reserved for the local CLI holding the installation lock. Earlier
+middleware validation can reject early but cannot authorize a later write. Time
+is read after acquiring locks. If reset commits first, the mutation is rejected;
+if mutation commits first, reset subsequently invalidates its session. Failures
+also roll back activity and nonce consumption. Regression coverage forces reset
+while apply waits, and checks audit-failure rollback and subsequent plan reuse.
+Plan/State still require caller authentication; a plan never replaces apply-time
+authorization. Future protected mutations must use the same transaction pattern,
+without calling DB or opening nested transactions from callbacks.
+
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an
