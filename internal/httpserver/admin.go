@@ -25,6 +25,7 @@ type adminAPI struct {
 	login         *storage.AdminLoginService
 	settings      *storage.AdminSettingsService
 	configuration *config.Manager
+	repository    *storage.Repository
 	boundary      adminBoundary
 }
 
@@ -64,6 +65,10 @@ func (a *adminAPI) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/admin/config/plan", a.planConfiguration)
 	mux.HandleFunc("POST /api/v1/admin/config/apply", a.applyConfiguration)
 	mux.HandleFunc("GET /api/v1/admin/config/export", a.exportConfiguration)
+	mux.HandleFunc("GET /api/v1/admin/resources/{kind}", a.listResources)
+	mux.HandleFunc("GET /api/v1/admin/resources/{kind}/{name}", a.getResource)
+	mux.HandleFunc("GET /api/v1/admin/secrets", a.listSecrets)
+	mux.HandleFunc("GET /api/v1/admin/secrets/{name}", a.getSecret)
 }
 
 func (a *adminAPI) createSession(w http.ResponseWriter, r *http.Request) {

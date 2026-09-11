@@ -158,6 +158,34 @@ func TestAdminHTTPLoginSettingsAndLogout(t *testing.T) {
 	if er.Code != http.StatusOK || !bytes.Contains(er.Body.Bytes(), []byte(`"name": "provider"`)) || bytes.Contains(er.Body.Bytes(), []byte(cp.PlanToken)) {
 		t.Fatalf("export=%d body=%s", er.Code, er.Body.String())
 	}
+	resource := request(http.MethodGet, "/api/v1/admin/resources/providers/provider", nil)
+	resource.Header.Set("X-CSRF-Token", session.CSRFToken)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, resource)
+	if rr.Code != http.StatusOK || rr.Header().Get("ETag") != `"1"` {
+		t.Fatalf("resource=%d etag=%q body=%s", rr.Code, rr.Header().Get("ETag"), rr.Body.String())
+	}
+	list := request(http.MethodGet, "/api/v1/admin/resources/providers?limit=1", nil)
+	list.Header.Set("X-CSRF-Token", session.CSRFToken)
+	listr := httptest.NewRecorder()
+	handler.ServeHTTP(listr, list)
+	if listr.Code != http.StatusOK || !bytes.Contains(listr.Body.Bytes(), []byte(`"provider"`)) {
+		t.Fatalf("list=%d body=%s", listr.Code, listr.Body.String())
+	}
+	badCursor := request(http.MethodGet, "/api/v1/admin/resources/providers?cursor="+encodeCursor("secrets", "some-id"), nil)
+	badCursor.Header.Set("X-CSRF-Token", session.CSRFToken)
+	bcr := httptest.NewRecorder()
+	handler.ServeHTTP(bcr, badCursor)
+	if bcr.Code != http.StatusBadRequest {
+		t.Fatalf("cross-scope cursor=%d", bcr.Code)
+	}
+	secrets := request(http.MethodGet, "/api/v1/admin/secrets", nil)
+	secrets.Header.Set("X-CSRF-Token", session.CSRFToken)
+	sr := httptest.NewRecorder()
+	handler.ServeHTTP(sr, secrets)
+	if sr.Code != http.StatusOK || !bytes.Contains(sr.Body.Bytes(), []byte(`"items":[]`)) {
+		t.Fatalf("secrets=%d body=%s", sr.Code, sr.Body.String())
+	}
 
 	logout := request(http.MethodDelete, "/api/v1/admin/session", nil)
 	logout.Header.Set("X-CSRF-Token", session.CSRFToken)

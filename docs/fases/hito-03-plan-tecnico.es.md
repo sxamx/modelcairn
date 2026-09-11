@@ -269,6 +269,14 @@ mismo plan con una sesión nueva y confirma éxito. El flujo HTTP integrado vali
 planea, aplica y exporta un recurso sin reflejar el token. CRUD paginado, secretos,
 CLI online y tokens de agentes continúan pendientes.
 
+Las lecturas de recursos y metadatos de secretos ya exponen GET individual y lista
+paginada. Las consultas filtran por tipo y `id > cursor`, solicitan límite más uno
+y nunca cargan todo el catálogo; el cursor opaco está acotado y ligado a su scope.
+Las páginas no prometen snapshot entre solicitudes. Los GET individuales devuelven
+ETag fuerte con resourceVersion. La representación de secretos publica únicamente
+nombre, fingerprint no reversible, versión y actualización; excluye valor, id
+interno, versión de clave y fecha de creación. Las escrituras siguen pendientes.
+
 El hito completo sigue pendiente: servicios de identidad/sesión,
 handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
