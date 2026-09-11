@@ -93,7 +93,11 @@ func NewAdmin(address string, readiness *ReadinessProbe, logger *slog.Logger, in
 	if err != nil {
 		return nil, err
 	}
-	return newServer(address, readiness, logger, &adminAPI{installation: installation, login: login, settings: settings, configuration: config.NewManager(installation), repository: storage.NewRepository(installation.DB()), boundary: boundary})
+	agentTokens, err := storage.NewAgentTokenService(installation)
+	if err != nil {
+		return nil, err
+	}
+	return newServer(address, readiness, logger, &adminAPI{installation: installation, login: login, settings: settings, configuration: config.NewManager(installation), repository: storage.NewRepository(installation.DB()), agentTokens: agentTokens, boundary: boundary})
 }
 
 func newServer(address string, readiness *ReadinessProbe, logger *slog.Logger, admin *adminAPI) (*http.Server, error) {

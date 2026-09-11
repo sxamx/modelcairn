@@ -2,7 +2,8 @@
 
 [Español](agent-token-lifecycle-v1.es.md)
 
-Status: implementable Milestone 3 design; issuance, authentication, and revocation pending.
+Status: core and administrative interface implemented in Milestone 3; data API
+integration remains part of the vertical router.
 
 ## Purpose and separation
 

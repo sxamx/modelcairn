@@ -2,7 +2,8 @@
 
 [English](agent-token-lifecycle-v1.md)
 
-Estado: diseño implementable del Hito 3; emisión, autenticación y revocación pendientes.
+Estado: núcleo e interfaz administrativa implementados en el Hito 3; conexión con
+la API de datos pendiente del router vertical.
 
 ## Propósito y separación
 
@@ -26,7 +27,7 @@ formato y ocho caracteres aleatorios, suficientes para reconocer credenciales si
 tratarlos como autenticadores.
 
 El hash rápido no protege un secreto débil: es correcto porque el bearer tiene 256
-bits aleatorios. La comparación de verificadores es constante. No escribir bearer,
+bits aleatorios. La búsqueda usa su digest binario de longitud fija. No escribir bearer,
 hash, cabeceras Authorization ni cuerpos en logs, auditoría, métricas o errores.
 
 ## Emisión administrativa
