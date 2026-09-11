@@ -55,6 +55,9 @@ func TestAdminHTTPLoginSettingsAndLogout(t *testing.T) {
 	}
 	response := lr.Result()
 	cookies := response.Cookies()
+	if len(cookies) == 1 && (!cookies[0].Expires.IsZero() || cookies[0].MaxAge != 0) {
+		t.Fatal("cookie imposes a fixed idle deadline")
+	}
 	if len(cookies) != 1 || cookies[0].Name != "mc_session" || !cookies[0].HttpOnly || cookies[0].SameSite != http.SameSiteStrictMode || cookies[0].Secure {
 		t.Fatalf("invalid session cookie: %+v", cookies)
 	}
@@ -74,6 +77,15 @@ func TestAdminHTTPLoginSettingsAndLogout(t *testing.T) {
 
 	get := request(http.MethodGet, "/api/v1/admin/settings", nil)
 	get.Header.Set("X-CSRF-Token", session.CSRFToken)
+	for _, badCSRF := range []string{"malformed", cookies[0].Value} {
+		bad := get.Clone(get.Context())
+		bad.Header.Set("X-CSRF-Token", badCSRF)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, bad)
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("bad CSRF returned %d, expected recovery-compatible 403", w.Code)
+		}
+	}
 	gr := httptest.NewRecorder()
 	handler.ServeHTTP(gr, get)
 	var state settingsState
@@ -112,6 +124,9 @@ func TestAdminHTTPLoginSettingsAndLogout(t *testing.T) {
 	logout.Header.Set("X-CSRF-Token", session.CSRFToken)
 	or := httptest.NewRecorder()
 	handler.ServeHTTP(or, logout)
+	if or.Header().Get("Cache-Control") != "no-store" {
+		t.Fatal("logout lacks no-store")
+	}
 	if or.Code != http.StatusNoContent || len(or.Result().Cookies()) != 1 || or.Result().Cookies()[0].MaxAge >= 0 {
 		t.Fatalf("logout status=%d cookies=%+v", or.Code, or.Result().Cookies())
 	}

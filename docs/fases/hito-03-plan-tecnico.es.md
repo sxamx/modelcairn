@@ -217,6 +217,48 @@ Una prueba integrada recorre login, rotación CSRF, lectura, plan, apply, audito
 transaccional, logout y rechazo posterior. Falta la revisión agrupada del bloque,
 la decisión/implementación de agregados de login y el resto de la API del hito.
 
+Revisión de integración: el arranque ahora usa `listen` persistido y rechaza un
+`--listen` distinto tras bootstrap. El flag sigue disponible antes del bootstrap
+para health. direct-tls carga certificado/clave antes de abrir el puerto y envuelve
+el listener con TLS (mínimo 1.2); un error detiene el arranque con código fijo.
+La prueba conecta por HTTPS real con confianza explícita en el certificado local.
+La cookie de sesión no fija Expires/Max-Age: SQLite impone los límites absoluto y
+deslizante en cada solicitud. Esto evita cerrar una sesión activa al cumplirse su
+primer plazo de inactividad. CSRF inválido devuelve 403; sesión inválida 401;
+fallos internos de sesión 503. Logout incluye no-store.
+
+### Relevo técnico para recursos y secretos
+
+- `storage.AuthorizeAdminMutationTx` ya implementado devuelve Actor derivado de
+  sesión y actualiza actividad dentro de la transacción del caller. No reutilizar
+  Actor de middleware ni pasar callbacks de terceros. Ante cualquier error se
+  revierte todo. Orden obligatorio: bloqueo de SecretStore, transacción SQLite,
+  autorización, precondiciones/validación, escritura/auditoría, commit, liberación.
+- Configuración: añadir `Manager.ApplySession` usando esa función al inicio del
+  callback snapshot de ExecutePlan. Conservar `prepareTx` y ApplyConfigTx para
+  validar el grafo completo. Devolver changes/appliedAt capturados en esa operación
+  solo tras commit; emitir expiresAt desde el emisor, sin decodificar tokens en HTTP.
+- CRUD de recursos: construir la operación mediante el validador de configuración
+  existente y verificar nombre/tipo y ETag dentro de la misma transacción. No
+  conectar Repository.Put/Delete directamente a HTTP: no validan todo el contrato
+  del grafo. Crear exige ausencia; actualizar/borrar exige versión observada.
+- Secretos: añadir entradas autenticadas que conserven el bloqueo existente de
+  SecretStore durante autorización, escritura, auditoría, commit y registro de
+  redacción. Reutilizar putTx y extraer deleteTx; no llamar Put/Delete desde un
+  callback transaccional. Si falla el registro posterior al commit, cerrar acceso
+  al almacén y comunicar resultado incierto; nunca anunciar rollback inexistente.
+- Lecturas paginadas: consulta SQL por tipo, `id > cursor`, orden por id y límite
+  1..200 más una fila para nextCursor. Cursor acotado y ligado al tipo consultado.
+  No cargar List completo para luego paginar; no prometer snapshot entre páginas.
+- ETags: una versión positiva entre comillas; ausencia 428, formato inválido 400,
+  obsoleto 412. Los planes mantienen conflictos 409. Tokens de agentes requieren
+  su servicio específico; CRUD genérico no puede emitir ni revivir verificadores.
+
+Esta es la guía de implementación del siguiente bloque, no funcionalidades ya
+entregadas. Agrupar su aceptación en pruebas de grafo, precondiciones, revocación,
+rollback de auditoría y ausencia de secretos en respuestas/logs. La decisión de
+retención de login sigue pendiente; el hito no está aceptado para despliegue final.
+
 El hito completo sigue pendiente: servicios de identidad/sesión,
 handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
