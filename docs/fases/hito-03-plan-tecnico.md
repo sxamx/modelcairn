@@ -10,6 +10,10 @@ login-history retention still requires an operator decision.
 
 ## Intended outcome
 
+Current handoff: [transactional CRUD design](../contratos/resource-mutations-v1.md).
+It specifies preconditions, noops, audit and acceptance for the next block using
+the existing full-graph validator.
+
 An installation can bootstrap its administrator locally, authenticate sessions,
 manage configuration and secrets over HTTP, and issue/revoke agent tokens.
 The console belongs to Milestone 5; provider requests belong to Milestone 4.
