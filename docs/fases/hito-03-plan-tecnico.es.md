@@ -259,6 +259,16 @@ entregadas. Agrupar su aceptación en pruebas de grafo, precondiciones, revocaci
 rollback de auditoría y ausencia de secretos en respuestas/logs. La decisión de
 retención de login sigue pendiente; el hito no está aceptado para despliegue final.
 
+El primer punto de ese relevo ya está implementado: validate, plan, apply y export
+de Configuration están conectados a la API administrativa. Plan devuelve expiry
+del emisor y cambios redacted; apply devuelve changes/appliedAt capturados en la
+operación. `Manager.ApplySession` autoriza dentro de ExecutePlan antes de preparar
+el snapshot, y confirma sesión, consumo de nonce, grafo completo y auditoría en una
+transacción. Una sesión revocada no consume el plan; la regresión reutiliza ese
+mismo plan con una sesión nueva y confirma éxito. El flujo HTTP integrado valida,
+planea, aplica y exporta un recurso sin reflejar el token. CRUD paginado, secretos,
+CLI online y tokens de agentes continúan pendientes.
+
 El hito completo sigue pendiente: servicios de identidad/sesión,
 handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
