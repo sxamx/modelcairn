@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sxamx/modelcairn/internal/adminsettings"
+	"github.com/sxamx/modelcairn/internal/config"
 	"github.com/sxamx/modelcairn/internal/storage"
 )
 
@@ -92,7 +93,7 @@ func NewAdmin(address string, readiness *ReadinessProbe, logger *slog.Logger, in
 	if err != nil {
 		return nil, err
 	}
-	return newServer(address, readiness, logger, &adminAPI{installation: installation, login: login, settings: settings, boundary: boundary})
+	return newServer(address, readiness, logger, &adminAPI{installation: installation, login: login, settings: settings, configuration: config.NewManager(installation), boundary: boundary})
 }
 
 func newServer(address string, readiness *ReadinessProbe, logger *slog.Logger, admin *adminAPI) (*http.Server, error) {

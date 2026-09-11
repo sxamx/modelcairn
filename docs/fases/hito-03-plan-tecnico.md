@@ -249,6 +249,16 @@ around graph rules, preconditions, revocation, audit rollback and secret-free
 responses/logs. Login retention remains undecided; this milestone is not accepted
 for final deployment.
 
+The first handoff item is now implemented: Configuration validate, plan, apply
+and export are connected to the administrative API. Plan returns issuer expiry
+and redacted changes; apply returns changes/appliedAt captured by the operation.
+`Manager.ApplySession` authorizes inside ExecutePlan before snapshot preparation,
+committing session, nonce consumption, complete graph and audit in one transaction.
+A revoked session does not consume the plan; regression coverage reuses that same
+plan with a fresh session and confirms success. The integrated HTTP flow validates,
+plans, applies and exports a resource without reflecting its token. Paginated CRUD,
+secrets, online CLI and agent tokens remain outstanding.
+
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an

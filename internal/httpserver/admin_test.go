@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/sxamx/modelcairn/internal/adminsettings"
 	"github.com/sxamx/modelcairn/internal/storage"
@@ -118,6 +119,44 @@ func TestAdminHTTPLoginSettingsAndLogout(t *testing.T) {
 	}
 	if bytes.Contains(ar.Body.Bytes(), []byte(plan.PlanToken)) {
 		t.Fatal("apply echoed plan token")
+	}
+
+	configuration := []byte(`{"apiVersion":"modelcairn.io/v1alpha1","kind":"Configuration","resources":[{"kind":"Provider","metadata":{"name":"provider"},"spec":{}}]}`)
+	validate := request(http.MethodPost, "/api/v1/admin/config/validate", configuration)
+	validate.Header.Set("Content-Type", "application/json")
+	validate.Header.Set("X-CSRF-Token", session.CSRFToken)
+	vr := httptest.NewRecorder()
+	handler.ServeHTTP(vr, validate)
+	if vr.Code != http.StatusOK {
+		t.Fatalf("validate status=%d body=%s", vr.Code, vr.Body.String())
+	}
+	configPlan := request(http.MethodPost, "/api/v1/admin/config/plan", configuration)
+	configPlan.Header.Set("Content-Type", "application/json")
+	configPlan.Header.Set("X-CSRF-Token", session.CSRFToken)
+	cpr := httptest.NewRecorder()
+	handler.ServeHTTP(cpr, configPlan)
+	var cp struct {
+		PlanToken string    `json:"planToken"`
+		ExpiresAt time.Time `json:"expiresAt"`
+	}
+	if cpr.Code != http.StatusOK || json.Unmarshal(cpr.Body.Bytes(), &cp) != nil || cp.PlanToken == "" || cp.ExpiresAt.IsZero() {
+		t.Fatalf("config plan=%d body=%s", cpr.Code, cpr.Body.String())
+	}
+	configApply := request(http.MethodPost, "/api/v1/admin/config/apply", configuration)
+	configApply.Header.Set("Content-Type", "application/json")
+	configApply.Header.Set("X-CSRF-Token", session.CSRFToken)
+	configApply.Header.Set("X-ModelCairn-Plan-Token", cp.PlanToken)
+	car := httptest.NewRecorder()
+	handler.ServeHTTP(car, configApply)
+	if car.Code != http.StatusOK {
+		t.Fatalf("config apply=%d body=%s", car.Code, car.Body.String())
+	}
+	export := request(http.MethodGet, "/api/v1/admin/config/export", nil)
+	export.Header.Set("X-CSRF-Token", session.CSRFToken)
+	er := httptest.NewRecorder()
+	handler.ServeHTTP(er, export)
+	if er.Code != http.StatusOK || !bytes.Contains(er.Body.Bytes(), []byte(`"name": "provider"`)) || bytes.Contains(er.Body.Bytes(), []byte(cp.PlanToken)) {
+		t.Fatalf("export=%d body=%s", er.Code, er.Body.String())
 	}
 
 	logout := request(http.MethodDelete, "/api/v1/admin/session", nil)

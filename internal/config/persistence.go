@@ -14,6 +14,7 @@ import (
 
 type PersistedPlan struct {
 	Token         string          `json:"token"`
+	ExpiresAt     time.Time       `json:"expiresAt"`
 	Changes       []Change        `json:"changes"`
 	Configuration json.RawMessage `json:"configuration"`
 }
@@ -30,7 +31,8 @@ func NewManager(installation *storage.Installation) *Manager {
 
 func (m *Manager) Plan(ctx context.Context, desired *Document, allowDelete bool) (*PersistedPlan, error) {
 	var prepared *Prepared
-	token, err := m.secrets.CreatePlanToken(ctx, m.clock(), func(tx *sql.Tx) (storage.PlanBinding, error) {
+	issuedAt := m.clock()
+	token, err := m.secrets.CreatePlanToken(ctx, issuedAt, func(tx *sql.Tx) (storage.PlanBinding, error) {
 		var binding storage.PlanBinding
 		var prepareErr error
 		prepared, binding, _, prepareErr = m.prepareTx(ctx, tx, desired, allowDelete)
@@ -43,18 +45,54 @@ func (m *Manager) Plan(ctx context.Context, desired *Document, allowDelete bool)
 	if err != nil {
 		return nil, err
 	}
-	return &PersistedPlan{Token: token, Changes: prepared.Changes, Configuration: safe}, nil
+	return &PersistedPlan{Token: token, ExpiresAt: time.Unix(issuedAt.Unix()+600, 0).UTC(), Changes: prepared.Changes, Configuration: safe}, nil
+}
+
+type ApplyResult struct {
+	Changes   []Change  `json:"changes"`
+	AppliedAt time.Time `json:"appliedAt"`
 }
 
 func (m *Manager) Apply(ctx context.Context, token string, desired *Document, allowDelete bool, actor storage.Actor) error {
+	_, err := m.apply(ctx, token, desired, allowDelete, func(*sql.Tx) (storage.Actor, error) { return actor, nil })
+	return err
+}
+
+// ApplySession derives its audit actor from a live session in the same database
+// transaction as plan consumption and the complete graph update.
+func (m *Manager) ApplySession(ctx context.Context, token string, desired *Document, allowDelete bool, sessionToken, csrfToken string) (ApplyResult, error) {
+	return m.apply(ctx, token, desired, allowDelete, func(tx *sql.Tx) (storage.Actor, error) {
+		return storage.AuthorizeAdminMutationTx(ctx, tx, sessionToken, csrfToken)
+	})
+}
+
+func (m *Manager) apply(ctx context.Context, token string, desired *Document, allowDelete bool, authorize func(*sql.Tx) (storage.Actor, error)) (ApplyResult, error) {
 	var mutations []storage.ConfigMutation
-	return m.secrets.ExecutePlan(ctx, token, func(tx *sql.Tx) (storage.PlanBinding, error) {
-		_, binding, preparedMutations, err := m.prepareTx(ctx, tx, desired, allowDelete)
+	var result ApplyResult
+	var actor storage.Actor
+	err := m.secrets.ExecutePlan(ctx, token, func(tx *sql.Tx) (storage.PlanBinding, error) {
+		var err error
+		actor, err = authorize(tx)
+		if err != nil {
+			return storage.PlanBinding{}, err
+		}
+		prepared, binding, preparedMutations, err := m.prepareTx(ctx, tx, desired, allowDelete)
 		mutations = preparedMutations
+		if err == nil {
+			result.Changes = append([]Change{}, prepared.Changes...)
+		}
 		return binding, err
 	}, func(tx *sql.Tx) error {
-		return m.repository.ApplyConfigTx(ctx, tx, mutations, actor)
+		if err := m.repository.ApplyConfigTx(ctx, tx, mutations, actor); err != nil {
+			return err
+		}
+		result.AppliedAt = m.clock().UTC()
+		return nil
 	})
+	if err != nil {
+		return ApplyResult{}, err
+	}
+	return result, nil
 }
 
 // Export returns the complete persisted configuration in deterministic form.

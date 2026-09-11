@@ -14,16 +14,18 @@ import (
 	"unicode/utf8"
 
 	"github.com/sxamx/modelcairn/internal/adminsettings"
+	"github.com/sxamx/modelcairn/internal/config"
 	"github.com/sxamx/modelcairn/internal/storage"
 )
 
 const loginBodyLimit = 16 << 10
 
 type adminAPI struct {
-	installation *storage.Installation
-	login        *storage.AdminLoginService
-	settings     *storage.AdminSettingsService
-	boundary     adminBoundary
+	installation  *storage.Installation
+	login         *storage.AdminLoginService
+	settings      *storage.AdminSettingsService
+	configuration *config.Manager
+	boundary      adminBoundary
 }
 
 type loginRequest struct {
@@ -58,6 +60,10 @@ func (a *adminAPI) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/admin/settings", a.getSettings)
 	mux.HandleFunc("POST /api/v1/admin/settings/plan", a.planSettings)
 	mux.HandleFunc("POST /api/v1/admin/settings/apply", a.applySettings)
+	mux.HandleFunc("POST /api/v1/admin/config/validate", a.validateConfiguration)
+	mux.HandleFunc("POST /api/v1/admin/config/plan", a.planConfiguration)
+	mux.HandleFunc("POST /api/v1/admin/config/apply", a.applyConfiguration)
+	mux.HandleFunc("GET /api/v1/admin/config/export", a.exportConfiguration)
 }
 
 func (a *adminAPI) createSession(w http.ResponseWriter, r *http.Request) {
