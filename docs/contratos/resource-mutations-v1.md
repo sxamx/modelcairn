@@ -2,7 +2,7 @@
 
 [Español](resource-mutations-v1.es.md)
 
-Status: implementable Milestone 3 design; mutation endpoints remain outstanding.
+Status: implemented in Milestone 3; integrated milestone closure remains pending.
 Extends the [shared semantics](config/semantica-apply-v1alpha1.md).
 
 ## Service and boundaries

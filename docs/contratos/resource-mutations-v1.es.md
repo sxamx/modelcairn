@@ -2,7 +2,7 @@
 
 [English](resource-mutations-v1.md)
 
-Estado: diseño implementable del Hito 3; endpoints de escritura pendientes.
+Estado: implementado en el Hito 3; pendiente el cierre integral del hito.
 Complementa [la semántica compartida](config/semantica-apply-v1alpha1.es.md).
 
 ## Servicio y límites
