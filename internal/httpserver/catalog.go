@@ -222,6 +222,11 @@ func optionalIfMatch(r *http.Request) (int64, bool, error) {
 		return 0, true, errors.New("invalid_precondition")
 	}
 	raw := values[0][1 : len(values[0])-1]
+	for _, digit := range raw {
+		if digit < '0' || digit > '9' {
+			return 0, true, errors.New("invalid_precondition")
+		}
+	}
 	if raw == "" || raw[0] == '0' || strings.ContainsAny(raw, " ,\t") {
 		return 0, true, errors.New("invalid_precondition")
 	}

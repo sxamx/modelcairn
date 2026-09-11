@@ -12,6 +12,10 @@ detalla campos y límites; la retención del histórico de login espera decisió
 
 ## Resultado esperado
 
+Relevo actual: [diseño del CRUD transaccional](../contratos/resource-mutations-v1.es.md).
+Concreta precondiciones, noop, auditoría y pruebas del próximo bloque reutilizando
+el validador existente del grafo completo.
+
 Una instalación puede crear su administrador localmente, autenticar sesiones,
 administrar configuración y secretos mediante HTTP y emitir o revocar tokens de
 agente. La consola corresponde al Hito 5 y las llamadas a proveedores al Hito 4.
