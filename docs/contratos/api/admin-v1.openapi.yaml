@@ -261,9 +261,12 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [token]
+                required: [token, tokenStatus]
                 additionalProperties: false
-                properties: { token: { type: string, readOnly: true, description: One-time intentional delivery to the authenticated issuer; never logged or recoverable later. } }
+                properties:
+                  token: { type: string, readOnly: true, pattern: '^mc_at_v1_[A-Za-z0-9_-]{43}$', description: One-time intentional delivery to the authenticated issuer; never logged or recoverable later. }
+                  tokenStatus: { $ref: '#/components/schemas/AgentTokenStatus' }
+        '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
   /agent-tokens/{name}/revoke:
     post:
@@ -271,6 +274,21 @@ paths:
       parameters: [ { $ref: '#/components/parameters/Name' } ]
       responses:
         '204': { description: Revoked immediately for new requests }
+        '404': { $ref: '#/components/responses/Error' }
+  /agent-tokens/{name}/status:
+    get:
+      operationId: getAgentTokenStatus
+      parameters: [ { $ref: '#/components/parameters/Name' } ]
+      responses:
+        '200':
+          description: Safe credential lifecycle metadata; never a bearer or verifier
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [tokenStatus]
+                properties: { tokenStatus: { $ref: '#/components/schemas/AgentTokenStatus' } }
         '404': { $ref: '#/components/responses/Error' }
   /strategies/{name}/publish:
     post:
@@ -437,6 +455,16 @@ components:
         resourceVersion: { type: integer }
         fingerprint: { type: string, description: Non-reversible display fingerprint }
         updatedAt: { type: string, format: date-time }
+    AgentTokenStatus:
+      type: object
+      additionalProperties: false
+      required: [state]
+      properties:
+        state: { type: string, enum: [unissued, active, expired, revoked] }
+        prefix: { type: string, pattern: '^mc_at_v1_[A-Za-z0-9_-]{8}$' }
+        issuedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        revokedAt: { type: string, format: date-time }
     Validation:
       type: object
       required: [valid, issues]
