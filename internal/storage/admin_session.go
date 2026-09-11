@@ -18,6 +18,7 @@ const (
 
 var (
 	ErrAdminSessionInvalid      = errors.New("admin_session_invalid")
+	ErrAdminCSRFInvalid         = errors.New("admin_csrf_invalid")
 	ErrAdminSessionStateInvalid = errors.New("admin_session_state_invalid")
 )
 
@@ -130,6 +131,18 @@ func UseAdminSession(ctx context.Context, i *Installation, sessionToken, csrfTok
 	return result, nil
 }
 
+// AuthorizeAdminMutationTx is for internal application services composing an
+// authenticated mutation. The caller owns tx and must roll it back on ANY error.
+// Call after acquiring all locks, before reading business preconditions. Never
+// carry this actor into another transaction or call DB/SecretStore from tx.
+func AuthorizeAdminMutationTx(ctx context.Context, tx *sql.Tx, sessionToken, csrfToken string) (Actor, error) {
+	session, err := useAdminSessionTx(ctx, tx, sessionToken, csrfToken, true, time.Now())
+	if err != nil {
+		return Actor{}, err
+	}
+	return Actor{Type: "admin", ID: session.Admin.ID}, nil
+}
+
 // useAdminSessionTx keeps authorization and activity in the caller's mutation
 // transaction. Never reuse the returned identity as authorization for a later
 // transaction. Any subsequent failure must roll back the entire transaction.
@@ -139,19 +152,19 @@ func useAdminSessionTx(ctx context.Context, tx *sql.Tx, sessionToken, csrfToken 
 		return AdminSessionContext{}, ErrAdminSessionInvalid
 	}
 	var csrfHash [sha256.Size]byte
-	if requireCSRF {
-		decoded, err := decodeAdminToken(csrfToken)
-		if err != nil {
-			return AdminSessionContext{}, ErrAdminSessionInvalid
-		}
-		csrfHash = decoded
-	}
 	row, err := readLiveSession(ctx, tx, sessionHash, now)
 	if err != nil {
 		return AdminSessionContext{}, err
 	}
+	if requireCSRF {
+		decoded, err := decodeAdminToken(csrfToken)
+		if err != nil {
+			return AdminSessionContext{}, errors.Join(ErrAdminSessionInvalid, ErrAdminCSRFInvalid)
+		}
+		csrfHash = decoded
+	}
 	if requireCSRF && !validCSRF(row, csrfHash, now.UTC()) {
-		return AdminSessionContext{}, ErrAdminSessionInvalid
+		return AdminSessionContext{}, errors.Join(ErrAdminSessionInvalid, ErrAdminCSRFInvalid)
 	}
 	now = now.UTC()
 	activityAt := now
@@ -221,10 +234,6 @@ func RevokeAdminSession(ctx context.Context, i *Installation, sessionToken, csrf
 	if err != nil {
 		return ErrAdminSessionInvalid
 	}
-	provided, err := decodeAdminToken(csrfToken)
-	if err != nil {
-		return ErrAdminSessionInvalid
-	}
 	tx, err := i.DB().BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -234,8 +243,9 @@ func RevokeAdminSession(ctx context.Context, i *Installation, sessionToken, csrf
 	if err != nil {
 		return err
 	}
-	if !validCSRF(row, provided, now.UTC()) {
-		return ErrAdminSessionInvalid
+	provided, decodeErr := decodeAdminToken(csrfToken)
+	if decodeErr != nil || !validCSRF(row, provided, now.UTC()) {
+		return errors.Join(ErrAdminSessionInvalid, ErrAdminCSRFInvalid)
 	}
 	now = now.UTC()
 	stamp := now.Format(time.RFC3339Nano)

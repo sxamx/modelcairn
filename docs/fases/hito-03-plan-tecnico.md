@@ -208,6 +208,47 @@ plan, apply, transactional audit, logout and subsequent rejection. Grouped revie
 the login aggregate decision/implementation and the remaining milestone API are
 still outstanding.
 
+Integration correction: startup now uses persisted `listen` and rejects a
+different `--listen` after bootstrap. Before bootstrap the flag still controls
+health-only serving. direct-tls loads certificate/key before binding and wraps
+the listener with TLS (minimum 1.2); failure stops startup with a fixed error code.
+A real HTTPS test explicitly trusts the local certificate. Session cookies omit
+Expires/Max-Age: SQLite enforces absolute and sliding expiry on each request,
+avoiding premature browser logout at the initial idle deadline. Invalid CSRF
+returns 403, invalid sessions 401, internal session failures 503. Logout is no-store.
+
+### Technical handoff for resources and secrets
+
+- Implemented `storage.AuthorizeAdminMutationTx` derives Actor from the current
+  session and updates activity within the caller transaction. Never reuse a
+  middleware Actor or accept third-party callbacks. Roll back everything on any
+  error. Lock order: SecretStore lock, SQLite transaction, authorization,
+  preconditions/validation, write/audit, commit, unlock.
+- Configuration: add `Manager.ApplySession` using this helper at the start of the
+  ExecutePlan snapshot callback. Retain prepareTx and ApplyConfigTx for full graph
+  validation. Return changes/appliedAt captured in that operation only after
+  commit; obtain expiresAt from the issuer without decoding opaque tokens in HTTP.
+- Resource CRUD: build operations through the existing configuration validator,
+  checking name/kind and ETag in the same transaction. Do not wire Repository
+  Put/Delete directly to HTTP: they do not enforce the entire graph contract.
+  Creation requires absence; update/delete require the observed version.
+- Secrets: add authenticated entry points retaining the existing SecretStore lock
+  across authorization, write, audit, commit and redaction registration. Reuse
+  putTx and extract deleteTx; never call Put/Delete inside transaction callbacks.
+  If post-commit registration fails, make the store unavailable and report an
+  uncertain result rather than claiming a rollback that did not happen.
+- Paginated reads: SQL filtered by kind, `id > cursor`, id ordering, and a limit
+  of 1..200 plus one row for nextCursor. Bound cursors and bind them to the queried
+  kind. Do not load List then paginate in memory; no cross-page snapshot guarantee.
+- ETags: one quoted positive version; missing 428, malformed 400, stale 412.
+  Plans retain 409 conflicts. Agent tokens require their dedicated service;
+  generic CRUD must not issue or revive verifiers.
+
+This is an implementation handoff, not delivered functionality. Group acceptance
+around graph rules, preconditions, revocation, audit rollback and secret-free
+responses/logs. Login retention remains undecided; this milestone is not accepted
+for final deployment.
+
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an

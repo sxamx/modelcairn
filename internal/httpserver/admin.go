@@ -97,7 +97,9 @@ func (a *adminAPI) createSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	secure := a.boundary.transport != adminsettings.LoopbackHTTP
-	http.SetCookie(w, &http.Cookie{Name: "mc_session", Value: credentials.SessionToken, Path: "/", HttpOnly: true, Secure: secure, SameSite: http.SameSiteStrictMode, Expires: credentials.ExpiresAt})
+	// Session lifetime is enforced in SQLite on every request. A fixed browser
+	// expiry based on initial idle time would log out an actively used session.
+	http.SetCookie(w, &http.Cookie{Name: "mc_session", Value: credentials.SessionToken, Path: "/", HttpOnly: true, Secure: secure, SameSite: http.SameSiteStrictMode})
 	writeJSON(w, http.StatusOK, sessionResponse(credentials.Admin, credentials.CSRFToken, credentials.ExpiresAt))
 }
 
@@ -113,7 +115,7 @@ func (a *adminAPI) currentSession(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := storage.RotateAdminSessionCSRF(r.Context(), a.installation, token, time.Now())
 	if err != nil {
-		writeAdminError(w, http.StatusUnauthorized, "authentication_required", false)
+		writeSessionError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, sessionResponse(result.Admin, result.CSRFToken, result.ExpiresAt))
@@ -135,10 +137,11 @@ func (a *adminAPI) deleteSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := storage.RevokeAdminSession(r.Context(), a.installation, token, csrf, time.Now()); err != nil {
-		writeAdminError(w, http.StatusUnauthorized, "authentication_required", false)
+		writeSessionError(w, err)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: "mc_session", Value: "", Path: "/", HttpOnly: true, Secure: a.boundary.transport != adminsettings.LoopbackHTTP, SameSite: http.SameSiteStrictMode, MaxAge: -1})
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -164,7 +167,7 @@ func (a *adminAPI) getSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := storage.UseAdminSession(r.Context(), a.installation, session, csrf, true, time.Now()); err != nil {
-		writeAdminError(w, http.StatusUnauthorized, "authentication_required", false)
+		writeSessionError(w, err)
 		return
 	}
 	state, err := a.settings.State(r.Context())
@@ -186,7 +189,7 @@ func (a *adminAPI) planSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := storage.UseAdminSession(r.Context(), a.installation, session, csrf, true, time.Now()); err != nil {
-		writeAdminError(w, http.StatusUnauthorized, "authentication_required", false)
+		writeSessionError(w, err)
 		return
 	}
 	body, err := readBody(r, adminsettings.MaxInputBytes)
@@ -224,6 +227,10 @@ func (a *adminAPI) applySettings(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := a.settings.ApplySession(r.Context(), body, plan, session, csrf)
 	if err != nil {
+		if errors.Is(err, storage.ErrAdminSessionInvalid) {
+			writeSessionError(w, err)
+			return
+		}
 		status := settingsErrorStatus(err)
 		if errors.Is(err, storage.ErrAdminSessionInvalid) {
 			status = http.StatusUnauthorized
@@ -236,6 +243,15 @@ func (a *adminAPI) applySettings(w http.ResponseWriter, r *http.Request) {
 
 func sessionResponse(admin storage.AdminIdentity, csrf string, expires time.Time) sessionView {
 	return sessionView{adminView{admin.ID, admin.Username}, csrf, expires}
+}
+func writeSessionError(w http.ResponseWriter, err error) {
+	if errors.Is(err, storage.ErrAdminCSRFInvalid) {
+		writeAdminError(w, http.StatusForbidden, "csrf_rejected", false)
+	} else if errors.Is(err, storage.ErrAdminSessionInvalid) {
+		writeAdminError(w, http.StatusUnauthorized, "authentication_required", false)
+	} else {
+		writeAdminError(w, http.StatusServiceUnavailable, "unavailable", true)
+	}
 }
 func document(r storage.AdminSettingsRecord) settingsDocument {
 	return settingsDocument{adminsettings.APIVersion, adminsettings.DocumentKind, r.ResourceVersion, r.Spec}

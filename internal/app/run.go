@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 
 	"golang.org/x/term"
 
+	"github.com/sxamx/modelcairn/internal/adminsettings"
 	"github.com/sxamx/modelcairn/internal/buildinfo"
 	server "github.com/sxamx/modelcairn/internal/httpserver"
 	"github.com/sxamx/modelcairn/internal/redact"
@@ -99,6 +101,7 @@ func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	probe.Set(server.ComponentSecretStore, true, "")
 	settings, err := storage.ReadAdminSettings(ctx, installation.DB())
 	var httpServer *http.Server
+	var transportTLS *tls.Config
 	if storage.IsRepositoryCode(err, storage.CodeNotFound) {
 		// A fresh installation remains reachable for health checks while local
 		// bootstrap is pending; no administrative routes are exposed yet.
@@ -107,6 +110,25 @@ func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 		logger.Error("administrative settings unavailable", "code", storageErrorCode(err))
 		return 1
 	} else {
+		listenExplicit := false
+		flags.Visit(func(f *flag.Flag) {
+			if f.Name == "listen" {
+				listenExplicit = true
+			}
+		})
+		if listenExplicit && *address != settings.Spec.Listen {
+			logger.Error("listen override conflicts with administrative settings", "code", "configuration_invalid")
+			return 1
+		}
+		*address = settings.Spec.Listen
+		if settings.Spec.Transport == adminsettings.DirectTLS {
+			certificate, loadErr := tls.LoadX509KeyPair(settings.Spec.TLSCertificatePath, settings.Spec.TLSPrivateKeyPath)
+			if loadErr != nil {
+				logger.Error("administrative TLS material unavailable", "code", "tls_unavailable")
+				return 1
+			}
+			transportTLS = &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{certificate}}
+		}
 		probe.Set(server.ComponentConfiguration, true, "")
 		httpServer, err = server.NewAdmin(*address, probe, logger, installation, settings.Spec)
 		if err != nil {
@@ -118,6 +140,9 @@ func runServe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	if err != nil {
 		logger.Error("http server bind failed", "address", *address, "error", err)
 		return 1
+	}
+	if transportTLS != nil {
+		listener = tls.NewListener(listener, transportTLS)
 	}
 
 	errCh := make(chan error, 1)

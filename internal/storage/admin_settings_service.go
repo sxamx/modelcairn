@@ -106,11 +106,7 @@ func (s *AdminSettingsService) Apply(ctx context.Context, input []byte, token st
 // for the key lock and database connection so queueing cannot extend a session.
 func (s *AdminSettingsService) ApplySession(ctx context.Context, input []byte, token, sessionToken, csrfToken string) (AdminSettingsApplyResult, error) {
 	return s.apply(ctx, input, token, func(tx *sql.Tx) (Actor, error) {
-		session, err := useAdminSessionTx(ctx, tx, sessionToken, csrfToken, true, time.Now())
-		if err != nil {
-			return Actor{}, err
-		}
-		return Actor{Type: "admin", ID: session.Admin.ID}, nil
+		return AuthorizeAdminMutationTx(ctx, tx, sessionToken, csrfToken)
 	})
 }
 
