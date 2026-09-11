@@ -7,7 +7,9 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/sxamx/modelcairn/internal/adminsettings"
 	"github.com/sxamx/modelcairn/internal/storage"
 )
 
@@ -19,6 +21,58 @@ func managerForTest(t *testing.T) (*Manager, *storage.Installation) {
 	}
 	t.Cleanup(func() { _ = installation.Close() })
 	return NewManager(installation), installation
+}
+
+func TestIndividualResourceMutationsAreConditionalAndGraphSafe(t *testing.T) {
+	ctx := context.Background()
+	manager, installation := managerForTest(t)
+	spec := adminsettings.Defaults()
+	spec.PublicOrigin = "http://127.0.0.1:8080"
+	admin, _, err := storage.BootstrapAdmin(ctx, installation, "owner", []byte("a secure password"), spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session, err := storage.CreateAdminSession(ctx, installation, storage.VerifiedAdmin{ID: admin.ID, Username: admin.Username, AuthVersion: admin.AuthVersion}, 1800, 3600, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutate := func(input ResourceMutationInput) (ResourceMutationResult, error) {
+		input.SessionToken, input.CSRFToken = session.SessionToken, session.CSRFToken
+		return manager.MutateResourceSession(ctx, input)
+	}
+	provider := Resource{Kind: ProviderKind, State: Present, Metadata: Metadata{Name: "acme"}, Spec: ProviderSpec{}}
+	created, err := mutate(ResourceMutationInput{Operation: CreateResource, Kind: ProviderKind, Name: "acme", Resource: &provider})
+	if err != nil || created.Resource.ResourceVersion != 1 {
+		t.Fatalf("create=%+v err=%v", created, err)
+	}
+	if _, err := mutate(ResourceMutationInput{Operation: CreateResource, Kind: ProviderKind, Name: "acme", Resource: &provider}); !storage.IsRepositoryCode(err, storage.CodeAlreadyExists) {
+		t.Fatalf("duplicate create=%v", err)
+	}
+	if _, err := mutate(ResourceMutationInput{Operation: UpdateResource, Kind: ProviderKind, Name: "acme", Resource: &provider, ExpectedVersion: 99}); !storage.IsRepositoryCode(err, storage.CodeVersionConflict) {
+		t.Fatalf("stale update=%v", err)
+	}
+	noop, err := mutate(ResourceMutationInput{Operation: UpdateResource, Kind: ProviderKind, Name: "acme", Resource: &provider, ExpectedVersion: 1})
+	if err != nil || !noop.Noop || noop.Resource.ResourceVersion != 1 {
+		t.Fatalf("noop=%+v err=%v", noop, err)
+	}
+	var noopAudits int
+	if err := installation.DB().QueryRowContext(ctx, "SELECT count(*) FROM audit_events WHERE action='resource.update_noop'").Scan(&noopAudits); err != nil || noopAudits != 1 {
+		t.Fatalf("noop audits=%d err=%v", noopAudits, err)
+	}
+	account := Resource{Kind: ProviderAccountKind, State: Present, Metadata: Metadata{Name: "acme-main"}, Spec: ProviderAccountSpec{ProviderRef: Ref{Name: "acme"}}}
+	if _, err := mutate(ResourceMutationInput{Operation: CreateResource, Kind: ProviderAccountKind, Name: "acme-main", Resource: &account}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := mutate(ResourceMutationInput{Operation: DeleteResource, Kind: ProviderKind, Name: "acme", ExpectedVersion: 1}); err == nil {
+		t.Fatal("deleted provider still referenced by account")
+	}
+	if err := storage.RevokeAdminSession(ctx, installation, session.SessionToken, session.CSRFToken, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	other := Resource{Kind: ProviderKind, State: Present, Metadata: Metadata{Name: "other"}, Spec: ProviderSpec{}}
+	if _, err := mutate(ResourceMutationInput{Operation: CreateResource, Kind: ProviderKind, Name: "other", Resource: &other}); !errors.Is(err, storage.ErrAdminSessionInvalid) {
+		t.Fatalf("revoked session mutation=%v", err)
+	}
 }
 
 func exampleDocument(t *testing.T) *Document {

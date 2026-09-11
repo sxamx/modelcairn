@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/sxamx/modelcairn/internal/config"
 	"github.com/sxamx/modelcairn/internal/storage"
 )
 
@@ -63,7 +64,7 @@ func (a *adminAPI) listResources(w http.ResponseWriter, r *http.Request) {
 	}
 	items := make([]any, 0, len(page.Items))
 	for _, item := range page.Items {
-		items = append(items, resourceView(item))
+		items = append(items, a.resourceView(item))
 	}
 	var next any
 	if page.NextID != "" {
@@ -87,7 +88,183 @@ func (a *adminAPI) getResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("ETag", quotedVersion(item.ResourceVersion))
-	writeJSON(w, http.StatusOK, resourceView(item))
+	writeJSON(w, http.StatusOK, a.resourceView(item))
+}
+
+func (a *adminAPI) createResource(w http.ResponseWriter, r *http.Request) {
+	session, csrf, ok := a.resourceMutationAccess(w, r)
+	if !ok {
+		return
+	}
+	kind, ok := resourceKinds[r.PathValue("kind")]
+	if !ok {
+		writeAdminError(w, http.StatusBadRequest, "invalid_resource_kind", false)
+		return
+	}
+	if _, present, err := optionalIfMatch(r); err != nil || present {
+		writeAdminError(w, http.StatusBadRequest, "invalid_precondition", false)
+		return
+	}
+	resource, err := decodeResourceBody(r)
+	if err != nil {
+		writeResourceBodyError(w, err)
+		return
+	}
+	result, err := a.configuration.MutateResourceSession(r.Context(), config.ResourceMutationInput{
+		Operation: config.CreateResource, Kind: config.Kind(kind), Name: resource.Metadata.Name,
+		Resource: &resource, SessionToken: session, CSRFToken: csrf,
+	})
+	if err != nil {
+		writeResourceMutationError(w, err)
+		return
+	}
+	w.Header().Set("ETag", quotedVersion(result.Resource.ResourceVersion))
+	writeJSON(w, http.StatusCreated, a.resourceView(result.Resource))
+}
+
+func (a *adminAPI) updateResource(w http.ResponseWriter, r *http.Request) {
+	session, csrf, ok := a.resourceMutationAccess(w, r)
+	if !ok {
+		return
+	}
+	kind, ok := resourceKinds[r.PathValue("kind")]
+	if !ok {
+		writeAdminError(w, http.StatusBadRequest, "invalid_resource_kind", false)
+		return
+	}
+	expected, present, err := optionalIfMatch(r)
+	if err != nil {
+		writeAdminError(w, http.StatusBadRequest, "invalid_precondition", false)
+		return
+	}
+	if !present {
+		writeAdminError(w, http.StatusPreconditionRequired, "precondition_required", false)
+		return
+	}
+	resource, err := decodeResourceBody(r)
+	if err != nil {
+		writeResourceBodyError(w, err)
+		return
+	}
+	result, err := a.configuration.MutateResourceSession(r.Context(), config.ResourceMutationInput{
+		Operation: config.UpdateResource, Kind: config.Kind(kind), Name: r.PathValue("name"),
+		Resource: &resource, ExpectedVersion: expected, SessionToken: session, CSRFToken: csrf,
+	})
+	if err != nil {
+		writeResourceMutationError(w, err)
+		return
+	}
+	w.Header().Set("ETag", quotedVersion(result.Resource.ResourceVersion))
+	writeJSON(w, http.StatusOK, a.resourceView(result.Resource))
+}
+
+func (a *adminAPI) deleteResource(w http.ResponseWriter, r *http.Request) {
+	session, csrf, status := a.authorize(r, true)
+	if status != 0 {
+		writeAdminError(w, status, boundaryCode(status), false)
+		return
+	}
+	kind, ok := resourceKinds[r.PathValue("kind")]
+	if !ok {
+		writeAdminError(w, http.StatusBadRequest, "invalid_resource_kind", false)
+		return
+	}
+	expected, present, err := optionalIfMatch(r)
+	if err != nil {
+		writeAdminError(w, http.StatusBadRequest, "invalid_precondition", false)
+		return
+	}
+	if !present {
+		writeAdminError(w, http.StatusPreconditionRequired, "precondition_required", false)
+		return
+	}
+	_, err = a.configuration.MutateResourceSession(r.Context(), config.ResourceMutationInput{
+		Operation: config.DeleteResource, Kind: config.Kind(kind), Name: r.PathValue("name"),
+		ExpectedVersion: expected, SessionToken: session, CSRFToken: csrf,
+	})
+	if err != nil {
+		writeResourceMutationError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *adminAPI) resourceMutationAccess(w http.ResponseWriter, r *http.Request) (string, string, bool) {
+	session, csrf, status := a.authorize(r, true)
+	if status != 0 {
+		writeAdminError(w, status, boundaryCode(status), false)
+		return "", "", false
+	}
+	if !mediaType(r, "application/json") {
+		writeAdminError(w, http.StatusUnsupportedMediaType, "unsupported_media_type", false)
+		return "", "", false
+	}
+	return session, csrf, true
+}
+
+func decodeResourceBody(r *http.Request) (config.Resource, error) {
+	body, err := readBody(r, config.MaxInputBytes-96)
+	if err != nil {
+		return config.Resource{}, err
+	}
+	prefix := []byte(`{"apiVersion":"modelcairn.io/v1alpha1","kind":"Configuration","resources":[`)
+	envelope := make([]byte, 0, len(prefix)+len(body)+2)
+	envelope = append(envelope, prefix...)
+	envelope = append(envelope, body...)
+	envelope = append(envelope, ']', '}')
+	doc, err := config.Parse(envelope)
+	if err != nil {
+		return config.Resource{}, err
+	}
+	if len(doc.Resources) != 1 {
+		return config.Resource{}, &config.Error{Diagnostics: []config.Diagnostic{{Code: config.CodeInvalidStructure, Path: "$.resources"}}}
+	}
+	return doc.Resources[0], nil
+}
+
+func writeResourceBodyError(w http.ResponseWriter, err error) {
+	if errors.Is(err, errBodyTooLarge) {
+		writeAdminError(w, http.StatusRequestEntityTooLarge, config.CodeInputTooLarge, false)
+		return
+	}
+	var parseErr *config.Error
+	if errors.As(err, &parseErr) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid_resource", "diagnostics": parseErr.Diagnostics})
+		return
+	}
+	writeAdminError(w, http.StatusBadRequest, "invalid_resource", false)
+}
+
+func writeResourceMutationError(w http.ResponseWriter, err error) {
+	if errors.Is(err, storage.ErrAdminSessionInvalid) {
+		writeSessionError(w, err)
+		return
+	}
+	switch {
+	case storage.IsRepositoryCode(err, storage.CodeAlreadyExists):
+		writeAdminError(w, http.StatusConflict, "already_exists", false)
+	case storage.IsRepositoryCode(err, storage.CodeNotFound):
+		writeAdminError(w, http.StatusNotFound, "not_found", false)
+	case storage.IsRepositoryCode(err, storage.CodeVersionConflict):
+		writeAdminError(w, http.StatusPreconditionFailed, "precondition_failed", false)
+	case storage.IsRepositoryCode(err, storage.CodeReferenceMissing), storage.IsRepositoryCode(err, storage.CodeResourceInUse), storage.IsRepositoryCode(err, storage.CodeProviderMismatch):
+		writeAdminError(w, http.StatusConflict, "graph_conflict", false)
+	case storage.IsRepositoryCode(err, storage.CodeInvalidResource):
+		writeAdminError(w, http.StatusBadRequest, "invalid_resource", false)
+	default:
+		var parseErr *config.Error
+		if errors.As(err, &parseErr) {
+			code := "invalid_resource"
+			status := http.StatusBadRequest
+			if len(parseErr.Diagnostics) > 0 && (parseErr.Diagnostics[0].Code == config.CodeReferenceNotFound || parseErr.Diagnostics[0].Code == config.CodeProviderMismatch) {
+				code, status = "graph_conflict", http.StatusConflict
+			}
+			writeJSON(w, status, map[string]any{"error": code, "diagnostics": parseErr.Diagnostics})
+			return
+		}
+		writeAdminError(w, http.StatusServiceUnavailable, "unavailable", true)
+	}
 }
 
 func (a *adminAPI) listSecrets(w http.ResponseWriter, r *http.Request) {
@@ -201,15 +378,36 @@ func secretMetadataView(item storage.SecretMetadata) map[string]any {
 	return map[string]any{"name": item.Name, "fingerprint": item.Fingerprint, "resourceVersion": item.ResourceVersion, "updatedAt": item.UpdatedAt}
 }
 
-func resourceView(item storage.Resource) map[string]any {
-	metadata := map[string]any{"name": item.Name, "uid": item.ID, "resourceVersion": item.ResourceVersion}
+func (a *adminAPI) resourceView(item storage.Resource) map[string]any {
+	redactor := a.installation.Secrets().Redactor()
+	metadata := map[string]any{"name": redactor.String(item.Name), "uid": item.ID, "resourceVersion": item.ResourceVersion}
 	if item.DisplayName != nil {
-		metadata["displayName"] = *item.DisplayName
+		metadata["displayName"] = redactor.String(*item.DisplayName)
 	}
 	if item.Description != nil {
-		metadata["description"] = *item.Description
+		metadata["description"] = redactor.String(*item.Description)
 	}
-	return map[string]any{"kind": item.Kind, "state": "present", "metadata": metadata, "spec": json.RawMessage(item.Spec)}
+	var spec any
+	if json.Unmarshal(item.Spec, &spec) != nil {
+		spec = map[string]any{}
+	}
+	return map[string]any{"kind": item.Kind, "state": "present", "metadata": metadata, "spec": redactResourceStrings(spec, redactor.String)}
+}
+
+func redactResourceStrings(value any, redactString func(string) string) any {
+	switch typed := value.(type) {
+	case string:
+		return redactString(typed)
+	case []any:
+		for index := range typed {
+			typed[index] = redactResourceStrings(typed[index], redactString)
+		}
+	case map[string]any:
+		for key, item := range typed {
+			typed[key] = redactResourceStrings(item, redactString)
+		}
+	}
+	return value
 }
 func quotedVersion(version int64) string { return `"` + strconv.FormatInt(version, 10) + `"` }
 func optionalIfMatch(r *http.Request) (int64, bool, error) {
