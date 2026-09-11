@@ -51,6 +51,13 @@ func TestIndividualResourceMutationsAreConditionalAndGraphSafe(t *testing.T) {
 	if _, err := mutate(ResourceMutationInput{Operation: UpdateResource, Kind: ProviderKind, Name: "acme", Resource: &provider, ExpectedVersion: 99}); !storage.IsRepositoryCode(err, storage.CodeVersionConflict) {
 		t.Fatalf("stale update=%v", err)
 	}
+	missing := Resource{Kind: ProviderKind, State: Present, Metadata: Metadata{Name: "missing"}, Spec: ProviderSpec{}}
+	if _, err := mutate(ResourceMutationInput{Operation: UpdateResource, Kind: ProviderKind, Name: "missing", Resource: &missing, ExpectedVersion: 1}); !storage.IsRepositoryCode(err, storage.CodeNotFound) {
+		t.Fatalf("missing update=%v", err)
+	}
+	if _, err := mutate(ResourceMutationInput{Operation: DeleteResource, Kind: ProviderKind, Name: "missing", ExpectedVersion: 1}); !storage.IsRepositoryCode(err, storage.CodeNotFound) {
+		t.Fatalf("missing delete=%v", err)
+	}
 	noop, err := mutate(ResourceMutationInput{Operation: UpdateResource, Kind: ProviderKind, Name: "acme", Resource: &provider, ExpectedVersion: 1})
 	if err != nil || !noop.Noop || noop.Resource.ResourceVersion != 1 {
 		t.Fatalf("noop=%+v err=%v", noop, err)
@@ -66,6 +73,48 @@ func TestIndividualResourceMutationsAreConditionalAndGraphSafe(t *testing.T) {
 	if _, err := mutate(ResourceMutationInput{Operation: DeleteResource, Kind: ProviderKind, Name: "acme", ExpectedVersion: 1}); err == nil {
 		t.Fatal("deleted provider still referenced by account")
 	}
+	updates := []Resource{
+		{Kind: ProviderKind, State: Present, Metadata: Metadata{Name: "acme", DisplayName: stringPointer("first")}, Spec: ProviderSpec{}},
+		{Kind: ProviderKind, State: Present, Metadata: Metadata{Name: "acme", DisplayName: stringPointer("second")}, Spec: ProviderSpec{}},
+	}
+	results := make(chan error, len(updates))
+	for index := range updates {
+		go func(resource Resource) {
+			_, err := mutate(ResourceMutationInput{Operation: UpdateResource, Kind: ProviderKind, Name: "acme", Resource: &resource, ExpectedVersion: 1})
+			results <- err
+		}(updates[index])
+	}
+	var successes, conflicts int
+	for range updates {
+		err := <-results
+		if err == nil {
+			successes++
+		} else if storage.IsRepositoryCode(err, storage.CodeVersionConflict) {
+			conflicts++
+		} else {
+			t.Fatalf("concurrent update=%v", err)
+		}
+	}
+	if successes != 1 || conflicts != 1 {
+		t.Fatalf("concurrent successes=%d conflicts=%d", successes, conflicts)
+	}
+
+	auditFail := Resource{Kind: ProviderKind, State: Present, Metadata: Metadata{Name: "audit-fail"}, Spec: ProviderSpec{}}
+	createdAuditFail, err := mutate(ResourceMutationInput{Operation: CreateResource, Kind: ProviderKind, Name: "audit-fail", Resource: &auditFail})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := installation.DB().Exec(`CREATE TRIGGER reject_resource_update_audit BEFORE INSERT ON audit_events WHEN NEW.action='resource.update' BEGIN SELECT RAISE(ABORT,'injected'); END`); err != nil {
+		t.Fatal(err)
+	}
+	auditFail.Metadata.DisplayName = stringPointer("must roll back")
+	if _, err := mutate(ResourceMutationInput{Operation: UpdateResource, Kind: ProviderKind, Name: "audit-fail", Resource: &auditFail, ExpectedVersion: createdAuditFail.Resource.ResourceVersion}); err == nil {
+		t.Fatal("update succeeded despite rejected audit")
+	}
+	persisted, err := storage.NewRepository(installation.DB()).Get(ctx, storage.KindProvider, "audit-fail")
+	if err != nil || persisted.ResourceVersion != 1 || persisted.DisplayName != nil {
+		t.Fatalf("audit rollback=%+v err=%v", persisted, err)
+	}
 	if err := storage.RevokeAdminSession(ctx, installation, session.SessionToken, session.CSRFToken, time.Now()); err != nil {
 		t.Fatal(err)
 	}
@@ -74,6 +123,8 @@ func TestIndividualResourceMutationsAreConditionalAndGraphSafe(t *testing.T) {
 		t.Fatalf("revoked session mutation=%v", err)
 	}
 }
+
+func stringPointer(value string) *string { return &value }
 
 func exampleDocument(t *testing.T) *Document {
 	t.Helper()
