@@ -85,6 +85,62 @@ func (s *SecretStore) ListMetadata(ctx context.Context) ([]SecretMetadata, error
 	return result, nil
 }
 
+type SecretMetadataPage struct {
+	Items  []SecretMetadata
+	NextID string
+}
+
+func (s *SecretStore) ListMetadataPage(ctx context.Context, afterID string, limit int) (SecretMetadataPage, error) {
+	if len(afterID) > 64 || limit < 1 || limit > 200 {
+		return SecretMetadataPage{}, &RepositoryError{Code: CodeInvalidResource}
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.unavailable {
+		return SecretMetadataPage{}, errKeyMaterialUnavailable
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT id,name,fingerprint,resource_version,key_version,created_at,updated_at FROM secrets WHERE id>? ORDER BY id LIMIT ?`, afterID, limit+1)
+	if err != nil {
+		return SecretMetadataPage{}, fmt.Errorf("list secret metadata page: %w", err)
+	}
+	defer rows.Close()
+	type entry struct {
+		id       string
+		metadata SecretMetadata
+	}
+	entries := make([]entry, 0, limit+1)
+	for rows.Next() {
+		var current entry
+		var created, updated string
+		if err := rows.Scan(&current.id, &current.metadata.Name, &current.metadata.Fingerprint, &current.metadata.ResourceVersion, &current.metadata.KeyVersion, &created, &updated); err != nil {
+			return SecretMetadataPage{}, err
+		}
+		current.metadata.CreatedAt, err = time.Parse(time.RFC3339Nano, created)
+		if err != nil {
+			return SecretMetadataPage{}, err
+		}
+		current.metadata.UpdatedAt, err = time.Parse(time.RFC3339Nano, updated)
+		if err != nil {
+			return SecretMetadataPage{}, err
+		}
+		entries = append(entries, current)
+	}
+	if err := rows.Err(); err != nil {
+		return SecretMetadataPage{}, err
+	}
+	page := SecretMetadataPage{Items: make([]SecretMetadata, 0, min(limit, len(entries)))}
+	for index, entry := range entries {
+		if index == limit {
+			break
+		}
+		page.Items = append(page.Items, entry.metadata)
+	}
+	if len(entries) > limit {
+		page.NextID = entries[limit-1].id
+	}
+	return page, nil
+}
+
 func scanSecretMetadata(row rowScanner) (SecretMetadata, error) {
 	var item SecretMetadata
 	var created, updated string

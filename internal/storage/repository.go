@@ -127,6 +127,42 @@ func (r *Repository) List(ctx context.Context) ([]Resource, error) {
 	return result, nil
 }
 
+type ResourcePage struct {
+	Items  []Resource
+	NextID string
+}
+
+// ListPage uses immutable IDs as continuation positions. Pages intentionally do
+// not promise a snapshot across requests.
+func (r *Repository) ListPage(ctx context.Context, kind ResourceKind, afterID string, limit int) (ResourcePage, error) {
+	if _, ok := validKinds[kind]; !ok || len(afterID) > 64 || limit < 1 || limit > 200 {
+		return ResourcePage{}, &RepositoryError{Code: CodeInvalidResource}
+	}
+	rows, err := r.db.QueryContext(ctx, `SELECT id,kind,name,display_name,description,resource_version,spec_json,created_at,updated_at
+		FROM resources WHERE kind=? AND id>? ORDER BY id LIMIT ?`, kind, afterID, limit+1)
+	if err != nil {
+		return ResourcePage{}, fmt.Errorf("list resource page: %w", err)
+	}
+	defer rows.Close()
+	items := make([]Resource, 0, limit+1)
+	for rows.Next() {
+		item, err := scanResource(rows)
+		if err != nil {
+			return ResourcePage{}, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return ResourcePage{}, fmt.Errorf("iterate resource page: %w", err)
+	}
+	page := ResourcePage{Items: items}
+	if len(items) > limit {
+		page.NextID = items[limit-1].ID
+		page.Items = items[:limit]
+	}
+	return page, nil
+}
+
 type rowScanner interface{ Scan(...any) error }
 
 func scanResource(row rowScanner) (Resource, error) {

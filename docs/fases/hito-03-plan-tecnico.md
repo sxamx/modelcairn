@@ -259,6 +259,14 @@ plan with a fresh session and confirms success. The integrated HTTP flow validat
 plans, applies and exports a resource without reflecting its token. Paginated CRUD,
 secrets, online CLI and agent tokens remain outstanding.
 
+Resource and secret-metadata reads now expose individual GET and paginated lists.
+Queries filter by kind and `id > cursor`, request limit plus one and never load the
+whole catalog; opaque cursors are bounded and scope-bound. Pages do not promise a
+cross-request snapshot. Individual GETs return strong resourceVersion ETags. The
+secret representation exposes only name, non-reversible fingerprint, version and
+update time; it omits value, internal id, key version and creation time. Mutations
+remain outstanding.
+
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an
