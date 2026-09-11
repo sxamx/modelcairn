@@ -12,9 +12,9 @@ detalla campos y límites; la retención del histórico de login espera decisió
 
 ## Resultado esperado
 
-Relevo actual: [diseño del CRUD transaccional](../contratos/resource-mutations-v1.es.md).
-Concreta precondiciones, noop, auditoría y pruebas del próximo bloque reutilizando
-el validador existente del grafo completo.
+Relevo actual: [ciclo de vida de AgentToken](../contratos/agent-token-lifecycle-v1.es.md).
+El [CRUD transaccional](../contratos/resource-mutations-v1.es.md) ya está implementado;
+el siguiente bloque emite y revoca bearers sin mezclarlos con sesiones administrativas.
 
 Una instalación puede crear su administrador localmente, autenticar sesiones,
 administrar configuración y secretos mediante HTTP y emitir o revocar tokens de
@@ -270,8 +270,8 @@ operación. `Manager.ApplySession` autoriza dentro de ExecutePlan antes de prepa
 el snapshot, y confirma sesión, consumo de nonce, grafo completo y auditoría en una
 transacción. Una sesión revocada no consume el plan; la regresión reutiliza ese
 mismo plan con una sesión nueva y confirma éxito. El flujo HTTP integrado valida,
-planea, aplica y exporta un recurso sin reflejar el token. CRUD paginado, secretos,
-CLI online y tokens de agentes continúan pendientes.
+planea, aplica y exporta un recurso sin reflejar el token. CRUD individual y
+secretos están conectados; CLI online y tokens de agentes continúan pendientes.
 
 Las lecturas de recursos y metadatos de secretos ya exponen GET individual y lista
 paginada. Las consultas filtran por tipo y `id > cursor`, solicitan límite más uno
@@ -279,7 +279,7 @@ y nunca cargan todo el catálogo; el cursor opaco está acotado y ligado a su sc
 Las páginas no prometen snapshot entre solicitudes. Los GET individuales devuelven
 ETag fuerte con resourceVersion. La representación de secretos publica únicamente
 nombre, fingerprint no reversible, versión y actualización; excluye valor, id
-interno, versión de clave y fecha de creación. Las escrituras siguen pendientes.
+interno, versión de clave y fecha de creación. Las escrituras ya están conectadas.
 
 Las escrituras de secretos ya implementan PUT y DELETE con Origin, sesión/CSRF y
 precondiciones fuertes. Omitir If-Match crea; si el nombre ya existe exige 428.
@@ -291,8 +291,8 @@ o desconocidos y el buffer del valor se limpia al terminar. La API devuelve solo
 metadatos/ETag. Un fallo excepcional de registro de redacción después del commit
 cierra el SecretStore para evitar continuar con una protección incompleta.
 
-El hito completo sigue pendiente: servicios de identidad/sesión,
-handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
+El hito completo sigue pendiente: paridad CLI, tokens de acceso, mediciones VM y
+aceptación integrada. Identidad, sesiones y administración HTTP ya están implementadas.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
 está publicado como PR #20 en borrador, no release fusionado. El diseño permite este
 relevo concreto; no implica que todo el diseño de seguridad esté aceptado.

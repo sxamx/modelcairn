@@ -13,6 +13,7 @@
 7. [Contratos técnicos](fases/fase-01-contratos-tecnicos.es.md)
 8. [Plan de implementación](fases/fase-01-plan-de-implementacion.es.md)
 9. [Plan técnico de entrega del Hito 2](fases/hito-02-plan-tecnico.es.md)
+10. [Plan técnico de entrega del Hito 3](fases/hito-03-plan-tecnico.es.md)
 
 ## Contratos ejecutables de la Fase 1
 
@@ -36,6 +37,8 @@
 - [Plan técnico de entrega](fases/hito-03-plan-tecnico.es.md)
 - [Ejecución administrativa](contratos/admin-runtime-v1.es.md)
 - [Propuesta de settings y auditoría](contratos/admin-settings-v1.es.md)
+- [Mutaciones individuales de recursos](contratos/resource-mutations-v1.es.md)
+- [Ciclo de vida de AgentToken](contratos/agent-token-lifecycle-v1.es.md)
 
 ## Decisiones
 
