@@ -267,6 +267,16 @@ secret representation exposes only name, non-reversible fingerprint, version and
 update time; it omits value, internal id, key version and creation time. Mutations
 remain outstanding.
 
+Secret writes now implement PUT and DELETE with Origin, session/CSRF and strong
+preconditions. Omitting If-Match creates; an existing name then requires 428.
+Replacement/deletion require one quoted version; malformed input returns 400 and
+a stale version 412. `SecretStore.PutSession/DeleteSession` hold the store lock
+through authorization, encryption/deletion, audit and commit. The actor is derived
+from the session, and a revoked session writes nothing. JSON rejects duplicate or
+unknown fields and clears the value buffer after use. The API returns metadata and
+ETag only. An exceptional redaction-registration failure after commit closes the
+SecretStore so operation cannot continue with incomplete output protection.
+
 The complete milestone remains unfinished. Outstanding implementation includes
 identity/session services, HTTP handlers, CLI parity, tokens,
 VM measurements and integration acceptance. Login aggregate retention remains an

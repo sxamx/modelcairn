@@ -164,6 +164,14 @@ func (s *SecretStore) Put(ctx context.Context, input PutSecret, actor Actor) (Se
 	if err := validateActor(actor); err != nil {
 		return SecretMetadata{}, err
 	}
+	return s.putAuthorized(ctx, input, func(*sql.Tx) (Actor, error) { return actor, nil })
+}
+
+func (s *SecretStore) PutSession(ctx context.Context, input PutSecret, sessionToken, csrfToken string) (SecretMetadata, error) {
+	return s.putAuthorized(ctx, input, func(tx *sql.Tx) (Actor, error) { return AuthorizeAdminMutationTx(ctx, tx, sessionToken, csrfToken) })
+}
+
+func (s *SecretStore) putAuthorized(ctx context.Context, input PutSecret, authorize func(*sql.Tx) (Actor, error)) (SecretMetadata, error) {
 	if !secretNamePattern.MatchString(input.Name) || input.ExpectedVersion < 0 {
 		return SecretMetadata{}, &RepositoryError{Code: CodeInvalidResource}
 	}
@@ -176,6 +184,11 @@ func (s *SecretStore) Put(ctx context.Context, input PutSecret, actor Actor) (Se
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return SecretMetadata{}, fmt.Errorf("begin secret mutation: %w", err)
+	}
+	actor, err := authorize(tx)
+	if err != nil {
+		_ = tx.Rollback()
+		return SecretMetadata{}, err
 	}
 	metadata, secretID, err := s.putTx(ctx, tx, input)
 	if err == nil {
@@ -193,6 +206,7 @@ func (s *SecretStore) Put(ctx context.Context, input PutSecret, actor Actor) (Se
 		return SecretMetadata{}, fmt.Errorf("commit secret mutation: %w", err)
 	}
 	if err := s.replaceRegistration(secretID, input.Value); err != nil {
+		s.unavailable = true
 		return SecretMetadata{}, fmt.Errorf("register secret redaction: %w", err)
 	}
 	return metadata, nil
@@ -202,6 +216,14 @@ func (s *SecretStore) Delete(ctx context.Context, name string, expectedVersion i
 	if err := validateActor(actor); err != nil {
 		return err
 	}
+	return s.deleteAuthorized(ctx, name, expectedVersion, func(*sql.Tx) (Actor, error) { return actor, nil })
+}
+
+func (s *SecretStore) DeleteSession(ctx context.Context, name string, expectedVersion int64, sessionToken, csrfToken string) error {
+	return s.deleteAuthorized(ctx, name, expectedVersion, func(tx *sql.Tx) (Actor, error) { return AuthorizeAdminMutationTx(ctx, tx, sessionToken, csrfToken) })
+}
+
+func (s *SecretStore) deleteAuthorized(ctx context.Context, name string, expectedVersion int64, authorize func(*sql.Tx) (Actor, error)) error {
 	if !secretNamePattern.MatchString(name) || expectedVersion < 1 {
 		return &RepositoryError{Code: CodeInvalidResource}
 	}
@@ -213,6 +235,11 @@ func (s *SecretStore) Delete(ctx context.Context, name string, expectedVersion i
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin secret deletion: %w", err)
+	}
+	actor, err := authorize(tx)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
 	}
 	var id string
 	var current int64

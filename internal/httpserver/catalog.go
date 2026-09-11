@@ -8,7 +8,9 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/sxamx/modelcairn/internal/storage"
 )
@@ -126,6 +128,75 @@ func (a *adminAPI) getSecret(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, secretMetadataView(metadata))
 }
 
+func (a *adminAPI) putSecret(w http.ResponseWriter, r *http.Request) {
+	session, csrf, status := a.authorize(r, true)
+	if status != 0 {
+		writeAdminError(w, status, boundaryCode(status), false)
+		return
+	}
+	if !mediaType(r, "application/json") {
+		writeAdminError(w, http.StatusUnsupportedMediaType, "unsupported_media_type", false)
+		return
+	}
+	expected, present, err := optionalIfMatch(r)
+	if err != nil {
+		writeAdminError(w, http.StatusBadRequest, "invalid_precondition", false)
+		return
+	}
+	value, err := decodeSecretValue(r)
+	if err != nil {
+		writeAdminError(w, bodyStatus(err), "invalid_secret", false)
+		return
+	}
+	defer clear(value)
+	metadata, err := a.installation.Secrets().PutSession(r.Context(), storage.PutSecret{Name: r.PathValue("name"), Value: value, ExpectedVersion: expected}, session, csrf)
+	if err != nil {
+		if errors.Is(err, storage.ErrAdminSessionInvalid) {
+			writeSessionError(w, err)
+			return
+		}
+		if storage.IsRepositoryCode(err, storage.CodeAlreadyExists) && !present {
+			writeAdminError(w, http.StatusPreconditionRequired, "precondition_required", false)
+			return
+		}
+		writeSecretMutationError(w, err)
+		return
+	}
+	w.Header().Set("ETag", quotedVersion(metadata.ResourceVersion))
+	if present {
+		writeJSON(w, http.StatusOK, secretMetadataView(metadata))
+	} else {
+		writeJSON(w, http.StatusCreated, secretMetadataView(metadata))
+	}
+}
+
+func (a *adminAPI) deleteSecret(w http.ResponseWriter, r *http.Request) {
+	session, csrf, status := a.authorize(r, true)
+	if status != 0 {
+		writeAdminError(w, status, boundaryCode(status), false)
+		return
+	}
+	expected, present, err := optionalIfMatch(r)
+	if err != nil {
+		writeAdminError(w, http.StatusBadRequest, "invalid_precondition", false)
+		return
+	}
+	if !present {
+		writeAdminError(w, http.StatusPreconditionRequired, "precondition_required", false)
+		return
+	}
+	if err := a.installation.Secrets().DeleteSession(r.Context(), r.PathValue("name"), expected, session, csrf); err != nil {
+		if errors.Is(err, storage.ErrAdminSessionInvalid) {
+			writeSessionError(w, err)
+			return
+		}
+		writeSecretMutationError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func secretMetadataView(item storage.SecretMetadata) map[string]any {
 	return map[string]any{"name": item.Name, "fingerprint": item.Fingerprint, "resourceVersion": item.ResourceVersion, "updatedAt": item.UpdatedAt}
 }
@@ -141,6 +212,78 @@ func resourceView(item storage.Resource) map[string]any {
 	return map[string]any{"kind": item.Kind, "state": "present", "metadata": metadata, "spec": json.RawMessage(item.Spec)}
 }
 func quotedVersion(version int64) string { return `"` + strconv.FormatInt(version, 10) + `"` }
+func optionalIfMatch(r *http.Request) (int64, bool, error) {
+	values := r.Header.Values("If-Match")
+	present := len(values) != 0
+	if !present {
+		return 0, false, nil
+	}
+	if len(values) != 1 || len(values[0]) < 3 || values[0][0] != '"' || values[0][len(values[0])-1] != '"' {
+		return 0, true, errors.New("invalid_precondition")
+	}
+	raw := values[0][1 : len(values[0])-1]
+	if raw == "" || raw[0] == '0' || strings.ContainsAny(raw, " ,\t") {
+		return 0, true, errors.New("invalid_precondition")
+	}
+	version, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || version < 1 {
+		return 0, true, errors.New("invalid_precondition")
+	}
+	return version, true, nil
+}
+func decodeSecretValue(r *http.Request) ([]byte, error) {
+	data, err := readBody(r, 128<<10)
+	if err != nil {
+		return nil, err
+	}
+	if !utf8.Valid(data) {
+		return nil, errors.New("invalid_secret")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	token, err := decoder.Token()
+	if err != nil || token != json.Delim('{') {
+		return nil, errors.New("invalid_secret")
+	}
+	seen := false
+	var value string
+	for decoder.More() {
+		key, err := decoder.Token()
+		name, ok := key.(string)
+		if err != nil || !ok || name != "value" || seen {
+			return nil, errors.New("invalid_secret")
+		}
+		seen = true
+		if decoder.Decode(&value) != nil {
+			return nil, errors.New("invalid_secret")
+		}
+	}
+	if token, err = decoder.Token(); err != nil || token != json.Delim('}') || !seen {
+		return nil, errors.New("invalid_secret")
+	}
+	if err := decoder.Decode(new(any)); !errors.Is(err, io.EOF) {
+		return nil, errors.New("invalid_secret")
+	}
+	result := []byte(value)
+	if len(result) < 8 || len(result) > 16384 || !utf8.Valid(result) {
+		clear(result)
+		return nil, errors.New("invalid_secret")
+	}
+	return result, nil
+}
+func writeSecretMutationError(w http.ResponseWriter, err error) {
+	switch {
+	case storage.IsRepositoryCode(err, storage.CodeVersionConflict):
+		writeAdminError(w, http.StatusPreconditionFailed, "precondition_failed", false)
+	case storage.IsRepositoryCode(err, storage.CodeNotFound):
+		writeAdminError(w, http.StatusNotFound, "not_found", false)
+	case storage.IsRepositoryCode(err, storage.CodeResourceInUse):
+		writeAdminError(w, http.StatusConflict, "resource_in_use", false)
+	case storage.IsRepositoryCode(err, storage.CodeInvalidResource):
+		writeAdminError(w, http.StatusBadRequest, "invalid_secret", false)
+	default:
+		writeAdminError(w, http.StatusServiceUnavailable, "unavailable", true)
+	}
+}
 func writeReadError(w http.ResponseWriter, err error) {
 	if storage.IsRepositoryCode(err, storage.CodeNotFound) {
 		writeAdminError(w, http.StatusNotFound, "not_found", false)

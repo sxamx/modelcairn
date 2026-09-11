@@ -186,6 +186,56 @@ func TestAdminHTTPLoginSettingsAndLogout(t *testing.T) {
 	if sr.Code != http.StatusOK || !bytes.Contains(sr.Body.Bytes(), []byte(`"items":[]`)) {
 		t.Fatalf("secrets=%d body=%s", sr.Code, sr.Body.String())
 	}
+	secretValue := "http-secret-canary"
+	put := request(http.MethodPut, "/api/v1/admin/secrets/provider-key", []byte(`{"value":"`+secretValue+`"}`))
+	put.Header.Set("Content-Type", "application/json")
+	put.Header.Set("X-CSRF-Token", session.CSRFToken)
+	pur := httptest.NewRecorder()
+	handler.ServeHTTP(pur, put)
+	if pur.Code != http.StatusCreated || pur.Header().Get("ETag") != `"1"` || bytes.Contains(pur.Body.Bytes(), []byte(secretValue)) {
+		t.Fatalf("secret create=%d body=%s", pur.Code, pur.Body.String())
+	}
+	missingPrecondition := request(http.MethodPut, "/api/v1/admin/secrets/provider-key", []byte(`{"value":"second-secret-value"}`))
+	missingPrecondition.Header.Set("Content-Type", "application/json")
+	missingPrecondition.Header.Set("X-CSRF-Token", session.CSRFToken)
+	mpr := httptest.NewRecorder()
+	handler.ServeHTTP(mpr, missingPrecondition)
+	if mpr.Code != http.StatusPreconditionRequired {
+		t.Fatalf("missing precondition=%d", mpr.Code)
+	}
+	stale := request(http.MethodPut, "/api/v1/admin/secrets/provider-key", []byte(`{"value":"second-secret-value"}`))
+	stale.Header.Set("Content-Type", "application/json")
+	stale.Header.Set("X-CSRF-Token", session.CSRFToken)
+	stale.Header.Set("If-Match", `"99"`)
+	str := httptest.NewRecorder()
+	handler.ServeHTTP(str, stale)
+	if str.Code != http.StatusPreconditionFailed {
+		t.Fatalf("stale precondition=%d", str.Code)
+	}
+	updateSecret := request(http.MethodPut, "/api/v1/admin/secrets/provider-key", []byte(`{"value":"second-secret-value"}`))
+	updateSecret.Header.Set("Content-Type", "application/json")
+	updateSecret.Header.Set("X-CSRF-Token", session.CSRFToken)
+	updateSecret.Header.Set("If-Match", `"1"`)
+	usr := httptest.NewRecorder()
+	handler.ServeHTTP(usr, updateSecret)
+	if usr.Code != http.StatusOK || usr.Header().Get("ETag") != `"2"` || bytes.Contains(usr.Body.Bytes(), []byte("second-secret-value")) {
+		t.Fatalf("secret update=%d body=%s", usr.Code, usr.Body.String())
+	}
+	deleteSecret := request(http.MethodDelete, "/api/v1/admin/secrets/provider-key", nil)
+	deleteSecret.Header.Set("X-CSRF-Token", session.CSRFToken)
+	deleteSecret.Header.Set("If-Match", `"2"`)
+	dsr := httptest.NewRecorder()
+	handler.ServeHTTP(dsr, deleteSecret)
+	if dsr.Code != http.StatusNoContent {
+		t.Fatalf("secret delete=%d body=%s", dsr.Code, dsr.Body.String())
+	}
+	missingSecret := request(http.MethodGet, "/api/v1/admin/secrets/provider-key", nil)
+	missingSecret.Header.Set("X-CSRF-Token", session.CSRFToken)
+	msr := httptest.NewRecorder()
+	handler.ServeHTTP(msr, missingSecret)
+	if msr.Code != http.StatusNotFound {
+		t.Fatalf("deleted secret get=%d", msr.Code)
+	}
 
 	logout := request(http.MethodDelete, "/api/v1/admin/session", nil)
 	logout.Header.Set("X-CSRF-Token", session.CSRFToken)

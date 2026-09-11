@@ -277,6 +277,16 @@ ETag fuerte con resourceVersion. La representación de secretos publica únicame
 nombre, fingerprint no reversible, versión y actualización; excluye valor, id
 interno, versión de clave y fecha de creación. Las escrituras siguen pendientes.
 
+Las escrituras de secretos ya implementan PUT y DELETE con Origin, sesión/CSRF y
+precondiciones fuertes. Omitir If-Match crea; si el nombre ya existe exige 428.
+Reemplazo/borrado requieren una versión entre comillas; formato inválido da 400 y
+versión obsoleta 412. `SecretStore.PutSession/DeleteSession` mantienen bloqueo,
+autorización, cifrado/borrado y auditoría hasta commit. El actor se deriva de la
+sesión. Una sesión revocada no escribe. Los cuerpos JSON rechazan campos duplicados
+o desconocidos y el buffer del valor se limpia al terminar. La API devuelve solo
+metadatos/ETag. Un fallo excepcional de registro de redacción después del commit
+cierra el SecretStore para evitar continuar con una protección incompleta.
+
 El hito completo sigue pendiente: servicios de identidad/sesión,
 handlers HTTP, paridad CLI, tokens de acceso, mediciones VM y aceptación integrada.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
