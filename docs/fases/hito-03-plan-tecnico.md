@@ -10,9 +10,9 @@ login-history retention still requires an operator decision.
 
 ## Intended outcome
 
-Current handoff: [transactional CRUD design](../contratos/resource-mutations-v1.md).
-It specifies preconditions, noops, audit and acceptance for the next block using
-the existing full-graph validator.
+Current handoff: [AgentToken lifecycle](../contratos/agent-token-lifecycle-v1.md).
+The [transactional CRUD](../contratos/resource-mutations-v1.md) is implemented;
+the next block issues and revokes bearers without mixing them with admin sessions.
 
 An installation can bootstrap its administrator locally, authenticate sessions,
 manage configuration and secrets over HTTP, and issue/revoke agent tokens.
@@ -260,8 +260,8 @@ and redacted changes; apply returns changes/appliedAt captured by the operation.
 committing session, nonce consumption, complete graph and audit in one transaction.
 A revoked session does not consume the plan; regression coverage reuses that same
 plan with a fresh session and confirms success. The integrated HTTP flow validates,
-plans, applies and exports a resource without reflecting its token. Paginated CRUD,
-secrets, online CLI and agent tokens remain outstanding.
+plans, applies and exports a resource without reflecting its token. Individual CRUD
+and secrets are connected; online CLI and agent tokens remain outstanding.
 
 Resource and secret-metadata reads now expose individual GET and paginated lists.
 Queries filter by kind and `id > cursor`, request limit plus one and never load the
@@ -269,7 +269,7 @@ whole catalog; opaque cursors are bounded and scope-bound. Pages do not promise 
 cross-request snapshot. Individual GETs return strong resourceVersion ETags. The
 secret representation exposes only name, non-reversible fingerprint, version and
 update time; it omits value, internal id, key version and creation time. Mutations
-remain outstanding.
+are now connected.
 
 Secret writes now implement PUT and DELETE with Origin, session/CSRF and strong
 preconditions. Omitting If-Match creates; an existing name then requires 428.
@@ -282,8 +282,8 @@ ETag only. An exceptional redaction-registration failure after commit closes the
 SecretStore so operation cannot continue with incomplete output protection.
 
 The complete milestone remains unfinished. Outstanding implementation includes
-identity/session services, HTTP handlers, CLI parity, tokens,
-VM measurements and integration acceptance. Login aggregate retention remains an
+CLI parity, tokens, VM measurements and integration acceptance. Identity, sessions,
+and HTTP administration are implemented. Login aggregate retention remains an
 explicit operator decision. The branch is published as draft PR #20, not a merged
 release. The design work now supports this concrete implementation
 handoff; it does not justify claiming the whole security design is accepted.

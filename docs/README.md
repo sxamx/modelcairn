@@ -13,6 +13,7 @@
 7. [Technical contracts](fases/fase-01-contratos-tecnicos.md)
 8. [Implementation plan](fases/fase-01-plan-de-implementacion.md)
 9. [Milestone 2 technical delivery plan](fases/hito-02-plan-tecnico.md)
+10. [Milestone 3 technical delivery plan](fases/hito-03-plan-tecnico.md)
 
 ## Phase 1 executable contracts
 
@@ -36,6 +37,8 @@
 - [Technical delivery plan](fases/hito-03-plan-tecnico.md)
 - [Administrative runtime](contratos/admin-runtime-v1.md)
 - [Settings and login audit proposal](contratos/admin-settings-v1.md)
+- [Individual resource mutations](contratos/resource-mutations-v1.md)
+- [AgentToken lifecycle](contratos/agent-token-lifecycle-v1.md)
 
 ## Decisions
 
