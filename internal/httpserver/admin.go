@@ -69,6 +69,8 @@ func (a *adminAPI) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/admin/resources/{kind}/{name}", a.getResource)
 	mux.HandleFunc("GET /api/v1/admin/secrets", a.listSecrets)
 	mux.HandleFunc("GET /api/v1/admin/secrets/{name}", a.getSecret)
+	mux.HandleFunc("PUT /api/v1/admin/secrets/{name}", a.putSecret)
+	mux.HandleFunc("DELETE /api/v1/admin/secrets/{name}", a.deleteSecret)
 }
 
 func (a *adminAPI) createSession(w http.ResponseWriter, r *http.Request) {
