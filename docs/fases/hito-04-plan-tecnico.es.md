@@ -2,8 +2,11 @@
 
 [English](hito-04-plan-tecnico.md)
 
-Estado: propuesta de plan de implementación; implementación no iniciada.
+Estado: plan de implementación aceptado; Bloque 1 iniciado.
 Prerrequisito: Hito 3 fusionado y aceptado.
+
+Orden aprobado por el operador: demostrar primero el router con salida directa y
+después añadir transportes proxy/relay dentro del mismo hito.
 
 ## Resultado
 

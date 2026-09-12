@@ -2,8 +2,11 @@
 
 [Español](hito-04-plan-tecnico.es.md)
 
-Status: proposed implementation plan; implementation not started.
+Status: accepted implementation plan; Block 1 started.
 Prerequisite: Milestone 3 merged and accepted.
+
+Implementation order approved by the operator: prove the router over direct
+egress first, then add proxy/relay transports within this same milestone.
 
 ## Outcome
 

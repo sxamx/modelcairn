@@ -28,6 +28,7 @@
 - [Benchmark representativo del Hito 3](evidencia/benchmark-hito-03-2026-09-12.es.md)
 - [Configuración de ejemplo](contratos/config/example-v1alpha1.yaml)
 - [OpenAPI administrativa](contratos/api/admin-v1.openapi.yaml)
+- [OpenAPI de datos](contratos/api/data-v1.openapi.yaml)
 - [Matriz Chat Completions](contratos/compatibilidad-chat-completions-v1.es.md)
 - [Schema SQLite documental](contratos/storage/schema-v1.sql)
 - [Reglas del modelo SQLite](contratos/storage/modelo-sqlite-v1.es.md)

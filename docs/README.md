@@ -28,6 +28,7 @@
 - [Milestone 3 representative benchmark](evidencia/benchmark-hito-03-2026-09-12.md)
 - [Example configuration](contratos/config/example-v1alpha1.yaml)
 - [Administrative OpenAPI](contratos/api/admin-v1.openapi.yaml)
+- [Data API OpenAPI](contratos/api/data-v1.openapi.yaml)
 - [Chat Completions compatibility matrix](contratos/compatibilidad-chat-completions-v1.md)
 - [Documentary SQLite schema](contratos/storage/schema-v1.sql)
 - [SQLite model rules](contratos/storage/modelo-sqlite-v1.md)

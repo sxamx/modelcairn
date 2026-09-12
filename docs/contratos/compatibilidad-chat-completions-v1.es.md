@@ -4,6 +4,11 @@
 
 - Estado: contrato de Fase 1
 - Endpoint: `POST /v1/chat/completions`
+- Contrato de esquema: [OpenAPI de datos v1](api/data-v1.openapi.yaml)
+
+El parser ejecutable limita el cuerpo a 1 MiB y la profundidad JSON a 64 niveles,
+rechaza claves duplicadas en cualquier nivel y exige UTF-8 válido. En esta primera
+entrega, los campos desconocidos son errores: no existe un modo passthrough.
 
 ## Solicitud
 
@@ -19,12 +24,17 @@
 | `parallel_tool_calls` | soportado condicional | requiere capacidad declarada |
 | `temperature`, `top_p` | passthrough validado | el adaptador declara rangos/soporte |
 | `max_tokens`, `max_completion_tokens` | normalizado | conflicto entre ambos produce `400` |
-| `stop`, `n`, penalties, `seed`, `logprobs` | condicional | nunca se ignoran silenciosamente |
-| `response_format` | condicional | requiere capacidad correspondiente |
+| `stop`, `n`, penalties, `seed`, `logprobs` | futuro | el parser actual los rechaza |
+| `response_format` | futuro | el parser actual lo rechaza |
 | campos desconocidos | rechazados por defecto | modo passthrough futuro, explícito por conexión |
 
 Una ruta solo es elegible si conserva todas las capacidades exigidas por la
 solicitud. La interfaz mostrará por qué un destino fue excluido.
+
+`stream_options` exige `stream: true`; `tool_choice` y
+`parallel_tool_calls` exigen una lista `tools`. Declarar ambas variantes de límite
+de tokens en una misma solicitud produce error. Un mensaje assistant puede tener
+contenido, tool calls o ambos, pero no puede omitir ambos.
 
 ## Respuesta no streaming
 
