@@ -14,6 +14,7 @@
 8. [Plan de implementación](fases/fase-01-plan-de-implementacion.es.md)
 9. [Plan técnico de entrega del Hito 2](fases/hito-02-plan-tecnico.es.md)
 10. [Plan técnico de entrega del Hito 3](fases/hito-03-plan-tecnico.es.md)
+11. [Mapa de datos locales y retención](retencion-de-datos.es.md)
 
 ## Contratos ejecutables de la Fase 1
 
@@ -35,11 +36,11 @@
 - [Trazabilidad de requisitos](fases/fase-01-trazabilidad.es.md)
 - [Riesgos y puertas de calidad](fases/fase-01-riesgos-y-puertas.es.md)
 
-## Borradores del Hito 3 — pendientes de aceptación
+## Contratos del Hito 3 — aceptación final en curso
 
 - [Plan técnico de entrega](fases/hito-03-plan-tecnico.es.md)
 - [Ejecución administrativa](contratos/admin-runtime-v1.es.md)
-- [Propuesta de settings y auditoría](contratos/admin-settings-v1.es.md)
+- [Settings y auditoría de login](contratos/admin-settings-v1.es.md)
 - [Mutaciones individuales de recursos](contratos/resource-mutations-v1.es.md)
 - [Ciclo de vida de AgentToken](contratos/agent-token-lifecycle-v1.es.md)
 

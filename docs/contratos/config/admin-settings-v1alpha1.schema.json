@@ -27,7 +27,7 @@
     "resolved": {
       "allOf": [
         { "$ref": "#/$defs/update" },
-        { "properties": { "spec": { "required": ["publicOrigin", "listen", "transport", "trustedProxyCidrs", "tlsCertificatePath", "tlsPrivateKeyPath", "idleSeconds", "absoluteSeconds", "globalAttemptsPerMinute", "globalBurst", "clientAttemptsPerMinute", "clientBurst", "maxClientEntries", "clientIdleSeconds", "argonMemoryKiB", "argonIterations"] } } }
+        { "properties": { "spec": { "required": ["publicOrigin", "listen", "transport", "trustedProxyCidrs", "tlsCertificatePath", "tlsPrivateKeyPath", "idleSeconds", "absoluteSeconds", "globalAttemptsPerMinute", "globalBurst", "clientAttemptsPerMinute", "clientBurst", "maxClientEntries", "clientIdleSeconds", "failedLoginRetentionSeconds", "argonMemoryKiB", "argonIterations"] } } }
       ]
     },
     "spec": {
@@ -48,6 +48,7 @@
         "clientBurst": { "type": "integer", "minimum": 1, "maximum": 10, "default": 3 },
         "maxClientEntries": { "type": "integer", "minimum": 64, "maximum": 4096, "default": 1024 },
         "clientIdleSeconds": { "type": "integer", "minimum": 60, "maximum": 3600, "default": 900 },
+        "failedLoginRetentionSeconds": { "type": "integer", "minimum": 0, "maximum": 3155760000, "default": 86400, "description": "Retention duration for aggregate failed-login statistics; 0 means unlimited time retention." },
         "argonMemoryKiB": { "type": "integer", "minimum": 19456, "maximum": 65536, "default": 19456 },
         "argonIterations": { "type": "integer", "minimum": 2, "maximum": 6, "default": 2 }
       }

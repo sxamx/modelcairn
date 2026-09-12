@@ -2,7 +2,7 @@
 
 [English](admin-runtime-v1.md)
 
-Estado: especificación de implementación del Hito 3; revisión pendiente.
+Estado: especificación implementada; verificación final del hito pendiente.
 Precisa el contrato de sesiones y ADR-0005.
 
 ## Transporte y despliegue
@@ -109,9 +109,10 @@ reutilizan validación del grafo y persistencia atómica, no SQL individual dire
 
 Auditoría con acciones tipadas para bootstrap, reset, creación/logout de sesión y
 emisión/revocación de agentes. Excluir contraseñas, PHC, cookies, CSRF, bearer,
-cuerpos y texto arbitrario del cliente. Auditoría de login fallido acotada/agregada
-para evitar crecimiento ilimitado por tráfico sin autenticar. Definir agregación
-y retención antes de exponer login.
+cuerpos y texto arbitrario del cliente. Las estadísticas de login fallido se
+agregan en buckets por minuto con motivos permitidos. La retención inicial de 24
+horas acota el crecimiento; elegir retención ilimitada cambia explícitamente ese
+límite por historial largo sin aumentar filas por minuto.
 
 Pruebas de conexión y publicación de estrategias corresponden al Hito 4; antes de
 implementarlas no pueden devolver éxito ficticio. Backup completo: Hito 6.

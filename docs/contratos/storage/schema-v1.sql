@@ -151,6 +151,13 @@ CREATE TABLE admin_settings (
   updated_at TEXT NOT NULL
 ) STRICT;
 
+CREATE TABLE failed_login_statistics (
+  minute_unix INTEGER NOT NULL CHECK(minute_unix >= 0 AND minute_unix % 60 = 0),
+  reason TEXT NOT NULL CHECK(reason IN ('invalid_credentials','throttled','malformed','unavailable')),
+  count INTEGER NOT NULL CHECK(count > 0),
+  PRIMARY KEY(minute_unix, reason)
+) STRICT, WITHOUT ROWID;
+
 CREATE TABLE agent_tokens (
   resource_id TEXT PRIMARY KEY REFERENCES resources(id) ON DELETE CASCADE,
   verifier_sha256 BLOB UNIQUE CHECK(verifier_sha256 IS NULL OR length(verifier_sha256) = 32),

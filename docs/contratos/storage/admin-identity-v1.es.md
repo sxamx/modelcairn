@@ -2,10 +2,10 @@
 
 [English](admin-identity-v1.md)
 
-La migración de producción `0003_admin_settings.sql` implementa este contrato con
-el ejecutor transaccional y verificaciones de checksum/compatibilidad existentes.
-Las migraciones publicadas 0001 y 0002 no cambian. La prueba ejecutable lee 0003
-directamente para evitar que una segunda copia SQL diverja de producción.
+Las migraciones de producción `0003_admin_settings.sql` y
+`0004_failed_login_statistics.sql` implementan este contrato con el ejecutor
+transaccional y verificaciones de checksum/compatibilidad existentes. Las
+migraciones publicadas 0001 a 0003 no cambian.
 
 ## Configuración
 
@@ -69,8 +69,9 @@ canal de capacidad uno rechaza concurrencia sin cola y cubre toda derivación re
 ficticia. Usuario ausente y contraseña incorrecta derivan y devuelven
 `invalid_credentials`; errores de PHC o persistencia devuelven indisponibilidad.
 Después del hash, la creación transaccional vuelve a comprobar auth_version.
-Éxito limpia backoff sin rellenar cubetas. El servicio mantiene estas estructuras
-solo en memoria y todavía no crea un endpoint HTTP ni persistencia de fallos.
+Éxito limpia backoff sin rellenar cubetas. El servicio expone el endpoint de login
+y registra únicamente contadores agregados por minuto/motivo mediante la migración
+0004.
 
 La migración 0003 revoca todas las sesiones activas anteriores antes de añadir idle_seconds:
 se desconoce su política original. Filas históricas revocadas pueden mantener NULL.
@@ -86,9 +87,10 @@ las comprobaciones HTTP requieren una entrega posterior.
 ## Auditoría y aceptación
 
 Acciones exitosas de identidad reutilizan audit_events con detalles tipados por
-acción; no se introduce una API de auditoría genérica con texto libre. Agregados de
-login fallido quedan pendientes de decidir retención. No se crea esa tabla ni se
-aprueba implícitamente una ventana de 24 horas.
+acción; no se introduce una API de auditoría genérica con texto libre. La migración
+0004 guarda solo minuto UTC, motivo permitido y contador saturable. Los ajustes
+efectivos aplican 24 horas por defecto, cualquier duración finita configurada o
+cero para no aplicar vencimiento temporal.
 
 Ejecutar `node docs/contratos/storage/admin-identity-v1.contract.test.cjs` para probar
 actualización desde datos previos al Hito 3, revocación, límites de settings y rollback.
