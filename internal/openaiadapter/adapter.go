@@ -29,22 +29,16 @@ type Adapter struct {
 	private *http.Client
 }
 
-type Result struct {
-	StatusCode        int
-	ContentType       string
-	RetryAfter        string
-	ProviderRequestID string
-	Body              []byte
-}
-
 type Error struct {
 	Code           string
 	RequestWritten bool
 	Err            error
 }
 
-func (e *Error) Error() string { return e.Code }
-func (e *Error) Unwrap() error { return e.Err }
+func (e *Error) Error() string           { return e.Code }
+func (e *Error) Unwrap() error           { return e.Err }
+func (e *Error) FailureCode() string     { return e.Code }
+func (e *Error) WasRequestWritten() bool { return e.RequestWritten }
 
 func New(secrets SecretResolver) *Adapter {
 	return &Adapter{
@@ -58,23 +52,23 @@ func noRedirectClient(transport http.RoundTripper) *http.Client {
 	return &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 }
 
-func (a *Adapter) Execute(ctx context.Context, destination router.Destination, request chatcompletions.Request, requestedAlias string) (Result, error) {
+func (a *Adapter) Execute(ctx context.Context, destination router.Destination, request chatcompletions.Request, requestedAlias string) (router.UpstreamResult, error) {
 	if a == nil || a.secrets == nil || destination.Adapter != "openai-chat-v1" || destination.EgressType != "direct" {
-		return Result{}, &Error{Code: "unsupported_destination"}
+		return router.UpstreamResult{}, &Error{Code: "unsupported_destination"}
 	}
 	endpoint, err := completionURL(destination.BaseURL)
 	if err != nil {
-		return Result{}, &Error{Code: "invalid_destination", Err: err}
+		return router.UpstreamResult{}, &Error{Code: "invalid_destination", Err: err}
 	}
 	request.Model = destination.ProviderModelID
 	payload, err := json.Marshal(request)
 	if err != nil {
-		return Result{}, &Error{Code: "encode_request", Err: err}
+		return router.UpstreamResult{}, &Error{Code: "encode_request", Err: err}
 	}
 	defer clear(payload)
 	upstreamRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint.String(), bytes.NewReader(payload))
 	if err != nil {
-		return Result{}, &Error{Code: "invalid_destination", Err: err}
+		return router.UpstreamResult{}, &Error{Code: "invalid_destination", Err: err}
 	}
 	upstreamRequest.Header.Set("Content-Type", "application/json")
 	upstreamRequest.Header.Set("Accept", "application/json")
@@ -85,7 +79,7 @@ func (a *Adapter) Execute(ctx context.Context, destination router.Destination, r
 	if destination.AllowPrivateNetwork {
 		client = a.private
 	}
-	var result Result
+	var result router.UpstreamResult
 	err = a.secrets.Use(ctx, destination.SecretName, func(secret []byte) error {
 		if len(secret) == 0 || bytes.IndexAny(secret, "\r\n") >= 0 {
 			return &Error{Code: "invalid_credential"}
@@ -126,9 +120,9 @@ func (a *Adapter) Execute(ctx context.Context, destination router.Destination, r
 	if err != nil {
 		var adapterErr *Error
 		if errors.As(err, &adapterErr) {
-			return Result{}, adapterErr
+			return router.UpstreamResult{}, adapterErr
 		}
-		return Result{}, &Error{Code: "credential_unavailable", Err: err}
+		return router.UpstreamResult{}, &Error{Code: "credential_unavailable", Err: err}
 	}
 	return result, nil
 }
