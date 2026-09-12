@@ -56,7 +56,7 @@ func TestExecuteRewritesModelInjectsCredentialAndRestoresAlias(t *testing.T) {
 		receivedModel, _ = request["model"].(string)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("X-Request-ID", "upstream-request")
-		_, _ = w.Write([]byte(`{"id":"chat-1","object":"chat.completion","model":"physical-model","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}`))
+		_, _ = w.Write([]byte(`{"id":"chat-1","object":"chat.completion","model":"physical-model","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":12,"completion_tokens":4,"total_tokens":16}}`))
 	}))
 	defer server.Close()
 	result, err := New(fixtureSecrets{name: "provider-key", value: []byte("fixture")}).Execute(context.Background(), testDestination(server), testRequest(t), "assistant")
@@ -70,8 +70,22 @@ func TestExecuteRewritesModelInjectsCredentialAndRestoresAlias(t *testing.T) {
 	if err := json.Unmarshal(result.Body, &response); err != nil {
 		t.Fatal(err)
 	}
-	if result.StatusCode != http.StatusOK || result.ProviderRequestID != "upstream-request" || response["model"] != "assistant" {
+	if result.StatusCode != http.StatusOK || result.ProviderRequestID != "upstream-request" || response["model"] != "assistant" ||
+		result.InputTokens == nil || *result.InputTokens != 12 || result.OutputTokens == nil || *result.OutputTokens != 4 {
 		t.Fatalf("result=%+v response=%v", result, response)
+	}
+}
+
+func TestExecuteRejectsMalformedUsage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"chat-1","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":-1,"completion_tokens":2}}`))
+	}))
+	defer server.Close()
+	_, err := New(fixtureSecrets{name: "provider-key", value: []byte("fixture")}).Execute(context.Background(), testDestination(server), chatcompletions.Request{}, "alias")
+	var adapterErr *Error
+	if !errors.As(err, &adapterErr) || adapterErr.Code != "invalid_response" {
+		t.Fatalf("err=%v", err)
 	}
 }
 
@@ -145,10 +159,17 @@ func TestNormalizeResponseRejectsMalformedChoices(t *testing.T) {
 		`{"id":"x","object":"chat.completion","choices":[null]}`,
 		`{"id":"x","object":"chat.completion","choices":[{"index":0,"message":{"role":"user","content":"x"}}]}`,
 		`{"id":"x","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant"}}]}`,
+		`{"id":"x","id":"y","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":"x"}}]}`,
 	} {
 		if _, err := normalizeResponse([]byte(body), "assistant"); err == nil {
 			t.Errorf("accepted malformed response: %s", body)
 		}
+	}
+	invalidUTF8 := []byte(`{"id":"x","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":"`)
+	invalidUTF8 = append(invalidUTF8, 0xff)
+	invalidUTF8 = append(invalidUTF8, []byte(`"}}]}`)...)
+	if _, err := normalizeResponse(invalidUTF8, "assistant"); err == nil {
+		t.Error("accepted invalid UTF-8 response")
 	}
 }
 
@@ -217,5 +238,22 @@ func TestOpenStreamRejectsInvalidMediaTypeAndReturns429Metadata(t *testing.T) {
 	result, err := adapter.OpenStream(context.Background(), testDestination(limited), request)
 	if err != nil || result.StatusCode != http.StatusTooManyRequests || result.RetryAfter != "11" || result.Body != nil {
 		t.Fatalf("result=%+v err=%v", result, err)
+	}
+}
+
+func TestExecuteRejectsMalformedAssistantToolCalls(t *testing.T) {
+	for _, calls := range []string{`[null]`, `[{}]`, `[{"id":"","type":"function","function":{"name":"lookup","arguments":"{}"}}]`, `[{"id":"call-1","type":"other","function":{"name":"lookup","arguments":"{}"}}]`} {
+		t.Run(calls, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"id":"chat-1","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":null,"tool_calls":` + calls + `},"finish_reason":"tool_calls"}]}`))
+			}))
+			defer server.Close()
+			_, err := New(fixtureSecrets{name: "provider-key", value: []byte("fixture")}).Execute(context.Background(), testDestination(server), chatcompletions.Request{}, "alias")
+			var adapterErr *Error
+			if !errors.As(err, &adapterErr) || adapterErr.Code != "invalid_response" {
+				t.Fatalf("err=%v", err)
+			}
+		})
 	}
 }

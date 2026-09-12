@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -17,16 +18,18 @@ func validChunk(model, content string) string {
 func TestRelayChatCompletionsValidatesNormalizesAndCompletes(t *testing.T) {
 	stream := ": keepalive\n\ndata: " + validChunk("physical", "hello") + "\n\n" +
 		"data: {\"id\":\"chunk-1\",\"object\":\"chat.completion.chunk\",\"model\":\"physical\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n" +
+		"data: {\"id\":\"chunk-1\",\"object\":\"chat.completion.chunk\",\"model\":\"physical\",\"choices\":[],\"usage\":{\"prompt_tokens\":9,\"completion_tokens\":3}}\n\n" +
 		"data: [DONE]\n\n"
 	w := &recordingWriter{}
 	result, err := RelayChatCompletions(context.Background(), w, io.NopCloser(strings.NewReader(stream)), "assistant")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !result.Committed || !result.Completed || result.Events != 2 || w.flushes != 3 {
+	if !result.Committed || !result.Completed || result.Events != 3 || w.flushes != 4 || result.FirstEventAt.IsZero() ||
+		result.InputTokens == nil || *result.InputTokens != 9 || result.OutputTokens == nil || *result.OutputTokens != 3 {
 		t.Fatalf("result=%+v flushes=%d", result, w.flushes)
 	}
-	if strings.Contains(w.body.String(), "physical") || strings.Count(w.body.String(), `"model":"assistant"`) != 2 || !strings.HasSuffix(w.body.String(), "data: [DONE]\n\n") {
+	if strings.Contains(w.body.String(), "physical") || strings.Count(w.body.String(), `"model":"assistant"`) != 3 || !strings.HasSuffix(w.body.String(), "data: [DONE]\n\n") {
 		t.Fatalf("body=%q", w.body.String())
 	}
 }
@@ -36,6 +39,7 @@ func TestRelayChatCompletionsRejectsInvalidFirstEventBeforeCommit(t *testing.T) 
 		"data: not-json\n\n",
 		"data: [DONE]\n\n",
 		"data: {\"id\":\"x\",\"object\":\"wrong\",\"choices\":[]}\n\n",
+		"data: {\"id\":\"x\",\"id\":\"y\",\"object\":\"chat.completion.chunk\",\"choices\":[]}\n\n",
 	} {
 		w := &recordingWriter{}
 		result, err := RelayChatCompletions(context.Background(), w, io.NopCloser(strings.NewReader(stream)), "assistant")
@@ -105,5 +109,18 @@ func TestReadSSEDataSkipsCommentsAndEmptyEvents(t *testing.T) {
 	payload, err := readSSEData(reader)
 	if err != nil || string(payload) != "x" {
 		t.Fatalf("payload=%q err=%v", payload, err)
+	}
+}
+
+func TestRelayChatCompletionsRejectsMalformedToolCallBeforeCommit(t *testing.T) {
+	for _, calls := range []string{`[null]`, `[{}]`, `[{"index":0,"function":{}}]`, `[{"index":-1,"function":{"arguments":"{}"}}]`} {
+		t.Run(calls, func(t *testing.T) {
+			body := `data: {"id":"chunk-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"tool_calls":` + calls + `},"finish_reason":null}]}\n\n`
+			response := httptest.NewRecorder()
+			result, err := RelayChatCompletions(context.Background(), response, io.NopCloser(strings.NewReader(body)), "alias")
+			if !errors.Is(err, ErrInvalidSSE) || result.Committed || response.Body.Len() != 0 {
+				t.Fatalf("result=%+v body=%q err=%v", result, response.Body.String(), err)
+			}
+		})
 	}
 }

@@ -19,7 +19,7 @@ func dataHandlerFixture(t *testing.T) (http.Handler, string, *int, *storage.Inst
 	t.Helper()
 	return dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"id":"chat-1","object":"chat.completion","model":"physical","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}`))
+		_, _ = w.Write([]byte(`{"id":"chat-1","object":"chat.completion","model":"physical","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":7,"completion_tokens":3,"total_tokens":10}}`))
 	})
 }
 
@@ -88,7 +88,7 @@ func dataHandlerFixtureWithUpstream(t *testing.T, upstreamHandler http.HandlerFu
 func TestDataChatCompletionsStreamingVerticalPath(t *testing.T) {
 	handler, token, calls, installation := dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
-		_, _ = w.Write([]byte("data: {\"id\":\"chat-stream-1\",\"object\":\"chat.completion.chunk\",\"model\":\"physical\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"ok\"},\"finish_reason\":null}]}\n\ndata: [DONE]\n\n"))
+		_, _ = w.Write([]byte("data: {\"id\":\"chat-stream-1\",\"object\":\"chat.completion.chunk\",\"model\":\"physical\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"ok\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chat-stream-1\",\"object\":\"chat.completion.chunk\",\"model\":\"physical\",\"choices\":[],\"usage\":{\"prompt_tokens\":8,\"completion_tokens\":2,\"total_tokens\":10}}\n\ndata: [DONE]\n\n"))
 	})
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}],"stream":true}`, token))
@@ -99,6 +99,7 @@ func TestDataChatCompletionsStreamingVerticalPath(t *testing.T) {
 		t.Fatalf("body=%q", body)
 	}
 	assertRecordedRequest(t, installation, recorder.Header().Get("X-ModelCairn-Request-ID"), "success", http.StatusOK, "success")
+	assertRecordedMetrics(t, installation, recorder.Header().Get("X-ModelCairn-Request-ID"), 8, 2, true)
 }
 
 func TestDataChatCompletionsPersistsCommittedStreamInterruption(t *testing.T) {
@@ -150,16 +151,28 @@ func TestDataChatCompletionsAuthenticatedVerticalPath(t *testing.T) {
 		t.Fatalf("body=%s", recorder.Body.String())
 	}
 	var outcome string
-	var contentStored, attempts int
+	var contentStored, attempts, inputTokens, outputTokens int
 	requestID := recorder.Header().Get("X-ModelCairn-Request-ID")
-	if err := installation.DB().QueryRow("SELECT outcome,content_stored FROM requests WHERE id=?", requestID).Scan(&outcome, &contentStored); err != nil {
+	if err := installation.DB().QueryRow("SELECT outcome,content_stored,input_tokens,output_tokens FROM requests WHERE id=?", requestID).Scan(&outcome, &contentStored, &inputTokens, &outputTokens); err != nil {
 		t.Fatal(err)
 	}
 	if err := installation.DB().QueryRow("SELECT count(*) FROM attempts WHERE request_id=?", requestID).Scan(&attempts); err != nil {
 		t.Fatal(err)
 	}
-	if outcome != "success" || contentStored != 0 || attempts != 1 {
-		t.Fatalf("outcome=%q content=%d attempts=%d", outcome, contentStored, attempts)
+	if outcome != "success" || contentStored != 0 || attempts != 1 || inputTokens != 7 || outputTokens != 3 {
+		t.Fatalf("outcome=%q content=%d attempts=%d input=%d output=%d", outcome, contentStored, attempts, inputTokens, outputTokens)
+	}
+}
+
+func assertRecordedMetrics(t *testing.T, installation *storage.Installation, requestID string, input, output int, requireTTFT bool) {
+	t.Helper()
+	var actualInput, actualOutput int
+	var ttft any
+	if err := installation.DB().QueryRow("SELECT input_tokens,output_tokens,ttft_ms FROM requests WHERE id=?", requestID).Scan(&actualInput, &actualOutput, &ttft); err != nil {
+		t.Fatal(err)
+	}
+	if actualInput != input || actualOutput != output || (requireTTFT && ttft == nil) {
+		t.Fatalf("input=%d output=%d ttft=%v", actualInput, actualOutput, ttft)
 	}
 }
 

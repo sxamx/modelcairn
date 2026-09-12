@@ -126,7 +126,13 @@ func (a *Adapter) Execute(ctx context.Context, destination router.Destination, r
 		if normalizeErr != nil {
 			return &Error{Code: "invalid_response", RequestWritten: true, Err: normalizeErr}
 		}
+		inputTokens, outputTokens, usageErr := responseUsage(body)
+		if usageErr != nil {
+			return &Error{Code: "invalid_response", RequestWritten: true, Err: usageErr}
+		}
 		result.Body = normalized
+		result.InputTokens = inputTokens
+		result.OutputTokens = outputTokens
 		return nil
 	})
 	if err != nil {
@@ -218,6 +224,9 @@ func completionURL(base string, allowPrivate bool) (*url.URL, error) {
 }
 
 func normalizeResponse(body []byte, requestedAlias string) ([]byte, error) {
+	if err := chatcompletions.ValidateJSONDocument(body); err != nil {
+		return nil, errors.New("response JSON is ambiguous")
+	}
 	var object map[string]json.RawMessage
 	if json.Unmarshal(body, &object) != nil || object == nil {
 		return nil, errors.New("response is not an object")
@@ -269,10 +278,49 @@ func validAssistantResponse(message map[string]json.RawMessage) bool {
 	}
 	validTools := false
 	if hasToolCalls {
-		var calls []json.RawMessage
+		var calls []struct {
+			ID       string `json:"id"`
+			Type     string `json:"type"`
+			Function struct {
+				Name      string `json:"name"`
+				Arguments string `json:"arguments"`
+			} `json:"function"`
+		}
 		validTools = json.Unmarshal(toolCalls, &calls) == nil && len(calls) > 0
+		for _, call := range calls {
+			if call.ID == "" || call.Type != "function" || call.Function.Name == "" || len(call.Function.Name) > 64 {
+				validTools = false
+				break
+			}
+		}
 	}
-	return (hasContent && validContent) || (hasToolCalls && validTools)
+	if hasContent && !validContent {
+		return false
+	}
+	if hasToolCalls && !validTools {
+		return false
+	}
+	return hasContent || hasToolCalls
+}
+
+func responseUsage(body []byte) (*int, *int, error) {
+	var object map[string]json.RawMessage
+	if json.Unmarshal(body, &object) != nil {
+		return nil, nil, errors.New("response is not an object")
+	}
+	raw, exists := object["usage"]
+	if !exists || string(raw) == "null" {
+		return nil, nil, nil
+	}
+	var usage struct {
+		PromptTokens     *int `json:"prompt_tokens"`
+		CompletionTokens *int `json:"completion_tokens"`
+	}
+	if json.Unmarshal(raw, &usage) != nil || usage.PromptTokens == nil || usage.CompletionTokens == nil ||
+		*usage.PromptTokens < 0 || *usage.CompletionTokens < 0 {
+		return nil, nil, errors.New("usage is invalid")
+	}
+	return usage.PromptTokens, usage.CompletionTokens, nil
 }
 
 func firstHeader(header http.Header, names ...string) string {

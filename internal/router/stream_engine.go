@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/sxamx/modelcairn/internal/chatcompletions"
 	"github.com/sxamx/modelcairn/internal/streaming"
@@ -23,11 +24,14 @@ type StreamExecutor interface {
 }
 
 type StreamRunResult struct {
-	Attempts  []Attempt
-	Committed bool
-	Completed bool
-	Bytes     int64
-	Events    int
+	Attempts     []Attempt
+	Committed    bool
+	Completed    bool
+	Bytes        int64
+	Events       int
+	InputTokens  *int
+	OutputTokens *int
+	FirstEventAt time.Time
 }
 
 func (e *Engine) RunStream(ctx context.Context, destination http.ResponseWriter, snapshot Snapshot, request chatcompletions.Request) (StreamRunResult, error) {
@@ -85,6 +89,7 @@ func (e *Engine) RunStream(ctx context.Context, destination http.ResponseWriter,
 			ProviderRequestID: upstream.ProviderRequestID, StartedAt: started, CompletedAt: completed,
 			Duration: completed.Sub(started), Outcome: "error"}
 		result.Committed, result.Completed, result.Bytes, result.Events = relay.Committed, relay.Completed, relay.Bytes, relay.Events
+		result.InputTokens, result.OutputTokens, result.FirstEventAt = relay.InputTokens, relay.OutputTokens, relay.FirstEventAt
 		if relayErr == nil {
 			attempt.Outcome = "success"
 			result.Attempts = append(result.Attempts, attempt)

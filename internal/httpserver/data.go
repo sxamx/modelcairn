@@ -93,7 +93,7 @@ func (a *dataAPI) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if parsed.Request.Stream {
-		a.streamChatCompletions(w, r, requestID, snapshot, parsed.Request)
+		a.streamChatCompletions(w, r, requestID, startedAt, snapshot, parsed.Request)
 		return
 	}
 	result, err := a.engine.Run(r.Context(), snapshot, parsed.Request)
@@ -101,7 +101,7 @@ func (a *dataAPI) chatCompletions(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		status = runErrorStatus(err, result)
 	}
-	a.completeOperational(requestID, status, result.Attempts, outcomeForRunError(err))
+	a.completeOperational(requestID, status, result.Attempts, outcomeForRunError(err), result.Upstream.InputTokens, result.Upstream.OutputTokens, nil)
 	if err != nil {
 		writeRunError(w, err, result, requestID)
 		return
@@ -113,7 +113,7 @@ func (a *dataAPI) chatCompletions(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(result.Upstream.Body)
 }
 
-func (a *dataAPI) streamChatCompletions(w http.ResponseWriter, r *http.Request, requestID string, snapshot router.Snapshot, request chatcompletions.Request) {
+func (a *dataAPI) streamChatCompletions(w http.ResponseWriter, r *http.Request, requestID string, startedAt time.Time, snapshot router.Snapshot, request chatcompletions.Request) {
 	w.Header().Set("X-ModelCairn-Request-ID", requestID)
 	result, err := a.engine.RunStream(r.Context(), w, snapshot, request)
 	status := streamRunErrorStatus(err, result)
@@ -121,7 +121,12 @@ func (a *dataAPI) streamChatCompletions(w http.ResponseWriter, r *http.Request, 
 	if result.Committed && err != nil && outcome == "error" {
 		outcome = "partial"
 	}
-	a.completeOperational(requestID, status, result.Attempts, outcome)
+	var ttft *time.Duration
+	if !result.FirstEventAt.IsZero() && !result.FirstEventAt.Before(startedAt) {
+		value := result.FirstEventAt.Sub(startedAt)
+		ttft = &value
+	}
+	a.completeOperational(requestID, status, result.Attempts, outcome, result.InputTokens, result.OutputTokens, ttft)
 	if err != nil && !result.Committed {
 		writeStreamRunError(w, err, result, requestID)
 	}
@@ -142,7 +147,7 @@ func outcomeForRunError(runErr error) string {
 	return outcome
 }
 
-func (a *dataAPI) completeOperational(requestID string, status int, routerAttempts []router.Attempt, outcome string) {
+func (a *dataAPI) completeOperational(requestID string, status int, routerAttempts []router.Attempt, outcome string, inputTokens, outputTokens *int, ttft *time.Duration) {
 	attempts := make([]storage.AttemptCompletion, 0, len(routerAttempts))
 	for _, attempt := range routerAttempts {
 		attempts = append(attempts, storage.AttemptCompletion{Sequence: attempt.Sequence, DestinationID: attempt.DestinationID,
@@ -153,7 +158,7 @@ func (a *dataAPI) completeOperational(requestID string, status int, routerAttemp
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	if err := a.recorder.Complete(ctx, requestID, storage.RequestCompletion{Outcome: outcome, HTTPStatus: status, CompletedAt: time.Now().UTC(), Attempts: attempts}); err != nil {
+	if err := a.recorder.Complete(ctx, requestID, storage.RequestCompletion{Outcome: outcome, HTTPStatus: status, InputTokens: inputTokens, OutputTokens: outputTokens, TTFT: ttft, CompletedAt: time.Now().UTC(), Attempts: attempts}); err != nil {
 		a.logger.Error("operational request completion failed", "requestId", requestID, "code", "persistence_unavailable")
 	}
 }

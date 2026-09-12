@@ -10,6 +10,9 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
+
+	"github.com/sxamx/modelcairn/internal/chatcompletions"
 )
 
 const maxSSEEventBytes = 1 << 20
@@ -20,10 +23,13 @@ var (
 )
 
 type ChatResult struct {
-	Committed bool
-	Completed bool
-	Bytes     int64
-	Events    int
+	Committed    bool
+	Completed    bool
+	Bytes        int64
+	Events       int
+	InputTokens  *int
+	OutputTokens *int
+	FirstEventAt time.Time
 }
 
 func RelayChatCompletions(ctx context.Context, destination http.ResponseWriter, upstream io.ReadCloser, requestedAlias string) (ChatResult, error) {
@@ -69,7 +75,7 @@ func RelayChatCompletions(ctx context.Context, destination http.ResponseWriter, 
 			result.Completed = true
 			return result, nil
 		}
-		normalized, err := normalizeChunk(payload, requestedAlias)
+		normalized, inputTokens, outputTokens, err := normalizeChunk(payload, requestedAlias)
 		if err != nil {
 			return result, fmt.Errorf("normalize SSE chunk: %w", err)
 		}
@@ -81,11 +87,18 @@ func RelayChatCompletions(ctx context.Context, destination http.ResponseWriter, 
 			destination.Header().Set("X-Accel-Buffering", "no")
 			destination.WriteHeader(http.StatusOK)
 			result.Committed = true
+			result.FirstEventAt = time.Now()
 		}
 		if err := writeChatFrame(destination, flusher, frame, &result); err != nil {
 			return result, err
 		}
 		result.Events++
+		if inputTokens != nil {
+			result.InputTokens = inputTokens
+		}
+		if outputTokens != nil {
+			result.OutputTokens = outputTokens
+		}
 	}
 }
 
@@ -134,15 +147,18 @@ func readSSEData(reader *bufio.Reader) ([]byte, error) {
 	}
 }
 
-func normalizeChunk(payload []byte, alias string) ([]byte, error) {
+func normalizeChunk(payload []byte, alias string) ([]byte, *int, *int, error) {
+	if err := chatcompletions.ValidateJSONDocument(payload); err != nil {
+		return nil, nil, nil, ErrInvalidSSE
+	}
 	var object map[string]json.RawMessage
 	if json.Unmarshal(payload, &object) != nil || object == nil {
-		return nil, ErrInvalidSSE
+		return nil, nil, nil, ErrInvalidSSE
 	}
 	var id, kind string
 	var choices []json.RawMessage
 	if json.Unmarshal(object["id"], &id) != nil || id == "" || json.Unmarshal(object["object"], &kind) != nil || kind != "chat.completion.chunk" || json.Unmarshal(object["choices"], &choices) != nil || choices == nil {
-		return nil, ErrInvalidSSE
+		return nil, nil, nil, ErrInvalidSSE
 	}
 	for _, rawChoice := range choices {
 		var choice struct {
@@ -151,36 +167,112 @@ func normalizeChunk(payload []byte, alias string) ([]byte, error) {
 			FinishReason json.RawMessage            `json:"finish_reason"`
 		}
 		if json.Unmarshal(rawChoice, &choice) != nil || choice.Index == nil || *choice.Index < 0 || choice.Delta == nil {
-			return nil, ErrInvalidSSE
+			return nil, nil, nil, ErrInvalidSSE
 		}
 		if roleRaw, exists := choice.Delta["role"]; exists {
 			var role string
 			if json.Unmarshal(roleRaw, &role) != nil || role != "assistant" {
-				return nil, ErrInvalidSSE
+				return nil, nil, nil, ErrInvalidSSE
 			}
 		}
 		if content, exists := choice.Delta["content"]; exists && string(content) != "null" {
 			var text string
 			if json.Unmarshal(content, &text) != nil {
-				return nil, ErrInvalidSSE
+				return nil, nil, nil, ErrInvalidSSE
 			}
 		}
 		if calls, exists := choice.Delta["tool_calls"]; exists {
 			var values []json.RawMessage
 			if json.Unmarshal(calls, &values) != nil || values == nil {
-				return nil, ErrInvalidSSE
+				return nil, nil, nil, ErrInvalidSSE
+			}
+			for _, value := range values {
+				if !validToolCallDelta(value) {
+					return nil, nil, nil, ErrInvalidSSE
+				}
 			}
 		}
 		if len(choice.FinishReason) > 0 && string(choice.FinishReason) != "null" {
 			var reason string
 			if json.Unmarshal(choice.FinishReason, &reason) != nil {
-				return nil, ErrInvalidSSE
+				return nil, nil, nil, ErrInvalidSSE
 			}
 		}
 	}
 	encodedAlias, _ := json.Marshal(alias)
 	object["model"] = encodedAlias
-	return json.Marshal(object)
+	inputTokens, outputTokens, err := usageTokens(object)
+	if err != nil {
+		return nil, nil, nil, ErrInvalidSSE
+	}
+	normalized, err := json.Marshal(object)
+	return normalized, inputTokens, outputTokens, err
+}
+
+func usageTokens(object map[string]json.RawMessage) (*int, *int, error) {
+	raw, exists := object["usage"]
+	if !exists || string(raw) == "null" {
+		return nil, nil, nil
+	}
+	var usage struct {
+		PromptTokens     *int `json:"prompt_tokens"`
+		CompletionTokens *int `json:"completion_tokens"`
+	}
+	if json.Unmarshal(raw, &usage) != nil || usage.PromptTokens == nil || usage.CompletionTokens == nil ||
+		*usage.PromptTokens < 0 || *usage.CompletionTokens < 0 {
+		return nil, nil, ErrInvalidSSE
+	}
+	return usage.PromptTokens, usage.CompletionTokens, nil
+}
+
+func validToolCallDelta(raw json.RawMessage) bool {
+	var call map[string]json.RawMessage
+	if json.Unmarshal(raw, &call) != nil || len(call) == 0 {
+		return false
+	}
+	var index int
+	if json.Unmarshal(call["index"], &index) != nil || index < 0 {
+		return false
+	}
+	meaningful := false
+	if value, exists := call["id"]; exists {
+		var id string
+		if json.Unmarshal(value, &id) != nil || id == "" {
+			return false
+		}
+		meaningful = true
+	}
+	if value, exists := call["type"]; exists {
+		var kind string
+		if json.Unmarshal(value, &kind) != nil || kind != "function" {
+			return false
+		}
+	}
+	if value, exists := call["function"]; exists {
+		var function map[string]json.RawMessage
+		if json.Unmarshal(value, &function) != nil || len(function) == 0 {
+			return false
+		}
+		if nameRaw, exists := function["name"]; exists {
+			var name string
+			if json.Unmarshal(nameRaw, &name) != nil || name == "" || len(name) > 64 {
+				return false
+			}
+		}
+		if argumentsRaw, exists := function["arguments"]; exists {
+			var arguments string
+			if json.Unmarshal(argumentsRaw, &arguments) != nil {
+				return false
+			}
+		}
+		if _, hasName := function["name"]; !hasName {
+			if _, hasArguments := function["arguments"]; !hasArguments {
+				return false
+			}
+		}
+		meaningful = true
+	}
+	return meaningful
 }
 
 func writeChatFrame(destination http.ResponseWriter, flusher http.Flusher, frame []byte, result *ChatResult) error {

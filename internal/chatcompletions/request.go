@@ -96,10 +96,7 @@ func Parse(data []byte) (Parsed, error) {
 	if len(data) > MaxRequestBytes {
 		return Parsed{}, invalid("request_too_large", "")
 	}
-	if !utf8.Valid(data) {
-		return Parsed{}, invalid("invalid_json", "")
-	}
-	if err := validateJSONShape(data); err != nil {
+	if err := ValidateJSONDocument(data); err != nil {
 		return Parsed{}, err
 	}
 	var request Request
@@ -116,6 +113,15 @@ func Parse(data []byte) (Parsed, error) {
 		return Parsed{}, err
 	}
 	return Parsed{Request: request, Capabilities: capabilities}, nil
+}
+
+// ValidateJSONDocument rejects ambiguous or abusive JSON before typed decoding.
+// It is also used for untrusted upstream Chat Completions responses.
+func ValidateJSONDocument(data []byte) error {
+	if !utf8.Valid(data) {
+		return invalid("invalid_json", "")
+	}
+	return validateJSONShape(data)
 }
 
 func validateRequest(r Request) ([]Capability, error) {

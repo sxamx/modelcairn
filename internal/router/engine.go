@@ -15,6 +15,8 @@ type UpstreamResult struct {
 	RetryAfter        string
 	ProviderRequestID string
 	Body              []byte
+	InputTokens       *int
+	OutputTokens      *int
 }
 
 type UpstreamExecutor interface {

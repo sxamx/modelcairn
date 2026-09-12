@@ -9,6 +9,8 @@
 El parser ejecutable limita el cuerpo a 1 MiB y la profundidad JSON a 64 niveles,
 rechaza claves duplicadas en cualquier nivel y exige UTF-8 válido. En esta primera
 entrega, los campos desconocidos son errores: no existe un modo passthrough.
+Las respuestas upstream se someten a las mismas reglas de UTF-8, profundidad y
+claves duplicadas antes de poder comprometerse.
 
 ## Solicitud
 
@@ -61,6 +63,12 @@ adicionales permitidos se documentan y no alteran la forma requerida por cliente
   petición lo solicita de manera compatible.
 - El request ID de ModelCairn se entrega en `X-ModelCairn-Request-ID` antes de
   iniciar el cuerpo SSE.
+
+ModelCairn persiste únicamente los contadores normalizados `prompt_tokens` y
+`completion_tokens` cuando upstream entrega ambos con valores no negativos. Para
+streaming también registra TTFT desde la recepción de la solicitud hasta el primer
+evento válido. No persiste el evento, prompt ni respuesta que originaron esas
+métricas.
 
 ## Error de ModelCairn
 
