@@ -2,7 +2,7 @@
 
 [Español](fase-01-plan-de-implementacion.es.md)
 
-- Status: accepted; Milestones 0, 1, and 2 complete, with Milestone 3 next
+- Status: accepted; Milestones 0 through 3 complete, with Milestone 4 next
 - Delivery rule: every milestone includes code, tests, and documentation; a visual
   demonstration alone does not make it complete
 

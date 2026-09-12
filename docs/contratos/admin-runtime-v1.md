@@ -2,7 +2,7 @@
 
 [Español](admin-runtime-v1.es.md)
 
-Status: implemented specification; final milestone verification pending.
+Status: accepted and verified implementation specification.
 This refines the existing session contract and ADR-0005.
 
 ## Transport and deployment

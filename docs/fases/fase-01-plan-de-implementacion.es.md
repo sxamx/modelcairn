@@ -2,7 +2,7 @@
 
 [English](fase-01-plan-de-implementacion.md)
 
-- Estado: aceptado; Hitos 0, 1 y 2 completados, Hito 3 es el siguiente
+- Estado: aceptado; Hitos 0 a 3 completados, Hito 4 es el siguiente
 - Regla de entrega: cada hito incluye código, pruebas y documentación; no se marca
   completo por una demostración visual
 

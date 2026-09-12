@@ -2,7 +2,7 @@
 
 [English](admin-runtime-v1.md)
 
-Estado: especificación implementada; verificación final del hito pendiente.
+Estado: especificación de implementación aceptada y verificada.
 Precisa el contrato de sesiones y ADR-0005.
 
 ## Transporte y despliegue
