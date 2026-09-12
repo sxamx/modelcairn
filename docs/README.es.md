@@ -20,6 +20,7 @@
 - [JSON Schema de configuración](contratos/config/modelcairn-config-v1alpha1.schema.json)
 - [Semántica de apply](contratos/config/semantica-apply-v1alpha1.es.md)
 - [Contrato de CLI offline](contratos/cli-v1.es.md)
+- [Contrato de CLI online](contratos/cli-online-v1.es.md)
 - [Evidencia de integración y recursos del Hito 2](evidencia/hito-02-integracion-recursos.es.md)
 - [Configuración de ejemplo](contratos/config/example-v1alpha1.yaml)
 - [OpenAPI administrativa](contratos/api/admin-v1.openapi.yaml)

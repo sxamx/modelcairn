@@ -20,6 +20,7 @@
 - [Configuration JSON Schema](contratos/config/modelcairn-config-v1alpha1.schema.json)
 - [Apply semantics](contratos/config/semantica-apply-v1alpha1.md)
 - [Offline CLI contract](contratos/cli-v1.md)
+- [Online CLI contract](contratos/cli-online-v1.md)
 - [Milestone 2 integration and resource evidence](evidencia/hito-02-integracion-recursos.md)
 - [Example configuration](contratos/config/example-v1alpha1.yaml)
 - [Administrative OpenAPI](contratos/api/admin-v1.openapi.yaml)

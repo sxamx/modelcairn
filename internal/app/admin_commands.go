@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -18,7 +19,7 @@ import (
 
 func runAdmin(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "admin requires bootstrap or reset-password")
+		fmt.Fprintln(stderr, "admin requires bootstrap, reset-password, login, whoami, or logout")
 		return 2
 	}
 	switch args[0] {
@@ -26,10 +27,127 @@ func runAdmin(ctx context.Context, args []string, stdin io.Reader, stdout, stder
 		return runAdminBootstrap(ctx, args[1:], stdin, stdout, stderr, interactive)
 	case "reset-password":
 		return runAdminResetPassword(ctx, args[1:], stdin, stdout, stderr, interactive)
+	case "login":
+		return runAdminLogin(ctx, args[1:], stdin, stdout, stderr, interactive)
+	case "whoami":
+		return runAdminWhoami(ctx, args[1:], stdout, stderr)
+	case "logout":
+		return runAdminLogout(ctx, args[1:], stdout, stderr)
 	default:
 		fmt.Fprintln(stderr, "unknown admin command")
 		return 2
 	}
+}
+
+func onlineAdminFlags(name string) (*flag.FlagSet, *string, *string) {
+	flags := flag.NewFlagSet(name, flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	server := flags.String("server", "", "administrative server origin")
+	sessionFile := flags.String("session-file", "", "private session file")
+	return flags, server, sessionFile
+}
+
+func onlineAdminClient(server, sessionFile string) (*adminClient, string, error) {
+	client, err := newAdminClient(server)
+	if err != nil {
+		return nil, "", err
+	}
+	if sessionFile == "" {
+		sessionFile, err = defaultOnlineSessionPath(client.server)
+	}
+	return client, sessionFile, err
+}
+
+func runAdminLogin(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
+	flags, server, sessionFile := onlineAdminFlags("admin login")
+	username := flags.String("username", "", "administrator username")
+	if flags.Parse(args) != nil || flags.NArg() != 0 || *server == "" || *username == "" {
+		fmt.Fprintln(stderr, "usage: modelcairn admin login --server origin --username name [--session-file path]")
+		return 2
+	}
+	password, err := readPasswordInput(stdin, stderr, interactive, false)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	defer clear(password)
+	client, path, err := onlineAdminClient(*server, *sessionFile)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	session, view, err := client.login(ctx, *username, password)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	if err := saveOnlineSession(path, session); err != nil {
+		return writeCLIError(stderr, err)
+	}
+	fmt.Fprintf(stdout, "authenticated as %s\n", view.Admin.Username)
+	return 0
+}
+
+func runAdminWhoami(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	flags, server, sessionFile := onlineAdminFlags("admin whoami")
+	if flags.Parse(args) != nil || flags.NArg() != 0 || *server == "" {
+		fmt.Fprintln(stderr, "usage: modelcairn admin whoami --server origin [--session-file path]")
+		return 2
+	}
+	client, path, err := onlineAdminClient(*server, *sessionFile)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	session, err := loadOnlineSession(path, client.server)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	response, data, err := client.authenticated(ctx, session, "GET", "/api/v1/admin/session/me", nil, "")
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	if response.StatusCode != 200 {
+		return writeCLIError(stderr, fmt.Errorf("admin_session_http_%d", response.StatusCode))
+	}
+	var view onlineSessionView
+	if json.Unmarshal(data, &view) != nil || view.CSRFToken == "" {
+		return writeCLIError(stderr, errors.New("invalid_admin_response"))
+	}
+	session.CSRFToken, session.ExpiresAt = view.CSRFToken, view.ExpiresAt
+	if err := saveOnlineSession(path, session); err != nil {
+		return writeCLIError(stderr, err)
+	}
+	encoder := json.NewEncoder(stdout)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(view.Admin); err != nil {
+		return writeCLIError(stderr, err)
+	}
+	return 0
+}
+
+func runAdminLogout(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	flags, server, sessionFile := onlineAdminFlags("admin logout")
+	if flags.Parse(args) != nil || flags.NArg() != 0 || *server == "" {
+		fmt.Fprintln(stderr, "usage: modelcairn admin logout --server origin [--session-file path]")
+		return 2
+	}
+	client, path, err := onlineAdminClient(*server, *sessionFile)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	session, err := loadOnlineSession(path, client.server)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	response, _, err := client.authenticated(ctx, session, "DELETE", "/api/v1/admin/session", nil, "")
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	if response.StatusCode != 204 {
+		return writeCLIError(stderr, fmt.Errorf("admin_logout_http_%d", response.StatusCode))
+	}
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return writeCLIError(stderr, err)
+	}
+	fmt.Fprintln(stdout, "administrative session revoked")
+	return 0
 }
 
 func runAdminBootstrap(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {

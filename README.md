@@ -43,7 +43,7 @@ ModelCairn is distributed under the [Apache License 2.0](LICENSE) and includes a
 
 ## Development
 
-Milestones 1 and 2 are complete; Milestone 3 is next. With Go installed:
+Milestones 1 and 2 are complete; Milestone 3 is in progress. With Go installed:
 
 ```sh
 go test ./...
