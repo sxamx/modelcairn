@@ -2,7 +2,7 @@
 
 [Español](hito-04-router-integrado.es.md)
 
-- Status: Blocks 1–6 implementation verified; final acceptance pending.
+- Status: Blocks 1–6 implementation and QA verified; final acceptance pending.
 - Date: September 12, 2026.
 - Surface: `POST /v1/chat/completions`, normal and SSE streaming.
 
@@ -30,6 +30,20 @@ AgentToken issuance, one normal call, and batches of 1, 2, 5, 10, and 20 streams
 It also measures RSS, swap, and latency and searches local storage for content
 canaries and logs for secrets.
 
+The integrated HTTP matrix induces `429`, `503`, invalid JSON response,
+terminal error, timeout, and cancellation. It checks attempts, fallback reasons,
+cooldowns, and persisted outcomes. It also proves SSE fallback only before
+commitment, partial interruption without a second destination, and tool-call
+round-trip.
+
+## Grouped independent QA
+
+The independent review found shallow tool-call validation, disconnected token/TTFT
+metrics, and ambiguous upstream JSON. The findings were fixed with structural
+validation, metric propagation through SQLite, and rejection of duplicate keys,
+invalid UTF-8, and excessive depth in upstream responses. Their regressions are
+part of the suite.
+
 ## Current results
 
 - The complete Go suite, `go vet`, documentation validators, reachable
@@ -41,11 +55,10 @@ canaries and logs for secrets.
 
 ## Remaining before milestone acceptance
 
-- incorporate and resolve the grouped independent QA;
 - run the gate for a representative duration on the target VM;
 - publish a redacted report omitting hostname, IP, user, paths, credentials, and
   revision identifiers;
-- resolve any finding and rerun every gate.
+- rerun every gate on the final revision.
 
 This evidence does not yet claim remote relay, HTTP CONNECT, SOCKS, visual editor,
 adaptive estimator, or additional protocol dialect support.

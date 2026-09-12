@@ -2,7 +2,7 @@
 
 [English](hito-04-router-integrado.md)
 
-- Estado: implementación de los Bloques 1–6 verificada; aceptación final pendiente.
+- Estado: implementación y QA de los Bloques 1–6 verificados; aceptación final pendiente.
 - Fecha: 12 de septiembre de 2026.
 - Superficie: `POST /v1/chat/completions`, normal y streaming SSE.
 
@@ -30,6 +30,19 @@ emisión de AgentToken, una llamada normal y lotes de 1, 2, 5, 10 y 20 streams.
 También mide RSS, swap y latencia, y busca canarios de contenido en el
 almacenamiento local y secretos en los logs.
 
+La matriz HTTP integrada induce `429`, `503`, respuesta JSON inválida, error
+terminal, timeout y cancelación. Comprueba intentos, motivos de fallback,
+cooldowns y outcomes persistidos. También demuestra fallback SSE únicamente antes
+del compromiso, corte parcial sin segundo destino y round trip de tool calls.
+
+## QA independiente agrupado
+
+La revisión independiente detectó validación superficial de tool calls, métricas
+de tokens/TTFT no conectadas y JSON upstream ambiguo. Los hallazgos se corrigieron
+con validación estructural, propagación de métricas hasta SQLite y rechazo de
+claves duplicadas, UTF-8 inválido y profundidad excesiva en respuestas upstream.
+Las regresiones correspondientes forman parte de la suite.
+
 ## Resultados actuales
 
 - La suite Go completa, `go vet`, validadores documentales, escaneo de
@@ -42,11 +55,10 @@ almacenamiento local y secretos en los logs.
 
 ## Pendientes para aceptar el hito
 
-- incorporar y resolver el QA independiente agrupado;
 - ejecutar la compuerta con duración representativa en la VM objetivo;
 - publicar un informe redactado que omita hostname, IP, usuario, rutas,
   credenciales e identificadores de revisión;
-- cerrar cualquier hallazgo y volver a ejecutar todas las puertas.
+- volver a ejecutar todas las puertas sobre la revisión final.
 
 Esta evidencia no afirma todavía soporte de relay remoto, HTTP CONNECT, SOCKS,
 editor visual, estimador adaptativo ni dialectos adicionales.

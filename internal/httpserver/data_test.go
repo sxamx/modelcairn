@@ -58,12 +58,15 @@ func dataHandlerFixtureWithUpstream(t *testing.T, upstreamHandler http.HandlerFu
 	}
 	put(storage.KindProvider, "provider", `{}`)
 	put(storage.KindProviderAccount, "account", `{"providerRef":{"name":"provider"}}`)
+	put(storage.KindProviderAccount, "account-fallback", `{"providerRef":{"name":"provider"}}`)
 	put(storage.KindProviderConnection, "connection", `{"providerRef":{"name":"provider"},"baseUrl":"`+upstream.URL+`","adapter":"openai-chat-v1","allowPrivateNetwork":true,"enabled":true}`)
 	put(storage.KindEgress, "direct", `{"type":"direct","enabled":true}`)
 	put(storage.KindCredential, "credential", `{"providerAccountRef":{"name":"account"},"egressRef":{"name":"direct"},"secretRef":{"name":"provider-secret"},"enabled":true}`)
-	put(storage.KindModel, "model", `{"connectionRef":{"name":"connection"},"providerModelId":"physical","capabilities":["text","stream"],"enabled":true}`)
+	put(storage.KindCredential, "credential-fallback", `{"providerAccountRef":{"name":"account-fallback"},"egressRef":{"name":"direct"},"secretRef":{"name":"provider-secret"},"enabled":true}`)
+	put(storage.KindModel, "model", `{"connectionRef":{"name":"connection"},"providerModelId":"physical","capabilities":["text","stream","tools"],"enabled":true}`)
 	put(storage.KindDestination, "destination", `{"modelRef":{"name":"model"},"credentialRef":{"name":"credential"},"weight":100,"enabled":true}`)
-	put(storage.KindStrategy, "strategy", `{"destinations":[{"name":"destination"}],"maxAttempts":1,"attemptTimeoutMs":1000,"totalTimeoutMs":2000}`)
+	put(storage.KindDestination, "destination-fallback", `{"modelRef":{"name":"model"},"credentialRef":{"name":"credential-fallback"},"weight":100,"enabled":true}`)
+	put(storage.KindStrategy, "strategy", `{"destinations":[{"name":"destination"},{"name":"destination-fallback"}],"maxAttempts":2,"attemptTimeoutMs":1000,"totalTimeoutMs":2500}`)
 	put(storage.KindRoute, "route", `{"modelAlias":"assistant","strategyRef":{"name":"strategy"},"enabled":true}`)
 	put(storage.KindAgentToken, "agent", `{"allowedRouteRefs":[{"name":"route"}],"expiresAt":null,"enabled":true}`)
 	session, err := storage.CreateAdminSession(ctx, installation, storage.VerifiedAdmin{ID: admin.ID, Username: admin.Username, AuthVersion: admin.AuthVersion}, 1800, 3600, time.Now())
@@ -103,13 +106,13 @@ func TestDataChatCompletionsStreamingVerticalPath(t *testing.T) {
 }
 
 func TestDataChatCompletionsPersistsCommittedStreamInterruption(t *testing.T) {
-	handler, token, _, installation := dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
+	handler, token, calls, installation := dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		_, _ = w.Write([]byte("data: {\"id\":\"chat-stream-1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"partial\"},\"finish_reason\":null}]}\n\ndata: not-json\n\n"))
 	})
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}],"stream":true}`, token))
-	if recorder.Code != http.StatusOK || strings.Contains(recorder.Body.String(), "modelcairn_error") || strings.Contains(recorder.Body.String(), "[DONE]") {
+	if recorder.Code != http.StatusOK || strings.Contains(recorder.Body.String(), "modelcairn_error") || strings.Contains(recorder.Body.String(), "[DONE]") || *calls != 1 {
 		t.Fatalf("status=%d body=%q", recorder.Code, recorder.Body.String())
 	}
 	assertRecordedRequest(t, installation, recorder.Header().Get("X-ModelCairn-Request-ID"), "partial", http.StatusOK, "partial")
@@ -204,5 +207,162 @@ func TestDataEndpointRejectsBeforeUpstream(t *testing.T) {
 	}
 	if *calls != 0 {
 		t.Fatalf("upstream calls=%d", *calls)
+	}
+}
+
+func TestDataNonStreamingFallbackMatrixAndPersistence(t *testing.T) {
+	tests := []struct {
+		name           string
+		firstStatus    int
+		firstBody      string
+		fallbackReason string
+		wantCooldown   int
+	}{
+		{"rate-limit", http.StatusTooManyRequests, `{"error":"limited"}`, "rate_limited", 1},
+		{"transient", http.StatusServiceUnavailable, `{"error":"unavailable"}`, "provider_transient", 0},
+		{"invalid-response", http.StatusOK, `not-json`, "invalid_response", 0},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			seen := 0
+			handler, token, calls, installation := dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
+				seen++
+				w.Header().Set("Content-Type", "application/json")
+				if seen == 1 {
+					if test.firstStatus == http.StatusTooManyRequests {
+						w.Header().Set("Retry-After", "2")
+					}
+					w.WriteHeader(test.firstStatus)
+					_, _ = w.Write([]byte(test.firstBody))
+					return
+				}
+				_, _ = w.Write([]byte(`{"id":"chat-ok","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}`))
+			})
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}]}`, token))
+			if recorder.Code != http.StatusOK || *calls != 2 {
+				t.Fatalf("status=%d calls=%d body=%s", recorder.Code, *calls, recorder.Body.String())
+			}
+			requestID := recorder.Header().Get("X-ModelCairn-Request-ID")
+			var firstOutcome, reason string
+			var retryable bool
+			if err := installation.DB().QueryRow("SELECT outcome,retryable,COALESCE(fallback_reason,'') FROM attempts WHERE request_id=? AND sequence=1", requestID).Scan(&firstOutcome, &retryable, &reason); err != nil {
+				t.Fatal(err)
+			}
+			var cooldowns int
+			if err := installation.DB().QueryRow("SELECT count(*) FROM cooldowns").Scan(&cooldowns); err != nil {
+				t.Fatal(err)
+			}
+			if firstOutcome != "error" || !retryable || reason != test.fallbackReason || cooldowns != test.wantCooldown {
+				t.Fatalf("outcome=%q retryable=%v reason=%q cooldowns=%d", firstOutcome, retryable, reason, cooldowns)
+			}
+		})
+	}
+}
+
+func TestDataTerminalProviderErrorDoesNotFallback(t *testing.T) {
+	handler, token, calls, installation := dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"bad request"}`))
+	})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}]}`, token))
+	if recorder.Code != http.StatusBadGateway || *calls != 1 || !strings.Contains(recorder.Body.String(), `"code":"provider_error"`) {
+		t.Fatalf("status=%d calls=%d body=%s", recorder.Code, *calls, recorder.Body.String())
+	}
+	var attempts int
+	if err := installation.DB().QueryRow("SELECT count(*) FROM attempts").Scan(&attempts); err != nil || attempts != 1 {
+		t.Fatalf("attempts=%d err=%v", attempts, err)
+	}
+}
+
+func TestDataStreamingFallsBackOnlyBeforeCommitment(t *testing.T) {
+	seen := 0
+	handler, token, calls, installation := dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
+		seen++
+		w.Header().Set("Content-Type", "text/event-stream")
+		if seen == 1 {
+			_, _ = w.Write([]byte("data: invalid\n\n"))
+			return
+		}
+		_, _ = w.Write([]byte("data: {\"id\":\"chat-ok\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"ok\"},\"finish_reason\":null}]}\n\ndata: [DONE]\n\n"))
+	})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}],"stream":true}`, token))
+	if recorder.Code != http.StatusOK || *calls != 2 || !strings.HasSuffix(recorder.Body.String(), "data: [DONE]\n\n") || strings.Contains(recorder.Body.String(), "invalid") {
+		t.Fatalf("status=%d calls=%d body=%q", recorder.Code, *calls, recorder.Body.String())
+	}
+	var attempts int
+	if err := installation.DB().QueryRow("SELECT count(*) FROM attempts WHERE request_id=?", recorder.Header().Get("X-ModelCairn-Request-ID")).Scan(&attempts); err != nil || attempts != 2 {
+		t.Fatalf("attempts=%d err=%v", attempts, err)
+	}
+}
+
+func TestDataAttemptTimeoutIsIndeterminateAndDoesNotFallback(t *testing.T) {
+	handler, token, calls, installation := dataHandlerFixtureWithUpstream(t, func(_ http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-time.After(2 * time.Second):
+		}
+	})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}]}`, token))
+	if recorder.Code != http.StatusBadGateway || *calls != 1 || !strings.Contains(recorder.Body.String(), `"code":"indeterminate_upstream"`) {
+		t.Fatalf("status=%d calls=%d body=%s", recorder.Code, *calls, recorder.Body.String())
+	}
+	var outcome string
+	if err := installation.DB().QueryRow("SELECT outcome FROM requests").Scan(&outcome); err != nil || outcome != "indeterminate" {
+		t.Fatalf("outcome=%q err=%v", outcome, err)
+	}
+}
+
+func TestDataClientCancellationStopsUpstreamAndPersistsCancellation(t *testing.T) {
+	started := make(chan struct{}, 1)
+	handler, token, calls, installation := dataHandlerFixtureWithUpstream(t, func(_ http.ResponseWriter, r *http.Request) {
+		started <- struct{}{}
+		select {
+		case <-r.Context().Done():
+		case <-time.After(2 * time.Second):
+		}
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	request := dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}]}`, token).WithContext(ctx)
+	recorder := httptest.NewRecorder()
+	done := make(chan struct{})
+	go func() {
+		handler.ServeHTTP(recorder, request)
+		close(done)
+	}()
+	select {
+	case <-started:
+		cancel()
+	case <-time.After(3 * time.Second):
+		t.Fatal("upstream did not start")
+	}
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("handler did not stop after cancellation")
+	}
+	if *calls != 1 || recorder.Body.Len() != 0 {
+		t.Fatalf("calls=%d body=%q", *calls, recorder.Body.String())
+	}
+	var outcome string
+	var status int
+	if err := installation.DB().QueryRow("SELECT outcome,http_status FROM requests").Scan(&outcome, &status); err != nil || outcome != "cancelled" || status != 499 {
+		t.Fatalf("outcome=%q status=%d err=%v", outcome, status, err)
+	}
+}
+
+func TestDataToolCallRoundTripUsesCompatibleDestination(t *testing.T) {
+	handler, token, calls, _ := dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"chat-tool","object":"chat.completion","model":"physical","choices":[{"index":0,"message":{"role":"assistant","content":null,"tool_calls":[{"id":"call-1","type":"function","function":{"name":"lookup","arguments":"{\"city\":\"Santiago\"}"}}]},"finish_reason":"tool_calls"}]}`))
+	})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"weather"}],"tools":[{"type":"function","function":{"name":"lookup","parameters":{"type":"object"}}}]}`, token))
+	if recorder.Code != http.StatusOK || *calls != 1 || !strings.Contains(recorder.Body.String(), `"id":"call-1"`) || !strings.Contains(recorder.Body.String(), `"model":"assistant"`) {
+		t.Fatalf("status=%d calls=%d body=%s", recorder.Code, *calls, recorder.Body.String())
 	}
 }
