@@ -98,7 +98,8 @@ elimina restartRequired aunque difiera la versión. Apply sin cambios consume su
 token sin cambiar versión ni fecha de actualización de settings.
 La integración HTTP de settings ya conecta GET, plan y apply con sesión/CSRF,
 frontera de origen y transporte, cuerpos acotados y respuestas resueltas. Apply
-revalida sesión dentro de su propia transacción. La CLI online sigue pendiente.
+revalida sesión dentro de su propia transacción. La CLI online ya ofrece
+plan/apply/export de ajustes contra la misma API y conserva el modo offline.
 
 ## Auditoría de login fallido
 

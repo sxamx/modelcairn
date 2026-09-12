@@ -101,7 +101,8 @@ values clears restartRequired even when the resource version differs. No-op appl
 consume their token without changing the settings version or update timestamp.
 The HTTP settings integration now connects GET, plan and apply with session/CSRF,
 the origin and transport boundary, bounded bodies and resolved responses. Apply
-revalidates its session inside its own transaction. The online CLI remains pending.
+revalidates its session inside its own transaction. The online CLI now provides
+settings plan/apply/export against the same API while retaining the offline mode.
 
 ## Failed login audit
 

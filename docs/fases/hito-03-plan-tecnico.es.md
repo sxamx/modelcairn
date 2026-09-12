@@ -294,10 +294,12 @@ metadatos/ETag. Un fallo excepcional de registro de redacción después del comm
 cierra el SecretStore para evitar continuar con una protección incompleta.
 
 La puerta integrada automatizada ya recorre el plano administrativo completo y
-está incluida en CI. La medición VM representativa aprobó con 55.368 KiB de RSS
-máximo y cero swap del proceso. El hito sigue pendiente de revisión independiente
-final. Identidad, sesiones, administración HTTP, tokens de acceso y paridad CLI
-ya están implementados.
+está incluida en CI. Ahora impone un máximo de 128 MiB de RSS pico en vez de solo
+informar la medición. La medición VM representativa aprobó con 55.368 KiB de RSS
+máximo y cero swap del proceso. La revisión independiente final terminó y bloqueó
+la aceptación por el contrato de retención de login; también detectó la medición
+de memoria antes no bloqueante, que ya fue corregida. Identidad, sesiones,
+administración HTTP, tokens de acceso y paridad CLI ya están implementados.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
 está publicado como PR #20 en borrador, no release fusionado. El diseño permite este
 relevo concreto; no implica que todo el diseño de seguridad esté aceptado.
