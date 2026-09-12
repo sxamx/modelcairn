@@ -71,5 +71,8 @@ go test -run '^$' -bench '^BenchmarkStreamingRouterConcurrency$' -benchtime=1x .
 
 Este microbenchmark usa un upstream local en memoria y no mide autenticación HTTP,
 SQLite, red real, RSS ni swap. Sus cifras de throughput no son capacidad anunciable.
-El cierre del Hito 4 aún exige la compuerta integral y el informe redactado de la VM
-representativa con esos cinco niveles de concurrencia.
+`scripts/verify-hito4.sh` es la compuerta integral: usa el binario real, bootstrap,
+sesión administrativa, configuración publicada, AgentToken, adaptador directo,
+persistencia y un upstream HTTP local determinista. Mide RSS, swap y latencia en
+los cinco niveles, y rechaza contenido persistido o secretos en logs. CI la usa
+como humo; el cierre aún exige su informe redactado en la VM representativa.

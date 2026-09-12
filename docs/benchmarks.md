@@ -68,6 +68,9 @@ go test -run '^$' -bench '^BenchmarkStreamingRouterConcurrency$' -benchtime=1x .
 
 This microbenchmark uses an in-memory local upstream and does not measure HTTP
 authentication, SQLite, real networking, RSS, or swap. Its throughput figures are
-not publishable capacity claims. Milestone 4 acceptance still requires the full
-gate and a redacted report from the representative VM at all five concurrency
-levels.
+not publishable capacity claims. `scripts/verify-hito4.sh` is the full gate: it
+uses the real binary, bootstrap, admin session, published configuration, AgentToken,
+direct adapter, persistence, and a deterministic local HTTP upstream. It measures
+RSS, swap, and latency at all five levels and rejects persisted content or secrets
+in logs. CI uses it as a smoke gate; closure still requires its redacted report
+from the representative VM.
