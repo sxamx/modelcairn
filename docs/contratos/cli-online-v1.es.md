@@ -2,7 +2,8 @@
 
 [English](cli-online-v1.md)
 
-Estado: base de sesión implementada; paridad de operaciones pendiente.
+Estado: sesión y ciclo de vida de AgentToken implementados; paridad de
+configuración y secretos pendiente.
 
 La CLI online usa exclusivamente la API administrativa y nunca abre el directorio
 de datos. `--server` es el origen público exacto, sin ruta, query ni credenciales.
@@ -12,6 +13,9 @@ HTTPS es obligatorio salvo HTTP hacia loopback. No se siguen redirecciones.
 modelcairn admin login --server origen --username nombre [--session-file ruta]
 modelcairn admin whoami --server origen [--session-file ruta]
 modelcairn admin logout --server origen [--session-file ruta]
+modelcairn agent-token status --server origen [--session-file ruta] <nombre>
+modelcairn agent-token issue --server origen [--session-file ruta] <nombre>
+modelcairn agent-token revoke --server origen [--session-file ruta] <nombre>
 ```
 
 Login lee la contraseña mediante terminal sin eco o stdin, nunca argv. La sesión
@@ -22,5 +26,7 @@ ni compartirse. `whoami` recupera/rota CSRF y actualiza el archivo. Logout prime
 confirma revocación en el servidor y luego elimina la copia local.
 
 Cada petición envía Origin exacto, cookie y CSRF, limita respuestas a 1 MiB y usa
-timeout. La CLI no imprime cookie ni CSRF. Una futura conexión de config, secretos
-y AgentToken reutilizará este cliente; no creará un segundo protocolo.
+timeout. Ante 403 recupera CSRF mediante `session/me` y reintenta exactamente una
+vez. La CLI no imprime cookie ni CSRF. `agent-token issue` es la única salida que
+entrega intencionalmente el bearer una vez. La futura conexión de config y secretos
+reutilizará este cliente; no creará un segundo protocolo.

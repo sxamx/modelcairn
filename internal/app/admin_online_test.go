@@ -102,3 +102,52 @@ func TestAdminClientRejectsRedirectsAndRemotePlainHTTP(t *testing.T) {
 		t.Fatalf("response=%v targetCalled=%v err=%v", response, targetCalled, err)
 	}
 }
+
+func TestAgentTokenCLIRecoversCSRFOnce(t *testing.T) {
+	const bearer = "mc_at_v1_abcdefghijklmnopqrstuvwxyzABCDEFGH123456789"
+	var origin string
+	issues := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Origin") != origin {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		switch r.URL.Path {
+		case "/api/v1/admin/session/me":
+			_ = json.NewEncoder(w).Encode(map[string]any{"admin": map[string]string{"id": "admin-id", "username": "owner"}, "csrfToken": "fresh-csrf", "expiresAt": time.Now().Add(time.Hour)})
+		case "/api/v1/admin/agent-tokens/agent/issue":
+			issues++
+			if r.Header.Get("X-CSRF-Token") != "fresh-csrf" {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]any{"token": bearer, "tokenStatus": map[string]string{"state": "active"}})
+		case "/api/v1/admin/agent-tokens/agent/status":
+			_ = json.NewEncoder(w).Encode(map[string]any{"tokenStatus": map[string]string{"state": "active"}})
+		case "/api/v1/admin/agent-tokens/agent/revoke":
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+	origin = server.URL
+	sessionFile := filepath.Join(t.TempDir(), "session.json")
+	if err := saveOnlineSession(sessionFile, onlineSession{Server: origin, SessionToken: "session", CSRFToken: "stale-csrf", ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	base := []string{"--server", origin, "--session-file", sessionFile, "agent"}
+	code, out, errOut := runCLI(t, append([]string{"agent-token", "issue"}, base...), "", false)
+	if code != 0 || !strings.Contains(out, bearer) || errOut != "" || issues != 2 {
+		t.Fatalf("issue code=%d issues=%d out=%q err=%q", code, issues, out, errOut)
+	}
+	code, out, errOut = runCLI(t, append([]string{"agent-token", "status"}, base...), "", false)
+	if code != 0 || !strings.Contains(out, `"state": "active"`) || strings.Contains(errOut, bearer) {
+		t.Fatalf("status code=%d out=%q err=%q", code, out, errOut)
+	}
+	code, out, errOut = runCLI(t, append([]string{"agent-token", "revoke"}, base...), "", false)
+	if code != 0 || out != "agent token revoked\n" || strings.Contains(errOut, bearer) {
+		t.Fatalf("revoke code=%d out=%q err=%q", code, out, errOut)
+	}
+}

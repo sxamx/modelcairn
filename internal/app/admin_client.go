@@ -209,6 +209,29 @@ func (c *adminClient) authenticated(ctx context.Context, session onlineSession, 
 	return c.execute(request)
 }
 
+func (c *adminClient) authenticatedWithRecovery(ctx context.Context, session *onlineSession, sessionFile, method, path string, body []byte, contentType string) (*http.Response, []byte, error) {
+	response, data, err := c.authenticated(ctx, *session, method, path, body, contentType)
+	if err != nil || response.StatusCode != http.StatusForbidden {
+		return response, data, err
+	}
+	recovery, recoveryData, err := c.authenticated(ctx, *session, http.MethodGet, "/api/v1/admin/session/me", nil, "")
+	if err != nil {
+		return nil, nil, err
+	}
+	if recovery.StatusCode != http.StatusOK {
+		return response, data, nil
+	}
+	var view onlineSessionView
+	if json.Unmarshal(recoveryData, &view) != nil || view.CSRFToken == "" {
+		return nil, nil, errors.New("invalid_admin_response")
+	}
+	session.CSRFToken, session.ExpiresAt = view.CSRFToken, view.ExpiresAt
+	if err := saveOnlineSession(sessionFile, *session); err != nil {
+		return nil, nil, err
+	}
+	return c.authenticated(ctx, *session, method, path, body, contentType)
+}
+
 func (c *adminClient) execute(request *http.Request) (*http.Response, []byte, error) {
 	response, err := c.http.Do(request)
 	if err != nil {
