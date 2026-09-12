@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/sxamx/modelcairn/internal/storage"
 )
 
-func dataHandlerFixture(t *testing.T) (http.Handler, string, *int, *storage.Installation) {
+func dataHandlerFixture(t *testing.T) (http.Handler, string, *atomic.Int32, *storage.Installation) {
 	t.Helper()
 	return dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -23,12 +24,12 @@ func dataHandlerFixture(t *testing.T) (http.Handler, string, *int, *storage.Inst
 	})
 }
 
-func dataHandlerFixtureWithUpstream(t *testing.T, upstreamHandler http.HandlerFunc) (http.Handler, string, *int, *storage.Installation) {
+func dataHandlerFixtureWithUpstream(t *testing.T, upstreamHandler http.HandlerFunc) (http.Handler, string, *atomic.Int32, *storage.Installation) {
 	t.Helper()
 	ctx := context.Background()
-	upstreamCalls := 0
+	var upstreamCalls atomic.Int32
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		upstreamCalls++
+		upstreamCalls.Add(1)
 		upstreamHandler(w, r)
 	}))
 	t.Cleanup(upstream.Close)
@@ -95,8 +96,8 @@ func TestDataChatCompletionsStreamingVerticalPath(t *testing.T) {
 	})
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}],"stream":true}`, token))
-	if recorder.Code != http.StatusOK || recorder.Header().Get("Content-Type") != "text/event-stream" || recorder.Header().Get("X-ModelCairn-Request-ID") == "" || *calls != 1 {
-		t.Fatalf("status=%d headers=%v calls=%d body=%s", recorder.Code, recorder.Header(), *calls, recorder.Body.String())
+	if recorder.Code != http.StatusOK || recorder.Header().Get("Content-Type") != "text/event-stream" || recorder.Header().Get("X-ModelCairn-Request-ID") == "" || calls.Load() != 1 {
+		t.Fatalf("status=%d headers=%v calls=%d body=%s", recorder.Code, recorder.Header(), calls.Load(), recorder.Body.String())
 	}
 	if body := recorder.Body.String(); !strings.Contains(body, `"model":"assistant"`) || !strings.HasSuffix(body, "data: [DONE]\n\n") {
 		t.Fatalf("body=%q", body)
@@ -112,7 +113,7 @@ func TestDataChatCompletionsPersistsCommittedStreamInterruption(t *testing.T) {
 	})
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}],"stream":true}`, token))
-	if recorder.Code != http.StatusOK || strings.Contains(recorder.Body.String(), "modelcairn_error") || strings.Contains(recorder.Body.String(), "[DONE]") || *calls != 1 {
+	if recorder.Code != http.StatusOK || strings.Contains(recorder.Body.String(), "modelcairn_error") || strings.Contains(recorder.Body.String(), "[DONE]") || calls.Load() != 1 {
 		t.Fatalf("status=%d body=%q", recorder.Code, recorder.Body.String())
 	}
 	assertRecordedRequest(t, installation, recorder.Header().Get("X-ModelCairn-Request-ID"), "partial", http.StatusOK, "partial")
@@ -146,8 +147,8 @@ func TestDataChatCompletionsAuthenticatedVerticalPath(t *testing.T) {
 	handler, token, calls, installation := dataHandlerFixture(t)
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}]}`, token))
-	if recorder.Code != http.StatusOK || recorder.Header().Get("X-ModelCairn-Request-ID") == "" || recorder.Header().Get("Cache-Control") != "no-store" || *calls != 1 {
-		t.Fatalf("status=%d headers=%v calls=%d body=%s", recorder.Code, recorder.Header(), *calls, recorder.Body.String())
+	if recorder.Code != http.StatusOK || recorder.Header().Get("X-ModelCairn-Request-ID") == "" || recorder.Header().Get("Cache-Control") != "no-store" || calls.Load() != 1 {
+		t.Fatalf("status=%d headers=%v calls=%d body=%s", recorder.Code, recorder.Header(), calls.Load(), recorder.Body.String())
 	}
 	var response map[string]any
 	if json.Unmarshal(recorder.Body.Bytes(), &response) != nil || response["model"] != "assistant" {
@@ -205,8 +206,8 @@ func TestDataEndpointRejectsBeforeUpstream(t *testing.T) {
 	if recorder.Code != http.StatusUnauthorized {
 		t.Fatalf("ambiguous authorization status=%d", recorder.Code)
 	}
-	if *calls != 0 {
-		t.Fatalf("upstream calls=%d", *calls)
+	if calls.Load() != 0 {
+		t.Fatalf("upstream calls=%d", calls.Load())
 	}
 }
 
@@ -240,8 +241,8 @@ func TestDataNonStreamingFallbackMatrixAndPersistence(t *testing.T) {
 			})
 			recorder := httptest.NewRecorder()
 			handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}]}`, token))
-			if recorder.Code != http.StatusOK || *calls != 2 {
-				t.Fatalf("status=%d calls=%d body=%s", recorder.Code, *calls, recorder.Body.String())
+			if recorder.Code != http.StatusOK || calls.Load() != 2 {
+				t.Fatalf("status=%d calls=%d body=%s", recorder.Code, calls.Load(), recorder.Body.String())
 			}
 			requestID := recorder.Header().Get("X-ModelCairn-Request-ID")
 			var firstOutcome, reason string
@@ -268,8 +269,8 @@ func TestDataTerminalProviderErrorDoesNotFallback(t *testing.T) {
 	})
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}]}`, token))
-	if recorder.Code != http.StatusBadGateway || *calls != 1 || !strings.Contains(recorder.Body.String(), `"code":"provider_error"`) {
-		t.Fatalf("status=%d calls=%d body=%s", recorder.Code, *calls, recorder.Body.String())
+	if recorder.Code != http.StatusBadGateway || calls.Load() != 1 || !strings.Contains(recorder.Body.String(), `"code":"provider_error"`) {
+		t.Fatalf("status=%d calls=%d body=%s", recorder.Code, calls.Load(), recorder.Body.String())
 	}
 	var attempts int
 	if err := installation.DB().QueryRow("SELECT count(*) FROM attempts").Scan(&attempts); err != nil || attempts != 1 {
@@ -290,8 +291,8 @@ func TestDataStreamingFallsBackOnlyBeforeCommitment(t *testing.T) {
 	})
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}],"stream":true}`, token))
-	if recorder.Code != http.StatusOK || *calls != 2 || !strings.HasSuffix(recorder.Body.String(), "data: [DONE]\n\n") || strings.Contains(recorder.Body.String(), "invalid") {
-		t.Fatalf("status=%d calls=%d body=%q", recorder.Code, *calls, recorder.Body.String())
+	if recorder.Code != http.StatusOK || calls.Load() != 2 || !strings.HasSuffix(recorder.Body.String(), "data: [DONE]\n\n") || strings.Contains(recorder.Body.String(), "invalid") {
+		t.Fatalf("status=%d calls=%d body=%q", recorder.Code, calls.Load(), recorder.Body.String())
 	}
 	var attempts int
 	if err := installation.DB().QueryRow("SELECT count(*) FROM attempts WHERE request_id=?", recorder.Header().Get("X-ModelCairn-Request-ID")).Scan(&attempts); err != nil || attempts != 2 {
@@ -308,8 +309,8 @@ func TestDataAttemptTimeoutIsIndeterminateAndDoesNotFallback(t *testing.T) {
 	})
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}]}`, token))
-	if recorder.Code != http.StatusBadGateway || *calls != 1 || !strings.Contains(recorder.Body.String(), `"code":"indeterminate_upstream"`) {
-		t.Fatalf("status=%d calls=%d body=%s", recorder.Code, *calls, recorder.Body.String())
+	if recorder.Code != http.StatusBadGateway || calls.Load() != 1 || !strings.Contains(recorder.Body.String(), `"code":"indeterminate_upstream"`) {
+		t.Fatalf("status=%d calls=%d body=%s", recorder.Code, calls.Load(), recorder.Body.String())
 	}
 	var outcome string
 	if err := installation.DB().QueryRow("SELECT outcome FROM requests").Scan(&outcome); err != nil || outcome != "indeterminate" {
@@ -345,8 +346,8 @@ func TestDataClientCancellationStopsUpstreamAndPersistsCancellation(t *testing.T
 	case <-time.After(3 * time.Second):
 		t.Fatal("handler did not stop after cancellation")
 	}
-	if *calls != 1 || recorder.Body.Len() != 0 {
-		t.Fatalf("calls=%d body=%q", *calls, recorder.Body.String())
+	if calls.Load() != 1 || recorder.Body.Len() != 0 {
+		t.Fatalf("calls=%d body=%q", calls.Load(), recorder.Body.String())
 	}
 	var outcome string
 	var status int
@@ -362,7 +363,7 @@ func TestDataToolCallRoundTripUsesCompatibleDestination(t *testing.T) {
 	})
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"weather"}],"tools":[{"type":"function","function":{"name":"lookup","parameters":{"type":"object"}}}]}`, token))
-	if recorder.Code != http.StatusOK || *calls != 1 || !strings.Contains(recorder.Body.String(), `"id":"call-1"`) || !strings.Contains(recorder.Body.String(), `"model":"assistant"`) {
-		t.Fatalf("status=%d calls=%d body=%s", recorder.Code, *calls, recorder.Body.String())
+	if recorder.Code != http.StatusOK || calls.Load() != 1 || !strings.Contains(recorder.Body.String(), `"id":"call-1"`) || !strings.Contains(recorder.Body.String(), `"model":"assistant"`) {
+		t.Fatalf("status=%d calls=%d body=%s", recorder.Code, calls.Load(), recorder.Body.String())
 	}
 }
