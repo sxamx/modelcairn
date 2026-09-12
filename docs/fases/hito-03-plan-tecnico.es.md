@@ -12,7 +12,9 @@ detalla campos y límites; la retención del histórico de login espera decisió
 
 ## Resultado esperado
 
-Relevo actual: paridad de CLI online. El
+Relevo actual: medición representativa y aceptación integrada. La paridad de CLI
+online ya reutiliza la API administrativa para sesiones, configuración, secretos
+y AgentToken. El
 [ciclo de vida de AgentToken](../contratos/agent-token-lifecycle-v1.es.md) y el
 [CRUD transaccional](../contratos/resource-mutations-v1.es.md) ya están implementados.
 
@@ -271,7 +273,7 @@ el snapshot, y confirma sesión, consumo de nonce, grafo completo y auditoría e
 transacción. Una sesión revocada no consume el plan; la regresión reutiliza ese
 mismo plan con una sesión nueva y confirma éxito. El flujo HTTP integrado valida,
 planea, aplica y exporta un recurso sin reflejar el token. CRUD individual y
-secretos y tokens de agentes están conectados; la CLI online continúa pendiente.
+secretos, tokens de agentes y CLI online están conectados.
 
 Las lecturas de recursos y metadatos de secretos ya exponen GET individual y lista
 paginada. Las consultas filtran por tipo y `id > cursor`, solicitan límite más uno
@@ -291,8 +293,8 @@ o desconocidos y el buffer del valor se limpia al terminar. La API devuelve solo
 metadatos/ETag. Un fallo excepcional de registro de redacción después del commit
 cierra el SecretStore para evitar continuar con una protección incompleta.
 
-El hito completo sigue pendiente: paridad CLI, tokens de acceso, mediciones VM y
-aceptación integrada. Identidad, sesiones y administración HTTP ya están implementadas.
+El hito completo sigue pendiente: mediciones VM y aceptación integrada. Identidad,
+sesiones, administración HTTP, tokens de acceso y paridad CLI ya están implementados.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
 está publicado como PR #20 en borrador, no release fusionado. El diseño permite este
 relevo concreto; no implica que todo el diseño de seguridad esté aceptado.

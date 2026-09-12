@@ -8,7 +8,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 	"unicode/utf8"
 
 	"golang.org/x/term"
@@ -44,6 +47,8 @@ func secretFlags(name string, stderr io.Writer) (*flag.FlagSet, *string) {
 
 func runSecretSet(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
 	flags, dataDir := secretFlags("secret set", stderr)
+	server := flags.String("server", "", "administrative server origin")
+	sessionFile := flags.String("session-file", "", "private online session file")
 	version := flags.Int64("version", 0, "expected version when replacing a secret")
 	if err := flags.Parse(args); err != nil {
 		return 2
@@ -52,11 +57,18 @@ func runSecretSet(ctx context.Context, args []string, stdin io.Reader, stdout, s
 		fmt.Fprintln(stderr, "usage: modelcairn secret set [--data-dir path] [--version n] <name>")
 		return 2
 	}
+	if !validOnlineFlagMix(flags, *server, *sessionFile) {
+		fmt.Fprintln(stderr, "--server cannot be combined with --data-dir; --session-file requires --server")
+		return 2
+	}
 	value, err := readSecretInput(stdin, stderr, interactive)
 	if err != nil {
 		return writeCLIError(stderr, err)
 	}
 	defer clear(value)
+	if *server != "" {
+		return runSecretSetOnline(ctx, *server, *sessionFile, flags.Arg(0), *version, value, stdout, stderr)
+	}
 	installation, err := storage.OpenInstallation(ctx, *dataDir)
 	if err != nil {
 		return writeCLIError(stderr, err)
@@ -71,12 +83,25 @@ func runSecretSet(ctx context.Context, args []string, stdin io.Reader, stdout, s
 
 func runSecretMetadata(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	flags, dataDir := secretFlags("secret metadata", stderr)
+	server := flags.String("server", "", "administrative server origin")
+	sessionFile := flags.String("session-file", "", "private online session file")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}
 	if flags.NArg() > 1 {
 		fmt.Fprintln(stderr, "usage: modelcairn secret metadata [--data-dir path] [name]")
 		return 2
+	}
+	if !validOnlineFlagMix(flags, *server, *sessionFile) {
+		fmt.Fprintln(stderr, "--server cannot be combined with --data-dir; --session-file requires --server")
+		return 2
+	}
+	if *server != "" {
+		name := ""
+		if flags.NArg() == 1 {
+			name = flags.Arg(0)
+		}
+		return runSecretMetadataOnline(ctx, *server, *sessionFile, name, stdout, stderr)
 	}
 	installation, err := storage.OpenInstallation(ctx, *dataDir)
 	if err != nil {
@@ -121,6 +146,8 @@ func runSecretRotate(ctx context.Context, args []string, stdout, stderr io.Write
 
 func runSecretDelete(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	flags, dataDir := secretFlags("secret delete", stderr)
+	server := flags.String("server", "", "administrative server origin")
+	sessionFile := flags.String("session-file", "", "private online session file")
 	version := flags.Int64("version", 0, "expected secret version")
 	if err := flags.Parse(args); err != nil {
 		return 2
@@ -129,6 +156,13 @@ func runSecretDelete(ctx context.Context, args []string, stdout, stderr io.Write
 		fmt.Fprintln(stderr, "usage: modelcairn secret delete --version n [--data-dir path] <name>")
 		return 2
 	}
+	if !validOnlineFlagMix(flags, *server, *sessionFile) {
+		fmt.Fprintln(stderr, "--server cannot be combined with --data-dir; --session-file requires --server")
+		return 2
+	}
+	if *server != "" {
+		return runSecretDeleteOnline(ctx, *server, *sessionFile, flags.Arg(0), *version, stdout, stderr)
+	}
 	installation, err := storage.OpenInstallation(ctx, *dataDir)
 	if err != nil {
 		return writeCLIError(stderr, err)
@@ -136,6 +170,110 @@ func runSecretDelete(ctx context.Context, args []string, stdout, stderr io.Write
 	defer installation.Close()
 	if err := installation.Secrets().Delete(ctx, flags.Arg(0), *version, storage.Actor{Type: "cli"}); err != nil {
 		return writeCLIError(stderr, err)
+	}
+	fmt.Fprintln(stdout, "secret deleted")
+	return 0
+}
+
+func runSecretSetOnline(ctx context.Context, server, sessionFile, name string, version int64, value []byte, stdout, stderr io.Writer) int {
+	payload, err := json.Marshal(map[string]string{"value": string(value)})
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	defer clear(payload)
+	client, session, path, err := onlineSessionClient(server, sessionFile)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	headers := map[string]string{}
+	if version > 0 {
+		headers["If-Match"] = `"` + strconv.FormatInt(version, 10) + `"`
+	}
+	response, data, err := client.authenticatedWithRecovery(ctx, &session, path, http.MethodPut, "/api/v1/admin/secrets/"+url.PathEscape(name), payload, "application/json", headers)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	want := http.StatusCreated
+	if version > 0 {
+		want = http.StatusOK
+	}
+	if response.StatusCode != want {
+		return writeCLIError(stderr, fmt.Errorf("secret_http_%d", response.StatusCode))
+	}
+	var metadata storage.SecretMetadata
+	if json.Unmarshal(data, &metadata) != nil || metadata.Name == "" || metadata.ResourceVersion < 1 {
+		return writeCLIError(stderr, errors.New("invalid_admin_response"))
+	}
+	return encodeCLIJSON(stdout, stderr, metadata)
+}
+
+func runSecretMetadataOnline(ctx context.Context, server, sessionFile, name string, stdout, stderr io.Writer) int {
+	client, session, path, err := onlineSessionClient(server, sessionFile)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	if name != "" {
+		response, data, err := client.authenticatedWithRecovery(ctx, &session, path, http.MethodGet, "/api/v1/admin/secrets/"+url.PathEscape(name), nil, "")
+		if err != nil {
+			return writeCLIError(stderr, err)
+		}
+		if response.StatusCode != http.StatusOK {
+			return writeCLIError(stderr, fmt.Errorf("secret_http_%d", response.StatusCode))
+		}
+		var metadata storage.SecretMetadata
+		if json.Unmarshal(data, &metadata) != nil || metadata.Name == "" {
+			return writeCLIError(stderr, errors.New("invalid_admin_response"))
+		}
+		return encodeCLIJSON(stdout, stderr, metadata)
+	}
+	items := []storage.SecretMetadata{}
+	cursor := ""
+	for {
+		endpoint := "/api/v1/admin/secrets?limit=200"
+		if cursor != "" {
+			endpoint += "&cursor=" + url.QueryEscape(cursor)
+		}
+		response, data, err := client.authenticatedWithRecovery(ctx, &session, path, http.MethodGet, endpoint, nil, "")
+		if err != nil {
+			return writeCLIError(stderr, err)
+		}
+		if response.StatusCode != http.StatusOK {
+			return writeCLIError(stderr, fmt.Errorf("secret_http_%d", response.StatusCode))
+		}
+		var page struct {
+			Items      []storage.SecretMetadata `json:"items"`
+			NextCursor *string                  `json:"nextCursor"`
+		}
+		if json.Unmarshal(data, &page) != nil || page.Items == nil {
+			return writeCLIError(stderr, errors.New("invalid_admin_response"))
+		}
+		items = append(items, page.Items...)
+		if len(items) > 10000 {
+			return writeCLIError(stderr, errors.New("admin_response_too_large"))
+		}
+		if page.NextCursor == nil {
+			break
+		}
+		if *page.NextCursor == "" || len(*page.NextCursor) > 512 || *page.NextCursor == cursor {
+			return writeCLIError(stderr, errors.New("invalid_admin_response"))
+		}
+		cursor = *page.NextCursor
+	}
+	return encodeCLIJSON(stdout, stderr, items)
+}
+
+func runSecretDeleteOnline(ctx context.Context, server, sessionFile, name string, version int64, stdout, stderr io.Writer) int {
+	client, session, path, err := onlineSessionClient(server, sessionFile)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	headers := map[string]string{"If-Match": `"` + strconv.FormatInt(version, 10) + `"`}
+	response, _, err := client.authenticatedWithRecovery(ctx, &session, path, http.MethodDelete, "/api/v1/admin/secrets/"+url.PathEscape(name), nil, "", headers)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	if response.StatusCode != http.StatusNoContent {
+		return writeCLIError(stderr, fmt.Errorf("secret_http_%d", response.StatusCode))
 	}
 	fmt.Fprintln(stdout, "secret deleted")
 	return 0
