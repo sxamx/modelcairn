@@ -15,7 +15,7 @@ import (
 	"github.com/sxamx/modelcairn/internal/storage"
 )
 
-func dataHandlerFixture(t *testing.T) (http.Handler, string, *int) {
+func dataHandlerFixture(t *testing.T) (http.Handler, string, *int, *storage.Installation) {
 	t.Helper()
 	ctx := context.Background()
 	upstreamCalls := 0
@@ -75,7 +75,7 @@ func dataHandlerFixture(t *testing.T) (http.Handler, string, *int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return server.Handler, issued.Token, &upstreamCalls
+	return server.Handler, issued.Token, &upstreamCalls, installation
 }
 
 func dataRequest(body, token string) *http.Request {
@@ -88,7 +88,7 @@ func dataRequest(body, token string) *http.Request {
 }
 
 func TestDataChatCompletionsAuthenticatedVerticalPath(t *testing.T) {
-	handler, token, calls := dataHandlerFixture(t)
+	handler, token, calls, installation := dataHandlerFixture(t)
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}]}`, token))
 	if recorder.Code != http.StatusOK || recorder.Header().Get("X-ModelCairn-Request-ID") == "" || recorder.Header().Get("Cache-Control") != "no-store" || *calls != 1 {
@@ -98,10 +98,22 @@ func TestDataChatCompletionsAuthenticatedVerticalPath(t *testing.T) {
 	if json.Unmarshal(recorder.Body.Bytes(), &response) != nil || response["model"] != "assistant" {
 		t.Fatalf("body=%s", recorder.Body.String())
 	}
+	var outcome string
+	var contentStored, attempts int
+	requestID := recorder.Header().Get("X-ModelCairn-Request-ID")
+	if err := installation.DB().QueryRow("SELECT outcome,content_stored FROM requests WHERE id=?", requestID).Scan(&outcome, &contentStored); err != nil {
+		t.Fatal(err)
+	}
+	if err := installation.DB().QueryRow("SELECT count(*) FROM attempts WHERE request_id=?", requestID).Scan(&attempts); err != nil {
+		t.Fatal(err)
+	}
+	if outcome != "success" || contentStored != 0 || attempts != 1 {
+		t.Fatalf("outcome=%q content=%d attempts=%d", outcome, contentStored, attempts)
+	}
 }
 
 func TestDataEndpointRejectsBeforeUpstream(t *testing.T) {
-	handler, token, calls := dataHandlerFixture(t)
+	handler, token, calls, _ := dataHandlerFixture(t)
 	tests := []struct {
 		name, body, token string
 		status            int

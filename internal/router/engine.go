@@ -28,13 +28,17 @@ type ClassifiedFailure interface {
 }
 
 type Attempt struct {
-	Sequence       int
-	DestinationID  string
-	StatusCode     int
-	ErrorClass     string
-	Retryable      bool
-	FallbackReason string
-	Duration       time.Duration
+	Sequence               int
+	DestinationID          string
+	StatusCode             int
+	ErrorClass             string
+	Retryable              bool
+	FallbackReason         string
+	Outcome                string
+	ProviderRequestID      string
+	RetryAfter             string
+	StartedAt, CompletedAt time.Time
+	Duration               time.Duration
 }
 
 type RunResult struct {
@@ -88,10 +92,12 @@ func (e *Engine) Run(ctx context.Context, snapshot Snapshot, request chatcomplet
 		upstream, executeErr := e.executor.Execute(attemptContext, destination, request, snapshot.Alias)
 		cancelAttempt()
 		result.Upstream = upstream
-		attempt := Attempt{Sequence: index + 1, DestinationID: destination.ID, StatusCode: upstream.StatusCode, Duration: e.now().Sub(started)}
+		completed := e.now()
+		attempt := Attempt{Sequence: index + 1, DestinationID: destination.ID, StatusCode: upstream.StatusCode, ProviderRequestID: upstream.ProviderRequestID, RetryAfter: upstream.RetryAfter, StartedAt: started, CompletedAt: completed, Duration: completed.Sub(started), Outcome: "error"}
 		retry, terminalCode := classifyAttempt(ctx, totalContext, executeErr, upstream.StatusCode, &attempt)
 		result.Attempts = append(result.Attempts, attempt)
 		if executeErr == nil && upstream.StatusCode >= 200 && upstream.StatusCode < 300 {
+			result.Attempts[len(result.Attempts)-1].Outcome = "success"
 			return result, nil
 		}
 		if !retry {
@@ -107,10 +113,12 @@ func (e *Engine) Run(ctx context.Context, snapshot Snapshot, request chatcomplet
 func classifyAttempt(parent, total context.Context, executeErr error, status int, attempt *Attempt) (bool, string) {
 	if parent.Err() != nil {
 		attempt.ErrorClass = "client_cancelled"
+		attempt.Outcome = "cancelled"
 		return false, "request_cancelled"
 	}
 	if total.Err() != nil {
 		attempt.ErrorClass = "total_timeout"
+		attempt.Outcome = "indeterminate"
 		return false, "total_timeout"
 	}
 	if executeErr != nil {
@@ -124,6 +132,7 @@ func classifyAttempt(parent, total context.Context, executeErr error, status int
 					attempt.FallbackReason = "transport_pre_send"
 					return true, ""
 				}
+				attempt.Outcome = "indeterminate"
 				return false, "indeterminate_upstream"
 			case "invalid_response", "response_too_large":
 				attempt.Retryable = true
@@ -135,6 +144,7 @@ func classifyAttempt(parent, total context.Context, executeErr error, status int
 		}
 		if errors.Is(executeErr, context.DeadlineExceeded) {
 			attempt.ErrorClass = "attempt_timeout"
+			attempt.Outcome = "indeterminate"
 			return false, "indeterminate_upstream"
 		}
 		attempt.ErrorClass = "unclassified_error"

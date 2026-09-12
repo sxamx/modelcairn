@@ -2,7 +2,7 @@
 
 [Español](hito-04-plan-tecnico.es.md)
 
-Status: accepted implementation plan; Block 1 implemented and Block 2 started.
+Status: Blocks 1–4 implemented for non-streaming; Block 6 persistence started.
 Prerequisite: Milestone 3 merged and accepted.
 
 Implementation order approved by the operator: prove the router over direct
@@ -92,10 +92,12 @@ provider response into the same stream.
 7. **Acceptance:** grouped QA, race suite, simulated fault matrix and VM resource
    benchmark at 1, 2, 5, 10 and 20 concurrent streams.
 
-Block 1 now has the data OpenAPI, strict parser, programmable simulator, and
-failure matrix. Its independent QA will be grouped with the first state machine.
-Block 2 started with transactional strategy-version publication and immutable
-snapshot loading; this is not yet the executable router.
+Blocks 1–4 now form an authenticated non-streaming path: contract and parser,
+simulator, published versions, snapshots, secure direct egress, and bounded
+fallback. The first grouped independent QA completed and its findings were fixed.
+Initial Block 6 persistence records requests, attempts, 429 observations, and
+cooldowns without content. Streaming, persistence completion, and acceptance are
+still pending.
 
 Each block receives focused tests. Independent QA is grouped at the state-machine
 boundary and at final acceptance rather than repeated for every small edit.

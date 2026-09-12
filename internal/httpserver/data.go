@@ -1,12 +1,15 @@
 package httpserver
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/sxamx/modelcairn/internal/chatcompletions"
 	"github.com/sxamx/modelcairn/internal/router"
@@ -14,9 +17,11 @@ import (
 )
 
 type dataAPI struct {
-	tokens *storage.AgentTokenService
-	loader *router.Loader
-	engine *router.Engine
+	tokens   *storage.AgentTokenService
+	loader   *router.Loader
+	engine   *router.Engine
+	recorder *storage.OperationalRecorder
+	logger   *slog.Logger
 }
 
 func (a *dataAPI) chatCompletions(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +60,7 @@ func (a *dataAPI) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		writeDataError(w, http.StatusUnauthorized, "invalid_agent_token", "", requestID)
 		return
 	}
-	_, routeID, err := a.tokens.AuthenticateAlias(r.Context(), bearer, parsed.Request.Model)
+	identity, routeID, err := a.tokens.AuthenticateAlias(r.Context(), bearer, parsed.Request.Model)
 	if err != nil {
 		switch {
 		case errors.Is(err, storage.ErrAgentTokenInvalid):
@@ -82,7 +87,17 @@ func (a *dataAPI) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	startedAt := time.Now().UTC()
+	if err := a.recorder.Begin(r.Context(), storage.RequestStart{ID: requestID, AgentTokenID: identity.ResourceID, RouteID: routeID, RequestedAlias: snapshot.Alias, StartedAt: startedAt}); err != nil {
+		writeDataError(w, http.StatusServiceUnavailable, "persistence_unavailable", "", requestID)
+		return
+	}
 	result, err := a.engine.Run(r.Context(), snapshot, parsed.Request)
+	status := http.StatusOK
+	if err != nil {
+		status = runErrorStatus(err, result)
+	}
+	a.completeOperational(requestID, status, result, err)
 	if err != nil {
 		writeRunError(w, err, result, requestID)
 		return
@@ -92,6 +107,33 @@ func (a *dataAPI) chatCompletions(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-ModelCairn-Request-ID", requestID)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(result.Upstream.Body)
+}
+
+func (a *dataAPI) completeOperational(requestID string, status int, result router.RunResult, runErr error) {
+	outcome := "success"
+	var typed *router.RunError
+	if errors.As(runErr, &typed) {
+		outcome = "error"
+		if typed.Code == "request_cancelled" {
+			outcome = "cancelled"
+		}
+		if typed.Code == "indeterminate_upstream" {
+			outcome = "indeterminate"
+		}
+	}
+	attempts := make([]storage.AttemptCompletion, 0, len(result.Attempts))
+	for _, attempt := range result.Attempts {
+		attempts = append(attempts, storage.AttemptCompletion{Sequence: attempt.Sequence, DestinationID: attempt.DestinationID,
+			Outcome: attempt.Outcome, ErrorClass: attempt.ErrorClass, ProviderStatus: attempt.StatusCode,
+			ProviderRequestID: attempt.ProviderRequestID, Retryable: attempt.Retryable, FallbackReason: attempt.FallbackReason,
+			RetryAfter: attempt.RetryAfter,
+			StartedAt:  attempt.StartedAt, CompletedAt: attempt.CompletedAt})
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := a.recorder.Complete(ctx, requestID, storage.RequestCompletion{Outcome: outcome, HTTPStatus: status, CompletedAt: time.Now().UTC(), Attempts: attempts}); err != nil {
+		a.logger.Error("operational request completion failed", "requestId", requestID, "code", "persistence_unavailable")
+	}
 }
 
 func bearerToken(value string) (string, bool) {
@@ -107,6 +149,18 @@ func writeRunError(w http.ResponseWriter, err error, result router.RunResult, re
 		writeDataError(w, http.StatusServiceUnavailable, "router_unavailable", "", requestID)
 		return
 	}
+	status := runErrorStatus(err, result)
+	if status == 499 {
+		return
+	}
+	writeDataError(w, status, runErr.Code, "", requestID)
+}
+
+func runErrorStatus(err error, result router.RunResult) int {
+	var runErr *router.RunError
+	if !errors.As(err, &runErr) {
+		return http.StatusServiceUnavailable
+	}
 	status := http.StatusBadGateway
 	switch runErr.Code {
 	case "no_eligible_destination":
@@ -120,11 +174,11 @@ func writeRunError(w http.ResponseWriter, err error, result router.RunResult, re
 	case "total_timeout":
 		status = http.StatusGatewayTimeout
 	case "request_cancelled":
-		return
+		return 499
 	case "streaming_not_supported":
 		status = http.StatusUnprocessableEntity
 	}
-	writeDataError(w, status, runErr.Code, "", requestID)
+	return status
 }
 
 func writeDataError(w http.ResponseWriter, status int, code, param, requestID string) {

@@ -103,7 +103,7 @@ func NewAdmin(address string, readiness *ReadinessProbe, logger *slog.Logger, in
 		return nil, err
 	}
 	adapter := openaiadapter.New(installation.Secrets())
-	data := &dataAPI{tokens: agentTokens, loader: router.NewLoader(installation.DB()), engine: router.NewEngine(adapter)}
+	data := &dataAPI{tokens: agentTokens, loader: router.NewLoader(installation.DB()), engine: router.NewEngine(adapter), recorder: storage.NewOperationalRecorder(installation.DB()), logger: logger}
 	server, err := newServer(address, readiness, logger, &adminAPI{installation: installation, login: login, settings: settings, configuration: config.NewManager(installation), repository: storage.NewRepository(installation.DB()), agentTokens: agentTokens, boundary: boundary, data: data})
 	if err != nil {
 		login.Close()

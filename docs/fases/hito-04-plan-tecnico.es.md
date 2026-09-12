@@ -2,7 +2,7 @@
 
 [English](hito-04-plan-tecnico.md)
 
-Estado: plan de implementación aceptado; Bloque 1 implementado y Bloque 2 iniciado.
+Estado: bloques 1–4 implementados para no streaming; persistencia del Bloque 6 iniciada.
 Prerrequisito: Hito 3 fusionado y aceptado.
 
 Orden aprobado por el operador: demostrar primero el router con salida directa y
@@ -91,10 +91,12 @@ el stream y registra `partial`; jamás mezcla otra respuesta en el mismo stream.
 7. **Aceptación:** QA agrupado, suite de carreras, matriz de fallos simulada y
    benchmark VM con 1, 2, 5, 10 y 20 streams concurrentes.
 
-El Bloque 1 ya cuenta con OpenAPI de datos, parser estricto, simulador programable
-y matriz de fallos. Su QA independiente se agrupará con la primera máquina de
-estados. El Bloque 2 comenzó con publicación transaccional de versiones de
-estrategia y carga de snapshots inmutables; aún no constituye el router ejecutable.
+Los Bloques 1–4 ya forman un recorrido autenticado no streaming: contrato y parser,
+simulador, versiones publicadas, snapshots, salida directa segura y fallback
+acotado. El primer QA agrupado se completó y sus hallazgos fueron corregidos. La
+persistencia inicial del Bloque 6 registra solicitudes, intentos, observaciones 429
+y cooldowns sin contenido. Streaming, cierre completo de persistencia y aceptación
+siguen pendientes.
 
 Cada bloque recibe pruebas focales. El QA independiente se agrupa en la frontera
 de la máquina de estados y en la aceptación final, no en cada edición pequeña.

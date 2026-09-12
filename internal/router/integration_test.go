@@ -46,7 +46,7 @@ func TestNonStreamingFallbackThroughOpenAIAdapter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.Attempts) != 2 || result.Attempts[0].FallbackReason != "rate_limited" || result.Upstream.StatusCode != http.StatusOK {
+	if len(result.Attempts) != 2 || result.Attempts[0].FallbackReason != "rate_limited" || result.Attempts[0].RetryAfter != "3" || result.Upstream.StatusCode != http.StatusOK {
 		t.Fatalf("result=%+v", result)
 	}
 	observations := upstream.Observations()
