@@ -284,8 +284,11 @@ ETag only. An exceptional redaction-registration failure after commit closes the
 SecretStore so operation cannot continue with incomplete output protection.
 
 The automated integration gate now covers the complete administrative plane and is
-included in CI. Representative VM measurement passed at 55,368 KiB peak service
-RSS and zero process swap. The milestone still requires final independent review.
+included in CI. It enforces a 128 MiB peak-RSS ceiling rather than merely reporting
+the measurement. Representative VM measurement passed at 55,368 KiB peak service
+RSS and zero process swap. The final independent review completed and blocked
+acceptance on the login-retention contract; it also identified the formerly
+non-blocking memory measurement, which is now corrected.
 Identity, sessions, HTTP administration, access tokens, and CLI parity are
 implemented. Login aggregate retention remains an
 explicit operator decision. The branch is published as draft PR #20, not a merged
