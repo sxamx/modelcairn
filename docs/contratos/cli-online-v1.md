@@ -2,7 +2,8 @@
 
 [Español](cli-online-v1.es.md)
 
-Status: session foundation implemented; operation parity pending.
+Status: session and AgentToken lifecycle implemented; configuration and secret
+parity pending.
 
 The online CLI exclusively uses the administrative API and never opens the data
 directory. `--server` is the exact public origin without path, query, or userinfo.
@@ -12,6 +13,9 @@ HTTPS is mandatory except for loopback HTTP, and redirects are never followed.
 modelcairn admin login --server origin --username name [--session-file path]
 modelcairn admin whoami --server origin [--session-file path]
 modelcairn admin logout --server origin [--session-file path]
+modelcairn agent-token status --server origin [--session-file path] <name>
+modelcairn agent-token issue --server origin [--session-file path] <name>
+modelcairn agent-token revoke --server origin [--session-file path] <name>
 ```
 
 Login reads the password from a no-echo terminal or stdin, never argv. The session
@@ -22,5 +26,7 @@ and expiry, so it is a local credential that must not be versioned or shared.
 revocation before deleting the local copy.
 
 Every request sends the exact Origin, cookie, and CSRF, bounds responses to 1 MiB,
-and uses a timeout. Cookie and CSRF are never printed. Future config, secret, and
-AgentToken commands reuse this client rather than defining another protocol.
+and uses a timeout. A 403 triggers CSRF recovery through `session/me` and exactly
+one retry. Cookie and CSRF are never printed; `agent-token issue` is the sole
+intentional one-time bearer output. Future config and secret commands reuse this
+client rather than defining another protocol.

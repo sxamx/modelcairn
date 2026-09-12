@@ -51,6 +51,8 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return runSecret(ctx, args[1:], stdin, stdout, stderr, interactive)
 	case "admin":
 		return runAdmin(ctx, args[1:], stdin, stdout, stderr, interactive)
+	case "agent-token":
+		return runAgentToken(ctx, args[1:], stdout, stderr)
 	case "help", "-h", "--help":
 		printUsage(stdout)
 		return 0
@@ -204,5 +206,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  modelcairn admin login --server origin --username name [--session-file path]")
 	fmt.Fprintln(w, "  modelcairn admin whoami --server origin [--session-file path]")
 	fmt.Fprintln(w, "  modelcairn admin logout --server origin [--session-file path]")
+	fmt.Fprintln(w, "  modelcairn agent-token status --server origin [--session-file path] <name>")
+	fmt.Fprintln(w, "  modelcairn agent-token issue --server origin [--session-file path] <name>")
+	fmt.Fprintln(w, "  modelcairn agent-token revoke --server origin [--session-file path] <name>")
 	fmt.Fprintln(w, "  modelcairn version")
 }
