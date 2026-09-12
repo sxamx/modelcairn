@@ -14,6 +14,7 @@ binary="$working_directory/modelcairn"
 source_binary="${MODELCAIRN_BINARY:-}"
 expected_commit="${MODELCAIRN_EXPECTED_COMMIT:-}"
 measure_seconds="${MEASURE_SECONDS:-0}"
+max_rss_kib="${MAX_RSS_KIB:-131072}"
 output_file="${OUTPUT_FILE:-}"
 port="${MODELCAIRN_HITO3_PORT:-18083}"
 origin="http://127.0.0.1:$port"
@@ -32,6 +33,7 @@ trap cleanup EXIT
 
 cd "$repository_root"
 [[ "$measure_seconds" =~ ^[0-9]+$ ]] || { echo "MEASURE_SECONDS must be a non-negative integer" >&2; exit 2; }
+[[ "$max_rss_kib" =~ ^[1-9][0-9]*$ ]] || { echo "MAX_RSS_KIB must be a positive integer" >&2; exit 2; }
 if [[ -n "$source_binary" ]]; then
   [[ -x "$source_binary" ]] || { echo "MODELCAIRN_BINARY must be executable" >&2; exit 2; }
   [[ -n "$expected_commit" ]] || { echo "MODELCAIRN_EXPECTED_COMMIT is required with a precompiled binary" >&2; exit 2; }
@@ -92,6 +94,10 @@ sample_count="$(wc -l <"$samples_file")"
 average_rss_kib="$(awk '{sum += $1} END {printf "%d", sum/NR}' "$samples_file")"
 peak_rss_kib="$(awk 'BEGIN {max=0} $1>max {max=$1} END {print max}' "$samples_file")"
 peak_swap_kib="$(awk 'BEGIN {max=0} $2>max {max=$2} END {print max}' "$samples_file")"
+if (( peak_rss_kib > max_rss_kib )); then
+  echo "service exceeded RSS budget: ${peak_rss_kib} KiB > ${max_rss_kib} KiB" >&2
+  exit 1
+fi
 
 if [[ -n "$output_file" ]]; then
   mkdir -p "$(dirname "$output_file")"
@@ -111,6 +117,7 @@ if [[ -n "$output_file" ]]; then
 - Samples: $sample_count at approximately 50 ms
 - Average service RSS: ${average_rss_kib} KiB
 - Peak service RSS: ${peak_rss_kib} KiB
+- Enforced peak RSS budget: ${max_rss_kib} KiB
 - Peak service swap: ${peak_swap_kib} KiB
 EOF
 fi
