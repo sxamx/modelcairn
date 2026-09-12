@@ -30,6 +30,7 @@
 - [OpenAPI administrativa](contratos/api/admin-v1.openapi.yaml)
 - [OpenAPI de datos](contratos/api/data-v1.openapi.yaml)
 - [Matriz Chat Completions](contratos/compatibilidad-chat-completions-v1.es.md)
+- [Matriz de fallos del router](contratos/matriz-fallos-router-v1.es.md)
 - [Schema SQLite documental](contratos/storage/schema-v1.sql)
 - [Reglas del modelo SQLite](contratos/storage/modelo-sqlite-v1.es.md)
 - [Propiedad de SQLite y durabilidad del llavero](contratos/storage/propiedad-y-llavero-v1.es.md)
