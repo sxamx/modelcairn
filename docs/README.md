@@ -36,7 +36,7 @@
 - [Requirements traceability](fases/fase-01-trazabilidad.md)
 - [Risks and quality gates](fases/fase-01-riesgos-y-puertas.md)
 
-## Milestone 3 contracts — final acceptance in progress
+## Milestone 3 — accepted contracts
 
 - [Technical delivery plan](fases/hito-03-plan-tecnico.md)
 - [Administrative runtime](contratos/admin-runtime-v1.md)

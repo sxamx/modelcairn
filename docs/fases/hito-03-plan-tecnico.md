@@ -2,11 +2,12 @@
 
 [Español](hito-03-plan-tecnico.es.md)
 
-Status: implementation started; draft pull request. Prerequisite: accepted Milestone 2.
+Status: accepted on the milestone branch; pull request awaits merge authorization.
+Prerequisite: accepted Milestone 2.
 The [runtime contract](../contratos/admin-runtime-v1.md) defines transport,
-authentication and HTTP mapping. The [settings proposal](../contratos/admin-settings-v1.md)
-defines deployment settings and login auditing. Proposed defaults need validation;
-login-history retention still requires an operator decision.
+authentication and HTTP mapping. The [settings contract](../contratos/admin-settings-v1.md)
+defines deployment settings and login auditing. Its configurable 24-hour default
+and explicit unlimited option are implemented and verified.
 
 ## Intended outcome
 

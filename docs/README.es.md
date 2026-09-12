@@ -36,7 +36,7 @@
 - [Trazabilidad de requisitos](fases/fase-01-trazabilidad.es.md)
 - [Riesgos y puertas de calidad](fases/fase-01-riesgos-y-puertas.es.md)
 
-## Contratos del Hito 3 — aceptación final en curso
+## Hito 3 — contratos aceptados
 
 - [Plan técnico de entrega](fases/hito-03-plan-tecnico.es.md)
 - [Ejecución administrativa](contratos/admin-runtime-v1.es.md)

@@ -2,13 +2,14 @@
 
 [English](hito-03-plan-tecnico.md)
 
-Estado: implementación iniciada; pull request en borrador.
+Estado: aceptado en la rama del hito; el pull request espera autorización de fusión.
 La [especificación administrativa](../contratos/admin-runtime-v1.es.md) concreta
-transporte, autenticación y correspondencia HTTP; sus defaults esperan validación.
+transporte, autenticación y correspondencia HTTP.
 Prerrequisito: Hito 2 aceptado. Este documento organiza el alcance aprobado;
 las propuestas indicadas requieren concretarse en los contratos antes de implementarlas.
-La [propuesta de settings y auditoría](../contratos/admin-settings-v1.es.md)
-detalla campos y límites; la retención del histórico de login espera decisión.
+El [contrato de settings y auditoría](../contratos/admin-settings-v1.es.md) detalla
+campos y límites. Su valor inicial configurable de 24 horas y la opción ilimitada
+explícita están implementados y verificados.
 
 ## Resultado esperado
 
