@@ -23,6 +23,7 @@
 - [Online CLI contract](contratos/cli-online-v1.md)
 - [Milestone 2 integration and resource evidence](evidencia/hito-02-integracion-recursos.md)
 - [Milestone 3 administrative integration evidence](evidencia/hito-03-integracion-admin.md)
+- [Milestone 3 representative benchmark](evidencia/benchmark-hito-03-2026-09-12.md)
 - [Example configuration](contratos/config/example-v1alpha1.yaml)
 - [Administrative OpenAPI](contratos/api/admin-v1.openapi.yaml)
 - [Chat Completions compatibility matrix](contratos/compatibilidad-chat-completions-v1.md)

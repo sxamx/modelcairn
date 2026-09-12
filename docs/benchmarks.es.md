@@ -50,3 +50,11 @@ Si la VM no tiene Go, `MODELCAIRN_BINARY` permite medir un binario Linux precomp
 DURATION_SECONDS=120 OUTPUT_FILE=benchmark-results/hito-02.md \
   bash scripts/verify-hito2.sh
 ```
+
+## Compuerta administrativa del Hito 3
+
+`scripts/verify-hito3.sh` acepta el mismo patrón de binario precompilado y muestrea
+RSS/swap durante el recorrido administrativo completo. `MEASURE_SECONDS` añade un
+período estable y `OUTPUT_FILE` produce el informe redactado. La ejecución
+representativa está registrada en la
+[evidencia del Hito 3](evidencia/benchmark-hito-03-2026-09-12.es.md).

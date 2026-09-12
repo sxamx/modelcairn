@@ -284,8 +284,9 @@ ETag only. An exceptional redaction-registration failure after commit closes the
 SecretStore so operation cannot continue with incomplete output protection.
 
 The automated integration gate now covers the complete administrative plane and is
-included in CI. The milestone still requires VM measurement and final independent
-review. Identity, sessions, HTTP administration, access tokens, and CLI parity are
+included in CI. Representative VM measurement passed at 55,368 KiB peak service
+RSS and zero process swap. The milestone still requires final independent review.
+Identity, sessions, HTTP administration, access tokens, and CLI parity are
 implemented. Login aggregate retention remains an
 explicit operator decision. The branch is published as draft PR #20, not a merged
 release. The design work now supports this concrete implementation

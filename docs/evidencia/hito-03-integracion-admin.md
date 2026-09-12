@@ -3,7 +3,7 @@
 [Español](hito-03-integracion-admin.es.md)
 
 - Date: September 12, 2026
-- Status: local gate passed; CI and VM measurement pending
+- Status: local gate and VM measurement passed; increment CI pending
 
 `scripts/verify-hito3.sh` builds a clean binary and uses a temporary installation.
 It covers bootstrap, startup/readiness, login, session recovery, secret creation
@@ -14,5 +14,5 @@ delivery boundary. Temporary artifacts are removed on exit.
 
 The gate passed locally together with all Go tests, `go vet`, and documentation
 validation. CI runs it on Linux from this increment. This evidence does not replace
-representative RAM/latency measurement on the small VM or the final independent
-milestone review.
+The [representative measurement](benchmark-hito-03-2026-09-12.md) also passed.
+The final independent milestone review remains pending.

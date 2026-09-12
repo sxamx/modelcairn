@@ -23,6 +23,7 @@
 - [Contrato de CLI online](contratos/cli-online-v1.es.md)
 - [Evidencia de integración y recursos del Hito 2](evidencia/hito-02-integracion-recursos.es.md)
 - [Evidencia de integración administrativa del Hito 3](evidencia/hito-03-integracion-admin.es.md)
+- [Benchmark representativo del Hito 3](evidencia/benchmark-hito-03-2026-09-12.es.md)
 - [Configuración de ejemplo](contratos/config/example-v1alpha1.yaml)
 - [OpenAPI administrativa](contratos/api/admin-v1.openapi.yaml)
 - [Matriz Chat Completions](contratos/compatibilidad-chat-completions-v1.es.md)

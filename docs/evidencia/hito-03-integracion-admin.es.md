@@ -3,7 +3,7 @@
 [English](hito-03-integracion-admin.md)
 
 - Fecha: 12 de septiembre de 2026
-- Estado: puerta local aprobada; CI y medición VM pendientes
+- Estado: puerta local y medición VM aprobadas; CI del incremento pendiente
 
 `scripts/verify-hito3.sh` construye un binario limpio y usa una instalación temporal.
 Recorre bootstrap, arranque/readiness, login, recuperación de sesión, alta y lectura
@@ -14,5 +14,5 @@ intencional. Todos los temporales se eliminan al salir.
 
 La puerta pasó localmente junto con todas las pruebas Go, `go vet` y el verificador
 documental. CI la ejecutará en Linux desde este incremento. Esta evidencia no
-sustituye la medición representativa de RAM/latencia en la VM pequeña ni la revisión
-independiente final del hito.
+La [medición representativa](benchmark-hito-03-2026-09-12.es.md) también está
+aprobada. Queda pendiente la revisión independiente final del hito.
