@@ -195,7 +195,7 @@ func (c *adminClient) login(ctx context.Context, username string, password []byt
 	return onlineSession{Server: c.server, SessionToken: token, CSRFToken: view.CSRFToken, ExpiresAt: view.ExpiresAt}, view, nil
 }
 
-func (c *adminClient) authenticated(ctx context.Context, session onlineSession, method, path string, body []byte, contentType string) (*http.Response, []byte, error) {
+func (c *adminClient) authenticated(ctx context.Context, session onlineSession, method, path string, body []byte, contentType string, extra ...map[string]string) (*http.Response, []byte, error) {
 	request, err := http.NewRequestWithContext(ctx, method, c.server+path, bytes.NewReader(body))
 	if err != nil {
 		return nil, nil, err
@@ -206,11 +206,16 @@ func (c *adminClient) authenticated(ctx context.Context, session onlineSession, 
 	if contentType != "" {
 		request.Header.Set("Content-Type", contentType)
 	}
+	if len(extra) != 0 {
+		for name, value := range extra[0] {
+			request.Header.Set(name, value)
+		}
+	}
 	return c.execute(request)
 }
 
-func (c *adminClient) authenticatedWithRecovery(ctx context.Context, session *onlineSession, sessionFile, method, path string, body []byte, contentType string) (*http.Response, []byte, error) {
-	response, data, err := c.authenticated(ctx, *session, method, path, body, contentType)
+func (c *adminClient) authenticatedWithRecovery(ctx context.Context, session *onlineSession, sessionFile, method, path string, body []byte, contentType string, extra ...map[string]string) (*http.Response, []byte, error) {
+	response, data, err := c.authenticated(ctx, *session, method, path, body, contentType, extra...)
 	if err != nil || response.StatusCode != http.StatusForbidden {
 		return response, data, err
 	}
@@ -229,7 +234,7 @@ func (c *adminClient) authenticatedWithRecovery(ctx context.Context, session *on
 	if err := saveOnlineSession(sessionFile, *session); err != nil {
 		return nil, nil, err
 	}
-	return c.authenticated(ctx, *session, method, path, body, contentType)
+	return c.authenticated(ctx, *session, method, path, body, contentType, extra...)
 }
 
 func (c *adminClient) execute(request *http.Request) (*http.Response, []byte, error) {

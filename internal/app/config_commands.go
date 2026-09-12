@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/sxamx/modelcairn/internal/adminauth"
 	"github.com/sxamx/modelcairn/internal/adminsettings"
@@ -61,9 +62,15 @@ func runConfigPlan(ctx context.Context, args []string, stdout, stderr io.Writer)
 	flags := flag.NewFlagSet("config plan", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	dataDir := flags.String("data-dir", defaultDataDirectory(), "private ModelCairn data directory")
+	server := flags.String("server", "", "administrative server origin")
+	sessionFile := flags.String("session-file", "", "private online session file")
 	allowDelete := flags.Bool("allow-delete", false, "allow explicit state: absent")
 	out := flags.String("out", "", "write authenticated JSON plan")
 	if err := flags.Parse(args); err != nil {
+		return 2
+	}
+	if !validOnlineFlagMix(flags, *server, *sessionFile) {
+		fmt.Fprintln(stderr, "--server cannot be combined with --data-dir; --session-file requires --server")
 		return 2
 	}
 	if flags.NArg() != 1 {
@@ -73,6 +80,13 @@ func runConfigPlan(ctx context.Context, args []string, stdout, stderr io.Writer)
 	doc, err := readConfiguration(flags.Arg(0))
 	if err != nil {
 		return writeCLIError(stderr, err)
+	}
+	if *server != "" {
+		raw, err := readBoundedFile(flags.Arg(0), config.MaxInputBytes)
+		if err != nil {
+			return writeCLIError(stderr, err)
+		}
+		return runConfigPlanOnline(ctx, raw, *server, *sessionFile, *allowDelete, *out, stdout, stderr)
 	}
 	installation, err := storage.OpenInstallation(ctx, *dataDir)
 	if err != nil {
@@ -109,9 +123,15 @@ func runConfigApply(ctx context.Context, args []string, stdin io.Reader, stdout,
 	flags := flag.NewFlagSet("config apply", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	dataDir := flags.String("data-dir", defaultDataDirectory(), "private ModelCairn data directory")
+	server := flags.String("server", "", "administrative server origin")
+	sessionFile := flags.String("session-file", "", "private online session file")
 	allowDelete := flags.Bool("allow-delete", false, "allow explicit state: absent")
 	planPath := flags.String("plan", "", "authenticated plan file")
 	if err := flags.Parse(args); err != nil {
+		return 2
+	}
+	if !validOnlineFlagMix(flags, *server, *sessionFile) {
+		fmt.Fprintln(stderr, "--server cannot be combined with --data-dir; --session-file requires --server")
 		return 2
 	}
 	if flags.NArg() != 1 {
@@ -125,6 +145,17 @@ func runConfigApply(ctx context.Context, args []string, stdin io.Reader, stdout,
 	if *planPath == "" && !interactive {
 		fmt.Fprintln(stderr, "a plan file is required when stdin is not interactive")
 		return 2
+	}
+	if *server != "" {
+		if *planPath == "" {
+			fmt.Fprintln(stderr, "online apply requires --plan")
+			return 2
+		}
+		raw, err := readBoundedFile(flags.Arg(0), config.MaxInputBytes)
+		if err != nil {
+			return writeCLIError(stderr, err)
+		}
+		return runConfigApplyOnline(ctx, raw, *server, *sessionFile, *allowDelete, *planPath, stdout, stderr)
 	}
 	var token string
 	if *planPath != "" {
@@ -166,6 +197,16 @@ func runConfigApply(ctx context.Context, args []string, stdin io.Reader, stdout,
 	return 0
 }
 
+func validOnlineFlagMix(flags *flag.FlagSet, server, sessionFile string) bool {
+	dataDirExplicit := false
+	flags.Visit(func(item *flag.Flag) {
+		if item.Name == "data-dir" {
+			dataDirExplicit = true
+		}
+	})
+	return !(server != "" && dataDirExplicit) && !(server == "" && sessionFile != "")
+}
+
 func readPlanToken(path string) (string, error) {
 	raw, err := readBoundedFile(path, maxPlanFileBytes)
 	if err != nil {
@@ -184,12 +225,21 @@ func runConfigExport(ctx context.Context, args []string, stdout, stderr io.Write
 	flags := flag.NewFlagSet("config export", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	dataDir := flags.String("data-dir", defaultDataDirectory(), "private ModelCairn data directory")
+	server := flags.String("server", "", "administrative server origin")
+	sessionFile := flags.String("session-file", "", "private online session file")
 	if err := flags.Parse(args); err != nil {
+		return 2
+	}
+	if !validOnlineFlagMix(flags, *server, *sessionFile) {
+		fmt.Fprintln(stderr, "--server cannot be combined with --data-dir; --session-file requires --server")
 		return 2
 	}
 	if flags.NArg() != 0 {
 		fmt.Fprintln(stderr, "config export accepts no positional arguments")
 		return 2
+	}
+	if *server != "" {
+		return runConfigExportOnline(ctx, *server, *sessionFile, stdout, stderr)
 	}
 	installation, err := storage.OpenInstallation(ctx, *dataDir)
 	if err != nil {
@@ -204,6 +254,105 @@ func runConfigExport(ctx context.Context, args []string, stdout, stderr io.Write
 		return writeCLIError(stderr, err)
 	}
 	return 0
+}
+
+func onlineSessionClient(server, sessionFile string) (*adminClient, onlineSession, string, error) {
+	client, path, err := onlineAdminClient(server, sessionFile)
+	if err != nil {
+		return nil, onlineSession{}, "", err
+	}
+	session, err := loadOnlineSession(path, client.server)
+	return client, session, path, err
+}
+
+func runConfigPlanOnline(ctx context.Context, raw []byte, server, sessionFile string, allowDelete bool, out string, stdout, stderr io.Writer) int {
+	client, session, path, err := onlineSessionClient(server, sessionFile)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	endpoint := fmt.Sprintf("/api/v1/admin/config/plan?allowDelete=%t", allowDelete)
+	response, data, err := client.authenticatedWithRecovery(ctx, &session, path, "POST", endpoint, raw, "application/yaml")
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	if response.StatusCode != 200 {
+		return writeCLIError(stderr, fmt.Errorf("config_plan_http_%d", response.StatusCode))
+	}
+	if _, err := onlinePlanToken(data); err != nil {
+		return writeCLIError(stderr, err)
+	}
+	if out != "" {
+		if err := writePrivateFile(out, append(data, '\n')); err != nil {
+			return writeCLIError(stderr, err)
+		}
+		fmt.Fprintf(stdout, "plan written to %s\n", out)
+		return 0
+	}
+	if _, err := stdout.Write(append(data, '\n')); err != nil {
+		return writeCLIError(stderr, err)
+	}
+	return 0
+}
+
+func runConfigApplyOnline(ctx context.Context, raw []byte, server, sessionFile string, allowDelete bool, planPath string, stdout, stderr io.Writer) int {
+	planData, err := readBoundedFile(planPath, maxPlanFileBytes)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	token, err := onlinePlanToken(planData)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	client, session, path, err := onlineSessionClient(server, sessionFile)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	endpoint := fmt.Sprintf("/api/v1/admin/config/apply?allowDelete=%t", allowDelete)
+	response, _, err := client.authenticatedWithRecovery(ctx, &session, path, "POST", endpoint, raw, "application/yaml", map[string]string{"X-ModelCairn-Plan-Token": token})
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	if response.StatusCode != 200 {
+		return writeCLIError(stderr, fmt.Errorf("config_apply_http_%d", response.StatusCode))
+	}
+	fmt.Fprintln(stdout, "configuration applied")
+	return 0
+}
+
+func runConfigExportOnline(ctx context.Context, server, sessionFile string, stdout, stderr io.Writer) int {
+	client, session, path, err := onlineSessionClient(server, sessionFile)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	response, data, err := client.authenticatedWithRecovery(ctx, &session, path, "GET", "/api/v1/admin/config/export", nil, "")
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	if response.StatusCode != 200 {
+		return writeCLIError(stderr, fmt.Errorf("config_export_http_%d", response.StatusCode))
+	}
+	if _, err := config.Parse(data); err != nil {
+		return writeCLIError(stderr, errors.New("invalid_admin_response"))
+	}
+	if _, err := stdout.Write(data); err != nil {
+		return writeCLIError(stderr, err)
+	}
+	return 0
+}
+
+func onlinePlanToken(data []byte) (string, error) {
+	var plan struct {
+		Valid     bool            `json:"valid"`
+		Changes   json.RawMessage `json:"changes"`
+		PlanToken string          `json:"planToken"`
+		ExpiresAt time.Time       `json:"expiresAt"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if decoder.Decode(&plan) != nil || decoder.Decode(new(any)) != io.EOF || !plan.Valid || plan.PlanToken == "" || plan.ExpiresAt.IsZero() || len(plan.Changes) == 0 {
+		return "", storage.ErrInvalidPlan
+	}
+	return plan.PlanToken, nil
 }
 
 func readConfiguration(path string) (*config.Document, error) {

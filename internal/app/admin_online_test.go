@@ -151,3 +151,61 @@ func TestAgentTokenCLIRecoversCSRFOnce(t *testing.T) {
 		t.Fatalf("revoke code=%d out=%q err=%q", code, out, errOut)
 	}
 }
+
+func TestOnlineConfigurationPlanApplyExport(t *testing.T) {
+	const token = "authenticated-plan-token"
+	var origin string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Origin") != origin {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		switch r.URL.Path {
+		case "/api/v1/admin/config/plan":
+			if r.URL.Query().Get("allowDelete") != "false" {
+				w.WriteHeader(400)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"valid": true, "changes": []any{map[string]string{"operation": "create", "kind": "Provider", "name": "acme"}}, "planToken": token, "expiresAt": time.Now().Add(time.Minute)})
+		case "/api/v1/admin/config/apply":
+			if r.Header.Get("X-ModelCairn-Plan-Token") != token {
+				w.WriteHeader(400)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"applied": true, "changes": []any{}, "appliedAt": time.Now()})
+		case "/api/v1/admin/config/export":
+			_, _ = w.Write([]byte(`{"apiVersion":"modelcairn.io/v1alpha1","kind":"Configuration","resources":[{"kind":"Provider","state":"present","metadata":{"name":"acme"},"spec":{}}]}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+	origin = server.URL
+	directory := t.TempDir()
+	sessionFile, configFile, planFile := filepath.Join(directory, "session.json"), filepath.Join(directory, "config.yaml"), filepath.Join(directory, "plan.json")
+	if err := saveOnlineSession(sessionFile, onlineSession{Server: origin, SessionToken: "session", CSRFToken: "csrf", ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	configuration := "apiVersion: modelcairn.io/v1alpha1\nkind: Configuration\nresources:\n  - kind: Provider\n    metadata: {name: acme}\n    spec: {}\n"
+	if err := os.WriteFile(configFile, []byte(configuration), 0600); err != nil {
+		t.Fatal(err)
+	}
+	base := []string{"--server", origin, "--session-file", sessionFile}
+	planArgs := append([]string{"config", "plan"}, base...)
+	planArgs = append(planArgs, "--out", planFile, configFile)
+	code, out, errOut := runCLI(t, planArgs, "", false)
+	if code != 0 || !strings.Contains(out, "plan written") || errOut != "" {
+		t.Fatalf("plan code=%d out=%q err=%q", code, out, errOut)
+	}
+	applyArgs := append([]string{"config", "apply"}, base...)
+	applyArgs = append(applyArgs, "--plan", planFile, configFile)
+	code, out, errOut = runCLI(t, applyArgs, "", false)
+	if code != 0 || out != "configuration applied\n" || errOut != "" {
+		t.Fatalf("apply code=%d out=%q err=%q", code, out, errOut)
+	}
+	exportArgs := append([]string{"config", "export"}, base...)
+	code, out, errOut = runCLI(t, exportArgs, "", false)
+	if code != 0 || !strings.Contains(out, `"name":"acme"`) || strings.Contains(out+errOut, token) {
+		t.Fatalf("export code=%d out=%q err=%q", code, out, errOut)
+	}
+}

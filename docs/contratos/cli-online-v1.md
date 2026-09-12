@@ -2,7 +2,7 @@
 
 [Español](cli-online-v1.es.md)
 
-Status: session and AgentToken lifecycle implemented; configuration and secret
+Status: session, configuration, and AgentToken lifecycle implemented; secret
 parity pending.
 
 The online CLI exclusively uses the administrative API and never opens the data
@@ -16,6 +16,9 @@ modelcairn admin logout --server origin [--session-file path]
 modelcairn agent-token status --server origin [--session-file path] <name>
 modelcairn agent-token issue --server origin [--session-file path] <name>
 modelcairn agent-token revoke --server origin [--session-file path] <name>
+modelcairn config plan --server origin [--session-file path] [--allow-delete] [--out plan.json] <file>
+modelcairn config apply --server origin [--session-file path] [--allow-delete] --plan plan.json <file>
+modelcairn config export --server origin [--session-file path]
 ```
 
 Login reads the password from a no-echo terminal or stdin, never argv. The session
@@ -28,5 +31,6 @@ revocation before deleting the local copy.
 Every request sends the exact Origin, cookie, and CSRF, bounds responses to 1 MiB,
 and uses a timeout. A 403 triggers CSRF recovery through `session/me` and exactly
 one retry. Cookie and CSRF are never printed; `agent-token issue` is the sole
-intentional one-time bearer output. Future config and secret commands reuse this
-client rather than defining another protocol.
+intentional one-time bearer output. Online configuration preserves plan/apply,
+the private plan file, and exact input binding; `--server` cannot be mixed with
+`--data-dir`. Secret commands will reuse this client.
