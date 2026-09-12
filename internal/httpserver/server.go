@@ -87,17 +87,26 @@ func NewAdmin(address string, readiness *ReadinessProbe, logger *slog.Logger, in
 	}
 	settings, err := storage.NewAdminSettingsService(installation)
 	if err != nil {
+		login.Close()
 		return nil, err
 	}
 	boundary, err := newAdminBoundary(effective)
 	if err != nil {
+		login.Close()
 		return nil, err
 	}
 	agentTokens, err := storage.NewAgentTokenService(installation)
 	if err != nil {
+		login.Close()
 		return nil, err
 	}
-	return newServer(address, readiness, logger, &adminAPI{installation: installation, login: login, settings: settings, configuration: config.NewManager(installation), repository: storage.NewRepository(installation.DB()), agentTokens: agentTokens, boundary: boundary})
+	server, err := newServer(address, readiness, logger, &adminAPI{installation: installation, login: login, settings: settings, configuration: config.NewManager(installation), repository: storage.NewRepository(installation.DB()), agentTokens: agentTokens, boundary: boundary})
+	if err != nil {
+		login.Close()
+		return nil, err
+	}
+	server.RegisterOnShutdown(login.Close)
+	return server, nil
 }
 
 func newServer(address string, readiness *ReadinessProbe, logger *slog.Logger, admin *adminAPI) (*http.Server, error) {

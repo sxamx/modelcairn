@@ -21,8 +21,10 @@ func TestAdminLoginUniformFailureAndSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer service.Close()
 	now := time.Now().UTC()
 	service.now = func() time.Time { return now }
+	service.statistics.now = func() time.Time { return now }
 	unknown := netip.MustParseAddr("192.0.2.1")
 	wrong := netip.MustParseAddr("192.0.2.2")
 	correct := netip.MustParseAddr("192.0.2.3")
@@ -42,6 +44,14 @@ func TestAdminLoginUniformFailureAndSuccess(t *testing.T) {
 	if _, err := UseAdminSession(ctx, i, credentials.SessionToken, credentials.CSRFToken, true, now.Add(time.Second)); err != nil {
 		t.Fatal(err)
 	}
+	service.Close()
+	statistics, err := ListFailedLoginStatistics(ctx, i.DB(), now.Add(-time.Minute), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(statistics) != 1 || statistics[0].Reason != LoginInvalidCredentials || statistics[0].Count != 2 {
+		t.Fatalf("login statistics=%+v", statistics)
+	}
 }
 
 func TestAdminLoginBackoffAndInputBounds(t *testing.T) {
@@ -53,6 +63,7 @@ func TestAdminLoginBackoffAndInputBounds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer service.Close()
 	now := time.Now().UTC()
 	service.now = func() time.Time { return now }
 	client := netip.MustParseAddr("192.0.2.10")
@@ -116,6 +127,7 @@ func TestAdminLoginAllowsOnlyOneDerivation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer service.Close()
 	entered := make(chan struct{})
 	release := make(chan struct{})
 	var calls atomic.Int32
@@ -154,6 +166,7 @@ func TestBusyLoginRejectsBeforeWaitingForDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer s.Close()
 	// An existing login owns the admission permit while another operation owns DB.
 	s.derive <- struct{}{}
 	defer func() { <-s.derive }()

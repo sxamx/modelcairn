@@ -2,10 +2,10 @@
 
 [Español](admin-identity-v1.es.md)
 
-Production migration `0003_admin_settings.sql` implements this contract through
-the existing transactional runner and checksum/schema-compatibility checks.
-Published migrations 0001 and 0002 remain unchanged. The executable contract test
-reads migration 0003 directly so a second SQL copy cannot drift from production.
+Production migrations `0003_admin_settings.sql` and
+`0004_failed_login_statistics.sql` implement this contract through the existing
+transactional runner and checksum/schema-compatibility checks. Published
+migrations 0001 through 0003 remain unchanged.
 
 ## Settings
 
@@ -71,8 +71,8 @@ A capacity-one permit rejects concurrency without a queue and covers every real 
 dummy derivation. Missing users and wrong passwords both derive and return
 `invalid_credentials`; PHC or persistence errors return unavailable. Transactional
 session creation rechecks auth_version after hashing. Success clears backoff without
-refilling buckets. The service keeps this state in memory and does not yet add an
-HTTP endpoint or failed-login persistence.
+refilling buckets. The service exposes the login endpoint and records only
+aggregate failed-login minute/reason counters through migration 0004.
 
 Migration 0003 revokes every pre-existing live session before adding idle_seconds;
 their original idle policy is unknown. Historical revoked rows may retain NULL.
@@ -88,9 +88,9 @@ HTTP enforcement requires later implementation tests.
 ## Audit and acceptance
 
 Identity success actions reuse audit_events with typed action-specific details;
-no new broad free-form audit API is introduced. Failed-login aggregate storage is
-intentionally deferred until its retention policy is decided. Migration 0003 neither
-creates that table nor silently approves a 24-hour cap.
+no new broad free-form audit API is introduced. Migration 0004 stores only UTC
+minute, allowlisted reason and saturating count. Effective settings apply 24 hours
+by default, any configured finite duration, or zero for no time expiry.
 
 Run `node docs/contratos/storage/admin-identity-v1.contract.test.cjs` to exercise
 upgrade of a seeded pre-Hito-3 database, revocation, settings bounds and rollback.

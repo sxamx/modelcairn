@@ -252,8 +252,8 @@ returns 403, invalid sessions 401, internal session failures 503. Logout is no-s
 
 This is an implementation handoff, not delivered functionality. Group acceptance
 around graph rules, preconditions, revocation, audit rollback and secret-free
-responses/logs. Login retention remains undecided; this milestone is not accepted
-for final deployment.
+responses/logs. The later delivery implements the approved configurable login
+retention; this handoff paragraph is retained as implementation history.
 
 The first handoff item is now implemented: Configuration validate, plan, apply
 and export are connected to the administrative API. Plan returns issuer expiry
@@ -290,7 +290,8 @@ RSS and zero process swap. The final independent review completed and blocked
 acceptance on the login-retention contract; it also identified the formerly
 non-blocking memory measurement, which is now corrected.
 Identity, sessions, HTTP administration, access tokens, and CLI parity are
-implemented. Login aggregate retention remains an
-explicit operator decision. The branch is published as draft PR #20, not a merged
+implemented. Login aggregate retention is now configurable, defaults to 24 hours,
+and supports explicit unlimited retention. Migration 0004 and integration tests
+close the blocking review finding. The branch is published as draft PR #20, not a merged
 release. The design work now supports this concrete implementation
 handoff; it does not justify claiming the whole security design is accepted.

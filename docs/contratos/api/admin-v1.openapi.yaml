@@ -408,9 +408,9 @@ components:
         desired: { $ref: '../config/admin-settings-v1alpha1.schema.json#/$defs/resolved' }
         changedFields:
           type: array
-          maxItems: 16
+          maxItems: 17
           uniqueItems: true
-          items: { type: string, enum: [publicOrigin, listen, transport, trustedProxyCidrs, tlsCertificatePath, tlsPrivateKeyPath, idleSeconds, absoluteSeconds, globalAttemptsPerMinute, globalBurst, clientAttemptsPerMinute, clientBurst, maxClientEntries, clientIdleSeconds, argonMemoryKiB, argonIterations] }
+          items: { type: string, enum: [publicOrigin, listen, transport, trustedProxyCidrs, tlsCertificatePath, tlsPrivateKeyPath, idleSeconds, absoluteSeconds, globalAttemptsPerMinute, globalBurst, clientAttemptsPerMinute, clientBurst, maxClientEntries, clientIdleSeconds, argonMemoryKiB, argonIterations, failedLoginRetentionSeconds] }
         planToken: { type: string, minLength: 32 }
         expiresAt: { type: string, format: date-time }
     AdminSettingsApplyResult:

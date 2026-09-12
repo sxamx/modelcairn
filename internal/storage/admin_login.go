@@ -56,6 +56,7 @@ type AdminLoginService struct {
 	derive       chan struct{}
 	now          func() time.Time
 	verify       func([]byte, string) (bool, error)
+	statistics   *failedLoginStatistics
 }
 
 func NewAdminLoginService(i *Installation, effective adminsettings.Resolved) (*AdminLoginService, error) {
@@ -70,12 +71,18 @@ func NewAdminLoginService(i *Installation, effective adminsettings.Resolved) (*A
 		return nil, err
 	}
 	now := time.Now().UTC()
-	return &AdminLoginService{installation: i, effective: effective, dummyPHC: dummy, derive: make(chan struct{}, 1), now: time.Now, verify: adminauth.Verify, admission: &loginAdmission{
+	return &AdminLoginService{installation: i, effective: effective, dummyPHC: dummy, derive: make(chan struct{}, 1), now: time.Now, verify: adminauth.Verify, statistics: newFailedLoginStatistics(i.DB(), effective.FailedLoginRetentionSeconds), admission: &loginAdmission{
 		global: loginBucket{tokens: float64(effective.GlobalBurst), updated: now}, clients: make(map[netip.Addr]*loginClient), globalRate: effective.GlobalAttemptsPerMinute, globalBurst: effective.GlobalBurst, clientRate: effective.ClientAttemptsPerMinute, clientBurst: effective.ClientBurst, maxClients: effective.MaxClientEntries, clientIdle: time.Duration(effective.ClientIdleSeconds) * time.Second,
 	}}, nil
 }
 
-func (s *AdminLoginService) Login(ctx context.Context, client netip.Addr, username string, password []byte) (AdminSessionCredentials, error) {
+func (s *AdminLoginService) Login(ctx context.Context, client netip.Addr, username string, password []byte) (credentials AdminSessionCredentials, resultErr error) {
+	defer func() {
+		var loginErr *LoginError
+		if errors.As(resultErr, &loginErr) {
+			s.statistics.record(loginErr.Code)
+		}
+	}()
 	if !client.IsValid() || client.IsUnspecified() || ValidateAdminUsername(username) != nil || adminauth.ValidatePassword(password) != nil {
 		return AdminSessionCredentials{}, &LoginError{Code: LoginMalformed}
 	}
@@ -117,7 +124,7 @@ func (s *AdminLoginService) Login(ctx context.Context, client netip.Addr, userna
 		return AdminSessionCredentials{}, &LoginError{Code: LoginInvalidCredentials}
 	}
 	sessionAt := s.now().UTC()
-	credentials, err := CreateAdminSession(ctx, s.installation, verified, s.effective.IdleSeconds, s.effective.AbsoluteSeconds, sessionAt)
+	credentials, err = CreateAdminSession(ctx, s.installation, verified, s.effective.IdleSeconds, s.effective.AbsoluteSeconds, sessionAt)
 	if err != nil {
 		if IsRepositoryCode(err, CodeVersionConflict) {
 			s.admission.failed(client, s.now().UTC())
@@ -127,6 +134,12 @@ func (s *AdminLoginService) Login(ctx context.Context, client netip.Addr, userna
 	}
 	s.admission.succeeded(client, sessionAt)
 	return credentials, nil
+}
+
+func (s *AdminLoginService) Close() {
+	if s != nil && s.statistics != nil {
+		s.statistics.closeAndFlush()
+	}
 }
 
 func (a *loginAdmission) allow(address netip.Addr, now time.Time) (time.Duration, bool) {

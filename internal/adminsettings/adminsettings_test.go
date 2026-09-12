@@ -151,6 +151,7 @@ func TestSemanticBounds(t *testing.T) {
 		{"global-rate", "$.spec.globalAttemptsPerMinute", func(v *Resolved) { v.GlobalAttemptsPerMinute = 0 }}, {"client-rate", "$.spec.clientAttemptsPerMinute", func(v *Resolved) { v.ClientAttemptsPerMinute = v.GlobalAttemptsPerMinute + 1 }},
 		{"global-burst", "$.spec.globalBurst", func(v *Resolved) { v.GlobalBurst = 21 }}, {"client-burst", "$.spec.clientBurst", func(v *Resolved) { v.ClientBurst = v.GlobalBurst + 1 }},
 		{"entries", "$.spec.maxClientEntries", func(v *Resolved) { v.MaxClientEntries = 63 }}, {"client-idle", "$.spec.clientIdleSeconds", func(v *Resolved) { v.ClientIdleSeconds = 3601 }},
+		{"failed-login-retention", "$.spec.failedLoginRetentionSeconds", func(v *Resolved) { v.FailedLoginRetentionSeconds = -1 }},
 		{"argon-memory", "$.spec.argonMemoryKiB", func(v *Resolved) { v.ArgonMemoryKiB = 65537 }}, {"argon-iterations", "$.spec.argonIterations", func(v *Resolved) { v.ArgonIterations = 1 }},
 	}
 	for _, tc := range tests {

@@ -61,6 +61,9 @@ func Validate(v Resolved) error {
 	if !within(v.ClientIdleSeconds, 60, 3600) {
 		return failure(CodeInvalidValue, "$.spec.clientIdleSeconds")
 	}
+	if v.FailedLoginRetentionSeconds < 0 || v.FailedLoginRetentionSeconds > 3155760000 {
+		return failure(CodeInvalidValue, "$.spec.failedLoginRetentionSeconds")
+	}
 	if !within(v.ArgonMemoryKiB, 19456, 65536) {
 		return failure(CodeInvalidValue, "$.spec.argonMemoryKiB")
 	}

@@ -2,7 +2,7 @@
 
 [English](admin-settings-v1.md)
 
-Estado: propuesta de implementación; revisión agrupada registrada en el plan del hito. Retención pendiente de decisión.
+Estado: contrato de implementación aceptado; retención configurable aprobada.
 
 ## Fuente y ciclo de configuración
 
@@ -56,6 +56,7 @@ sin releer settings después de liberar la transacción. GET sirve también para
 | clientBurst | entero, 3 | 1..10 y no mayor que ráfaga global |
 | maxClientEntries | entero, 1024 | 64..4096 |
 | clientIdleSeconds | entero, 900 | 60..3600 |
+| failedLoginRetentionSeconds | entero, 86400 | 0..3155760000; 0 significa sin vencimiento temporal |
 | argonMemoryKiB | entero, 19456 | 19456..65536 |
 | argonIterations | entero, 2 | 2..6 |
 
@@ -111,14 +112,16 @@ en memoria, volcados por upsert como máximo una vez por minuto; al apagar, inte
 volcar lo restante. Un crash puede perder el último minuto sin volcar: son métricas
 operativas, no un historial forense durable de cada intento.
 
-Tabla acotada a 1440 minutos por motivo (5760 filas). Borrar vencidos dentro de la
-transacción de volcado. Saltos del reloj hacia adelante limpian datos antiguos;
-retrocesos no pueden superar el máximo de filas. Disco lleno no crea una cola
+La política inicial de 86400 segundos conserva como máximo 1440 minutos por motivo
+(5760 filas). El operador puede elegir cualquier duración de hasta 100 años o cero
+para no aplicar vencimiento temporal. Borrar vencidos dentro de la transacción de
+volcado. Saltos del reloj hacia adelante limpian datos antiguos; retrocesos no
+crean buckets anteriores. Disco lleno no crea una cola
 ilimitada: conservar solo contadores actuales acotados e informar indisponibilidad
 agregada. Login exitoso y mutaciones administrativas conservan auditoría
 transaccional. Esta ventana operativa no cambia la retención de eventos de
 proveedores ni su opción de conservación indefinida.
 
-Antes de implementar, aprobar esta ventana fija de estadísticas de login o elegir
-retención configurable. Se conserva como propuesta porque afecta qué histórico
-puede consultar el operador.
+La retención ilimitada es una elección explícita y la interfaz debe advertir que la
+tabla puede crecer con el tiempo. La agregación limita la amplificación de un atacante
+a cuatro filas por minuto activo, pero no hace que un historial perpetuo ocupe cero.

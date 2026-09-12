@@ -14,6 +14,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/sxamx/modelcairn/internal/adminsettings"
 )
 
 func TestInstallationBootstrapsAndRepeatedStartupIsNoop(t *testing.T) {
@@ -44,8 +46,8 @@ func TestInstallationBootstrapsAndRepeatedStartupIsNoop(t *testing.T) {
 	if err := second.DB().QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 3 {
-		t.Fatalf("migration count = %d, want 3", count)
+	if count != 4 {
+		t.Fatalf("migration count = %d, want 4", count)
 	}
 }
 
@@ -60,8 +62,8 @@ func TestAdminSettingsMigrationRevokesLegacySessions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(migrations) != 3 {
-		t.Fatalf("migration count=%d, want 3", len(migrations))
+	if len(migrations) != 4 {
+		t.Fatalf("migration count=%d, want 4", len(migrations))
 	}
 	if err := migrateWithSet(ctx, db, migrations[:2]); err != nil {
 		t.Fatal(err)
@@ -92,6 +94,42 @@ func TestAdminSettingsMigrationRevokesLegacySessions(t *testing.T) {
 	}
 	if err := CheckSchemaCompatibility(ctx, db); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestFailedLoginMigrationUpgradesCanonicalSettings(t *testing.T) {
+	ctx := context.Background()
+	db, err := OpenSQLite(ctx, filepath.Join(t.TempDir(), "upgrade-v4.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	migrations, err := embeddedMigrations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateWithSet(ctx, db, migrations[:3]); err != nil {
+		t.Fatal(err)
+	}
+	defaults := adminsettings.Defaults()
+	defaults.PublicOrigin = "http://127.0.0.1:8080"
+	encoded, err := adminsettings.CanonicalJSON(defaults)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := strings.TrimSuffix(string(encoded), `,"failedLoginRetentionSeconds":86400}`) + "}"
+	if _, err := db.ExecContext(ctx, "INSERT INTO admin_settings(singleton,resource_version,spec_json,updated_at) VALUES(1,1,?,?)", legacy, "2026-01-01T00:00:00Z"); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateWithSet(ctx, db, migrations); err != nil {
+		t.Fatal(err)
+	}
+	settings, err := ReadAdminSettings(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if settings.Spec.FailedLoginRetentionSeconds != 86400 {
+		t.Fatalf("retention=%d", settings.Spec.FailedLoginRetentionSeconds)
 	}
 }
 
@@ -200,7 +238,7 @@ func TestFutureMigrationFailsWithoutSchemaChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	sum := sha256.Sum256([]byte("future"))
-	if _, err := db.ExecContext(ctx, "INSERT INTO schema_migrations VALUES(4, ?, '2026-01-01T00:00:00Z')", hex.EncodeToString(sum[:])); err != nil {
+	if _, err := db.ExecContext(ctx, "INSERT INTO schema_migrations VALUES(5, ?, '2026-01-01T00:00:00Z')", hex.EncodeToString(sum[:])); err != nil {
 		t.Fatal(err)
 	}
 	if err := Migrate(ctx, db); err == nil || !strings.Contains(err.Error(), "unsupported schema version") {

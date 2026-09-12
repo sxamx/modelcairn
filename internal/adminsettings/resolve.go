@@ -82,6 +82,9 @@ func apply(v Resolved, p Patch) Resolved {
 	if p.ClientIdleSeconds != nil {
 		v.ClientIdleSeconds = *p.ClientIdleSeconds
 	}
+	if p.FailedLoginRetentionSeconds != nil {
+		v.FailedLoginRetentionSeconds = *p.FailedLoginRetentionSeconds
+	}
 	if p.ArgonMemoryKiB != nil {
 		v.ArgonMemoryKiB = *p.ArgonMemoryKiB
 	}

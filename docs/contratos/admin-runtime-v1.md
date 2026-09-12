@@ -2,7 +2,7 @@
 
 [Español](admin-runtime-v1.es.md)
 
-Status: implementation specification for Milestone 3; review pending.
+Status: implemented specification; final milestone verification pending.
 This refines the existing session contract and ADR-0005.
 
 ## Transport and deployment
@@ -111,9 +111,10 @@ than bypassing them through individual SQL writes.
 
 Audit uses typed allowlisted actions for bootstrap, reset, session creation/logout,
 and agent issue/revoke. Never include passwords, PHC strings, cookies, CSRF values,
-bearer values, raw request bodies or arbitrary client text. Failed-login audit
-must be bounded/aggregated so unauthenticated traffic cannot grow disk without
-limit. Define the aggregation and retention schema before exposing login.
+bearer values, raw request bodies or arbitrary client text. Failed-login statistics
+are aggregated into allowlisted minute buckets. The default 24-hour retention
+bounds disk growth; an explicit unlimited operator setting trades that bound for
+long-term history without increasing rows per minute.
 
 Connection tests and strategy publication remain Milestone 4 endpoints. Until
 implemented, their handlers must not claim success. Full backup remains Milestone 6.

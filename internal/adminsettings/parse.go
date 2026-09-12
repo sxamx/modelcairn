@@ -165,7 +165,7 @@ func allowedFields(path string) map[string]bool {
 		return map[string]bool{"apiVersion": true, "kind": true, "resourceVersion": true, "spec": true}
 	}
 	if path == "$.spec" {
-		return map[string]bool{"publicOrigin": true, "listen": true, "transport": true, "trustedProxyCidrs": true, "tlsCertificatePath": true, "tlsPrivateKeyPath": true, "idleSeconds": true, "absoluteSeconds": true, "globalAttemptsPerMinute": true, "globalBurst": true, "clientAttemptsPerMinute": true, "clientBurst": true, "maxClientEntries": true, "clientIdleSeconds": true, "argonMemoryKiB": true, "argonIterations": true}
+		return map[string]bool{"publicOrigin": true, "listen": true, "transport": true, "trustedProxyCidrs": true, "tlsCertificatePath": true, "tlsPrivateKeyPath": true, "idleSeconds": true, "absoluteSeconds": true, "globalAttemptsPerMinute": true, "globalBurst": true, "clientAttemptsPerMinute": true, "clientBurst": true, "maxClientEntries": true, "clientIdleSeconds": true, "failedLoginRetentionSeconds": true, "argonMemoryKiB": true, "argonIterations": true}
 	}
 	return nil
 }

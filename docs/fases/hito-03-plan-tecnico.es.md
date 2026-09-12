@@ -262,8 +262,9 @@ fallos internos de sesión 503. Logout incluye no-store.
 
 Esta es la guía de implementación del siguiente bloque, no funcionalidades ya
 entregadas. Agrupar su aceptación en pruebas de grafo, precondiciones, revocación,
-rollback de auditoría y ausencia de secretos en respuestas/logs. La decisión de
-retención de login sigue pendiente; el hito no está aceptado para despliegue final.
+rollback de auditoría y ausencia de secretos en respuestas/logs. La entrega
+posterior implementa la retención configurable aprobada; este párrafo se conserva
+como historial del relevo.
 
 El primer punto de ese relevo ya está implementado: validate, plan, apply y export
 de Configuration están conectados a la API administrativa. Plan devuelve expiry
@@ -299,7 +300,9 @@ informar la medición. La medición VM representativa aprobó con 55.368 KiB de 
 máximo y cero swap del proceso. La revisión independiente final terminó y bloqueó
 la aceptación por el contrato de retención de login; también detectó la medición
 de memoria antes no bloqueante, que ya fue corregida. Identidad, sesiones,
-administración HTTP, tokens de acceso y paridad CLI ya están implementados.
-Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
+administración HTTP, tokens de acceso y paridad CLI ya están implementados. La
+retención de agregados de login ahora es configurable, usa 24 horas inicialmente y
+admite conservación ilimitada explícita. La migración 0004 y las pruebas integradas
+cierran el hallazgo bloqueante de la revisión. El trabajo
 está publicado como PR #20 en borrador, no release fusionado. El diseño permite este
 relevo concreto; no implica que todo el diseño de seguridad esté aceptado.

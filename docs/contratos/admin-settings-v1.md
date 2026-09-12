@@ -2,7 +2,7 @@
 
 [Español](admin-settings-v1.es.md)
 
-Status: proposed implementation contract; grouped design review recorded in the milestone plan. Retention decision pending.
+Status: accepted implementation contract; configurable retention decision approved.
 
 ## Settings source and lifecycle
 
@@ -57,6 +57,7 @@ re-read settings after releasing the transaction. GET is also the export source.
 | clientBurst | integer, 3 | 1..10, no greater than global burst |
 | maxClientEntries | integer, 1024 | 64..4096 |
 | clientIdleSeconds | integer, 900 | 60..3600 |
+| failedLoginRetentionSeconds | integer, 86400 | 0..3155760000; 0 means no time expiry |
 | argonMemoryKiB | integer, 19456 | 19456..65536 |
 | argonIterations | integer, 2 | 2..6 |
 
@@ -114,13 +115,16 @@ memory per active minute and flush at most once per minute using upsert. At shut
 flush remaining counts best-effort. A crash can lose the last unflushed minute;
 these are operational statistics, not a durable forensic event stream.
 
-Bound this dedicated table to 1440 minute buckets per reason (5760 rows). Prune
-expired buckets in the flush transaction. A large forward clock jump prunes old
-buckets; backwards clock changes cannot expand the row cap. Disk-full errors do
+The default 86400-second policy retains at most 1440 minute buckets per reason
+(5760 rows). The operator may choose any duration through 100 years or set zero
+for no time expiry. Prune expired buckets in the flush transaction. A large
+forward clock jump prunes old buckets; backwards clock changes do not create older
+buckets. Disk-full errors do
 not buffer an unbounded retry queue; retain only bounded current counters and
 report an aggregated unavailable status. Login success and administrative mutations
 still require their normal transactional audit record. This operational window
 does not change provider-event retention or its indefinite-retention option.
 
-Before implementing this policy, retain it as a proposal: the operator must approve
-this fixed login-statistics window or choose configurable retention if desired.
+Unlimited retention is an explicit operator choice and the UI must warn that the
+table can grow over time. Aggregation caps attacker amplification at four rows per
+active minute, but cannot make indefinite history consume zero disk.
