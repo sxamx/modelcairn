@@ -15,6 +15,7 @@
 9. [Plan técnico de entrega del Hito 2](fases/hito-02-plan-tecnico.es.md)
 10. [Plan técnico de entrega del Hito 3](fases/hito-03-plan-tecnico.es.md)
 11. [Mapa de datos locales y retención](retencion-de-datos.es.md)
+12. [Plan técnico de entrega del Hito 4](fases/hito-04-plan-tecnico.es.md)
 
 ## Contratos ejecutables de la Fase 1
 
@@ -25,9 +26,12 @@
 - [Evidencia de integración y recursos del Hito 2](evidencia/hito-02-integracion-recursos.es.md)
 - [Evidencia de integración administrativa del Hito 3](evidencia/hito-03-integracion-admin.es.md)
 - [Benchmark representativo del Hito 3](evidencia/benchmark-hito-03-2026-09-12.es.md)
+- [Evidencia del router integrado del Hito 4](evidencia/hito-04-router-integrado.es.md)
 - [Configuración de ejemplo](contratos/config/example-v1alpha1.yaml)
 - [OpenAPI administrativa](contratos/api/admin-v1.openapi.yaml)
+- [OpenAPI de datos](contratos/api/data-v1.openapi.yaml)
 - [Matriz Chat Completions](contratos/compatibilidad-chat-completions-v1.es.md)
+- [Matriz de fallos del router](contratos/matriz-fallos-router-v1.es.md)
 - [Schema SQLite documental](contratos/storage/schema-v1.sql)
 - [Reglas del modelo SQLite](contratos/storage/modelo-sqlite-v1.es.md)
 - [Propiedad de SQLite y durabilidad del llavero](contratos/storage/propiedad-y-llavero-v1.es.md)

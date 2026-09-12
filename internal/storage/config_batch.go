@@ -116,6 +116,11 @@ func (r *Repository) ApplyConfigTx(ctx context.Context, tx *sql.Tx, mutations []
 			if version != mutation.ExpectedVersion {
 				return &RepositoryError{Code: CodeVersionConflict}
 			}
+			if mutation.Kind == KindStrategy {
+				if _, err := tx.ExecContext(ctx, "DELETE FROM strategy_versions WHERE strategy_id=?", id); err != nil {
+					return mapConstraint(err)
+				}
+			}
 			result, err := tx.ExecContext(ctx, "DELETE FROM resources WHERE id=? AND resource_version=?", id, version)
 			if err != nil {
 				return mapConstraint(err)

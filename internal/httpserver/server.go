@@ -10,6 +10,8 @@ import (
 
 	"github.com/sxamx/modelcairn/internal/adminsettings"
 	"github.com/sxamx/modelcairn/internal/config"
+	"github.com/sxamx/modelcairn/internal/openaiadapter"
+	"github.com/sxamx/modelcairn/internal/router"
 	"github.com/sxamx/modelcairn/internal/storage"
 )
 
@@ -100,12 +102,15 @@ func NewAdmin(address string, readiness *ReadinessProbe, logger *slog.Logger, in
 		login.Close()
 		return nil, err
 	}
-	server, err := newServer(address, readiness, logger, &adminAPI{installation: installation, login: login, settings: settings, configuration: config.NewManager(installation), repository: storage.NewRepository(installation.DB()), agentTokens: agentTokens, boundary: boundary})
+	adapter := openaiadapter.New(installation.Secrets())
+	data := &dataAPI{tokens: agentTokens, loader: router.NewLoader(installation.DB()), engine: router.NewEngine(adapter), recorder: storage.NewOperationalRecorder(installation.DB()), logger: logger}
+	server, err := newServer(address, readiness, logger, &adminAPI{installation: installation, login: login, settings: settings, configuration: config.NewManager(installation), repository: storage.NewRepository(installation.DB()), agentTokens: agentTokens, boundary: boundary, data: data})
 	if err != nil {
 		login.Close()
 		return nil, err
 	}
 	server.RegisterOnShutdown(login.Close)
+	server.RegisterOnShutdown(adapter.CloseIdleConnections)
 	return server, nil
 }
 

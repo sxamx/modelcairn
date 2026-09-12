@@ -225,6 +225,65 @@ func TestTypedProjectionsPersistResolvedReferences(t *testing.T) {
 	}
 }
 
+func TestStrategyUpdatesPublishImmutableVersionsAndActivateRoutes(t *testing.T) {
+	repository, installation := repositoryForTest(t)
+	items := seedRepositoryGraph(t, repository, installation)
+	var firstID, firstDefinition string
+	var firstVersion int
+	if err := installation.DB().QueryRow(`SELECT sv.id,sv.version,sv.definition_json
+		FROM routes r JOIN strategy_versions sv ON sv.id=r.active_strategy_version_id
+		WHERE r.resource_id=?`, items[KindRoute].ID).Scan(&firstID, &firstVersion, &firstDefinition); err != nil {
+		t.Fatal(err)
+	}
+	if firstVersion != 1 || firstDefinition != string(items[KindStrategy].Spec) {
+		t.Fatalf("first version=%d definition=%s", firstVersion, firstDefinition)
+	}
+
+	updatedDefinition := rawSpec(`{"destinations":[{"name":"destination"}],"maxAttempts":2,"attemptTimeoutMs":3000,"totalTimeoutMs":5000}`)
+	if _, err := repository.Put(context.Background(), PutResource{
+		Kind: KindStrategy, Name: items[KindStrategy].Name, Spec: updatedDefinition, ExpectedVersion: 1,
+	}, testActor); err != nil {
+		t.Fatal(err)
+	}
+	var activeID, activeDefinition string
+	var activeVersion, versionCount int
+	if err := installation.DB().QueryRow(`SELECT sv.id,sv.version,sv.definition_json
+		FROM routes r JOIN strategy_versions sv ON sv.id=r.active_strategy_version_id
+		WHERE r.resource_id=?`, items[KindRoute].ID).Scan(&activeID, &activeVersion, &activeDefinition); err != nil {
+		t.Fatal(err)
+	}
+	if err := installation.DB().QueryRow("SELECT count(*) FROM strategy_versions WHERE strategy_id=?", items[KindStrategy].ID).Scan(&versionCount); err != nil {
+		t.Fatal(err)
+	}
+	if activeID == firstID || activeVersion != 2 || versionCount != 2 || activeDefinition != string(updatedDefinition) {
+		t.Fatalf("active=%q version=%d count=%d definition=%s", activeID, activeVersion, versionCount, activeDefinition)
+	}
+	var preserved string
+	if err := installation.DB().QueryRow("SELECT definition_json FROM strategy_versions WHERE id=?", firstID).Scan(&preserved); err != nil {
+		t.Fatal(err)
+	}
+	if preserved != firstDefinition {
+		t.Fatalf("historical definition changed: %s", preserved)
+	}
+}
+
+func TestEquivalentStrategyDefinitionReusesPublishedVersion(t *testing.T) {
+	repository, installation := repositoryForTest(t)
+	items := seedRepositoryGraph(t, repository, installation)
+	if _, err := repository.Put(context.Background(), PutResource{
+		Kind: KindStrategy, Name: items[KindStrategy].Name, Spec: items[KindStrategy].Spec, ExpectedVersion: 1,
+	}, testActor); err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err := installation.DB().QueryRow("SELECT count(*) FROM strategy_versions WHERE strategy_id=?", items[KindStrategy].ID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("versions=%d, want 1", count)
+	}
+}
+
 func TestAgentTokenRevocationCannotContradictEnvelope(t *testing.T) {
 	repository, installation := repositoryForTest(t)
 	items := seedRepositoryGraph(t, repository, installation)

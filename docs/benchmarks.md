@@ -55,3 +55,22 @@ DURATION_SECONDS=120 OUTPUT_FILE=benchmark-results/hito-02.md \
 RSS/swap throughout the complete administrative flow. `MEASURE_SECONDS` adds a
 steady period and `OUTPUT_FILE` creates the redacted report. The representative run
 is recorded in the [Milestone 3 evidence](evidencia/benchmark-hito-03-2026-09-12.md).
+
+## Milestone 4 streaming microbenchmark
+
+`BenchmarkStreamingRouterConcurrency` exercises direct egress, selection, SSE
+validation, and relay in exact batches of 1, 2, 5, 10, and 20 concurrent streams.
+It provides an early regression signal, and CI runs one smoke iteration:
+
+```sh
+go test -run '^$' -bench '^BenchmarkStreamingRouterConcurrency$' -benchtime=1x ./internal/router
+```
+
+This microbenchmark uses an in-memory local upstream and does not measure HTTP
+authentication, SQLite, real networking, RSS, or swap. Its throughput figures are
+not publishable capacity claims. `scripts/verify-hito4.sh` is the full gate: it
+uses the real binary, bootstrap, admin session, published configuration, AgentToken,
+direct adapter, persistence, and a deterministic local HTTP upstream. It measures
+RSS, swap, and latency at all five levels and rejects persisted content or secrets
+in logs. CI uses it as a smoke gate; closure still requires its redacted report
+from the representative VM.

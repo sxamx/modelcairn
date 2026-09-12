@@ -15,6 +15,7 @@
 9. [Milestone 2 technical delivery plan](fases/hito-02-plan-tecnico.md)
 10. [Milestone 3 technical delivery plan](fases/hito-03-plan-tecnico.md)
 11. [Local data and retention map](data-retention.md)
+12. [Milestone 4 technical delivery plan](fases/hito-04-plan-tecnico.md)
 
 ## Phase 1 executable contracts
 
@@ -25,9 +26,12 @@
 - [Milestone 2 integration and resource evidence](evidencia/hito-02-integracion-recursos.md)
 - [Milestone 3 administrative integration evidence](evidencia/hito-03-integracion-admin.md)
 - [Milestone 3 representative benchmark](evidencia/benchmark-hito-03-2026-09-12.md)
+- [Milestone 4 integrated router evidence](evidencia/hito-04-router-integrado.md)
 - [Example configuration](contratos/config/example-v1alpha1.yaml)
 - [Administrative OpenAPI](contratos/api/admin-v1.openapi.yaml)
+- [Data API OpenAPI](contratos/api/data-v1.openapi.yaml)
 - [Chat Completions compatibility matrix](contratos/compatibilidad-chat-completions-v1.md)
+- [Router failure matrix](contratos/matriz-fallos-router-v1.md)
 - [Documentary SQLite schema](contratos/storage/schema-v1.sql)
 - [SQLite model rules](contratos/storage/modelo-sqlite-v1.md)
 - [SQLite ownership and keyring durability](contratos/storage/propiedad-y-llavero-v1.md)

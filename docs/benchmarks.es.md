@@ -58,3 +58,21 @@ RSS/swap durante el recorrido administrativo completo. `MEASURE_SECONDS` añade 
 período estable y `OUTPUT_FILE` produce el informe redactado. La ejecución
 representativa está registrada en la
 [evidencia del Hito 3](evidencia/benchmark-hito-03-2026-09-12.es.md).
+
+## Microbenchmark de streaming del Hito 4
+
+`BenchmarkStreamingRouterConcurrency` ejercita el adaptador directo, selección,
+validación y relay SSE con lotes exactos de 1, 2, 5, 10 y 20 streams concurrentes.
+Sirve como señal temprana de regresiones y CI ejecuta una iteración de humo:
+
+```sh
+go test -run '^$' -bench '^BenchmarkStreamingRouterConcurrency$' -benchtime=1x ./internal/router
+```
+
+Este microbenchmark usa un upstream local en memoria y no mide autenticación HTTP,
+SQLite, red real, RSS ni swap. Sus cifras de throughput no son capacidad anunciable.
+`scripts/verify-hito4.sh` es la compuerta integral: usa el binario real, bootstrap,
+sesión administrativa, configuración publicada, AgentToken, adaptador directo,
+persistencia y un upstream HTTP local determinista. Mide RSS, swap y latencia en
+los cinco niveles, y rechaza contenido persistido o secretos en logs. CI la usa
+como humo; el cierre aún exige su informe redactado en la VM representativa.
