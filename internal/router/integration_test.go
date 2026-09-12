@@ -30,7 +30,7 @@ func (integrationSecrets) Use(ctx context.Context, name string, callback func([]
 func TestNonStreamingFallbackThroughOpenAIAdapter(t *testing.T) {
 	upstream := testupstream.New(
 		testupstream.Step{Status: http.StatusTooManyRequests, Header: http.Header{"Retry-After": {"3"}}},
-		testupstream.Step{Header: http.Header{"Content-Type": {"application/json"}}, Body: `{"id":"chat-1","object":"chat.completion","model":"physical","choices":[]}`},
+		testupstream.Step{Header: http.Header{"Content-Type": {"application/json"}}, Body: `{"id":"chat-1","object":"chat.completion","model":"physical","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}`},
 	)
 	server := httptest.NewServer(upstream)
 	defer server.Close()

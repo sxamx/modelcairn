@@ -6,7 +6,7 @@ import (
 )
 
 func TestForbiddenAddressPolicy(t *testing.T) {
-	for _, value := range []string{"127.0.0.1", "10.0.0.1", "169.254.169.254", "100.96.178.46", "::1", "fd00::1"} {
+	for _, value := range []string{"127.0.0.1", "::ffff:127.0.0.1", "10.0.0.1", "169.254.169.254", "100.96.178.46", "::1", "fd00::1"} {
 		if !forbiddenAddress(netip.MustParseAddr(value)) {
 			t.Errorf("%s should require allowPrivateNetwork", value)
 		}

@@ -87,11 +87,11 @@ func (e *Engine) Run(ctx context.Context, snapshot Snapshot, request chatcomplet
 		started := e.now()
 		upstream, executeErr := e.executor.Execute(attemptContext, destination, request, snapshot.Alias)
 		cancelAttempt()
+		result.Upstream = upstream
 		attempt := Attempt{Sequence: index + 1, DestinationID: destination.ID, StatusCode: upstream.StatusCode, Duration: e.now().Sub(started)}
 		retry, terminalCode := classifyAttempt(ctx, totalContext, executeErr, upstream.StatusCode, &attempt)
 		result.Attempts = append(result.Attempts, attempt)
 		if executeErr == nil && upstream.StatusCode >= 200 && upstream.StatusCode < 300 {
-			result.Upstream = upstream
 			return result, nil
 		}
 		if !retry {

@@ -48,6 +48,18 @@ func New(secrets SecretResolver) *Adapter {
 	}
 }
 
+func (a *Adapter) CloseIdleConnections() {
+	if a == nil {
+		return
+	}
+	if a.public != nil {
+		a.public.CloseIdleConnections()
+	}
+	if a.private != nil {
+		a.private.CloseIdleConnections()
+	}
+}
+
 func noRedirectClient(transport http.RoundTripper) *http.Client {
 	return &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 }
@@ -56,7 +68,7 @@ func (a *Adapter) Execute(ctx context.Context, destination router.Destination, r
 	if a == nil || a.secrets == nil || destination.Adapter != "openai-chat-v1" || destination.EgressType != "direct" {
 		return router.UpstreamResult{}, &Error{Code: "unsupported_destination"}
 	}
-	endpoint, err := completionURL(destination.BaseURL)
+	endpoint, err := completionURL(destination.BaseURL, destination.AllowPrivateNetwork)
 	if err != nil {
 		return router.UpstreamResult{}, &Error{Code: "invalid_destination", Err: err}
 	}
@@ -73,7 +85,7 @@ func (a *Adapter) Execute(ctx context.Context, destination router.Destination, r
 	upstreamRequest.Header.Set("Content-Type", "application/json")
 	upstreamRequest.Header.Set("Accept", "application/json")
 	written := false
-	trace := &httptrace.ClientTrace{WroteRequest: func(info httptrace.WroteRequestInfo) { written = info.Err == nil }}
+	trace := &httptrace.ClientTrace{WroteRequest: func(httptrace.WroteRequestInfo) { written = true }}
 	upstreamRequest = upstreamRequest.WithContext(httptrace.WithClientTrace(upstreamRequest.Context(), trace))
 	client := a.public
 	if destination.AllowPrivateNetwork {
@@ -127,13 +139,16 @@ func (a *Adapter) Execute(ctx context.Context, destination router.Destination, r
 	return result, nil
 }
 
-func completionURL(base string) (*url.URL, error) {
+func completionURL(base string, allowPrivate bool) (*url.URL, error) {
 	parsed, err := url.Parse(base)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
 		return nil, errors.New("invalid base URL")
 	}
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return nil, errors.New("unsupported URL scheme")
+	}
+	if parsed.Scheme != "https" && !allowPrivate {
+		return nil, errors.New("public upstream requires HTTPS")
 	}
 	parsed.Path = strings.TrimRight(parsed.Path, "/") + "/chat/completions"
 	parsed.RawPath = ""
@@ -147,8 +162,28 @@ func normalizeResponse(body []byte, requestedAlias string) ([]byte, error) {
 	}
 	var id, kind string
 	var choices []json.RawMessage
-	if json.Unmarshal(object["id"], &id) != nil || id == "" || json.Unmarshal(object["object"], &kind) != nil || kind != "chat.completion" || json.Unmarshal(object["choices"], &choices) != nil {
+	if json.Unmarshal(object["id"], &id) != nil || id == "" || json.Unmarshal(object["object"], &kind) != nil || kind != "chat.completion" || json.Unmarshal(object["choices"], &choices) != nil || len(choices) == 0 {
 		return nil, errors.New("required response fields are invalid")
+	}
+	for _, rawChoice := range choices {
+		var choice struct {
+			Index        *int                       `json:"index"`
+			Message      map[string]json.RawMessage `json:"message"`
+			FinishReason json.RawMessage            `json:"finish_reason"`
+		}
+		if json.Unmarshal(rawChoice, &choice) != nil || choice.Index == nil || *choice.Index < 0 || choice.Message == nil {
+			return nil, errors.New("choice is invalid")
+		}
+		var role string
+		if json.Unmarshal(choice.Message["role"], &role) != nil || role != "assistant" || !validAssistantResponse(choice.Message) {
+			return nil, errors.New("choice message is invalid")
+		}
+		if len(choice.FinishReason) > 0 && string(choice.FinishReason) != "null" {
+			var finish string
+			if json.Unmarshal(choice.FinishReason, &finish) != nil {
+				return nil, errors.New("finish reason is invalid")
+			}
+		}
 	}
 	model, err := json.Marshal(requestedAlias)
 	if err != nil {
@@ -156,6 +191,26 @@ func normalizeResponse(body []byte, requestedAlias string) ([]byte, error) {
 	}
 	object["model"] = model
 	return json.Marshal(object)
+}
+
+func validAssistantResponse(message map[string]json.RawMessage) bool {
+	content, hasContent := message["content"]
+	toolCalls, hasToolCalls := message["tool_calls"]
+	validContent := false
+	if hasContent {
+		if string(content) == "null" {
+			validContent = true
+		} else {
+			var text string
+			validContent = json.Unmarshal(content, &text) == nil
+		}
+	}
+	validTools := false
+	if hasToolCalls {
+		var calls []json.RawMessage
+		validTools = json.Unmarshal(toolCalls, &calls) == nil && len(calls) > 0
+	}
+	return (hasContent && validContent) || (hasToolCalls && validTools)
 }
 
 func firstHeader(header http.Header, names ...string) string {

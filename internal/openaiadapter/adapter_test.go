@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,7 +55,7 @@ func TestExecuteRewritesModelInjectsCredentialAndRestoresAlias(t *testing.T) {
 		receivedModel, _ = request["model"].(string)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("X-Request-ID", "upstream-request")
-		_, _ = w.Write([]byte(`{"id":"chat-1","object":"chat.completion","model":"physical-model","choices":[]}`))
+		_, _ = w.Write([]byte(`{"id":"chat-1","object":"chat.completion","model":"physical-model","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}`))
 	}))
 	defer server.Close()
 	result, err := New(fixtureSecrets{name: "provider-key", value: []byte("fixture")}).Execute(context.Background(), testDestination(server), testRequest(t), "assistant")
@@ -117,6 +118,7 @@ func TestExecuteRejectsRedirectInvalidResponseAndPublicLoopback(t *testing.T) {
 
 	publicDestination := testDestination(bad)
 	publicDestination.AllowPrivateNetwork = false
+	publicDestination.BaseURL = "https://" + strings.TrimPrefix(publicDestination.BaseURL, "http://")
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	_, err = adapter.Execute(ctx, publicDestination, testRequest(t), "assistant")
@@ -131,6 +133,32 @@ func TestExecuteRejectsCredentialHeaderInjection(t *testing.T) {
 	_, err := New(fixtureSecrets{name: "provider-key", value: []byte("x\r\ny")}).Execute(context.Background(), testDestination(server), testRequest(t), "assistant")
 	var adapterErr *Error
 	if !errors.As(err, &adapterErr) || adapterErr.Code != "invalid_credential" {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestNormalizeResponseRejectsMalformedChoices(t *testing.T) {
+	for _, body := range []string{
+		`{"id":"x","object":"chat.completion","choices":null}`,
+		`{"id":"x","object":"chat.completion","choices":[]}`,
+		`{"id":"x","object":"chat.completion","choices":[null]}`,
+		`{"id":"x","object":"chat.completion","choices":[{"index":0,"message":{"role":"user","content":"x"}}]}`,
+		`{"id":"x","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant"}}]}`,
+	} {
+		if _, err := normalizeResponse([]byte(body), "assistant"); err == nil {
+			t.Errorf("accepted malformed response: %s", body)
+		}
+	}
+}
+
+func TestPublicHTTPDestinationIsRejectedBeforeCredentialUse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { t.Fatal("upstream contacted") }))
+	defer server.Close()
+	destination := testDestination(server)
+	destination.AllowPrivateNetwork = false
+	_, err := New(fixtureSecrets{name: "provider-key", value: []byte("x")}).Execute(context.Background(), destination, testRequest(t), "assistant")
+	var adapterErr *Error
+	if !errors.As(err, &adapterErr) || adapterErr.Code != "invalid_destination" {
 		t.Fatalf("err=%v", err)
 	}
 }

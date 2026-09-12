@@ -55,6 +55,7 @@ func newDirectTransport(allowPrivate bool) *http.Transport {
 }
 
 func forbiddenAddress(address netip.Addr) bool {
+	address = address.Unmap()
 	return address.IsPrivate() || address.IsLoopback() || address.IsLinkLocalUnicast() ||
 		address.IsLinkLocalMulticast() || address.IsUnspecified() || address.IsMulticast() ||
 		sharedAddressSpace.Contains(address)

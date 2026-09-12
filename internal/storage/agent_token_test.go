@@ -50,6 +50,16 @@ func TestAgentTokenIssueAuthenticateAndRevokeLifecycle(t *testing.T) {
 	if err != nil || identity.ResourceID != items[KindAgentToken].ID {
 		t.Fatalf("identity=%+v err=%v", identity, err)
 	}
+	aliasIdentity, routeID, err := service.AuthenticateAlias(ctx, issued.Token, "assistant")
+	if err != nil || aliasIdentity.ResourceID != identity.ResourceID || routeID != items[KindRoute].ID {
+		t.Fatalf("alias identity=%+v route=%q err=%v", aliasIdentity, routeID, err)
+	}
+	if _, _, err := service.AuthenticateAlias(ctx, issued.Token, "missing"); !IsRepositoryCode(err, CodeNotFound) {
+		t.Fatalf("missing alias=%v", err)
+	}
+	if _, _, err := service.AuthenticateAlias(ctx, "invalid", "missing"); !errors.Is(err, ErrAgentTokenInvalid) {
+		t.Fatalf("invalid bearer leaked alias state: %v", err)
+	}
 	if _, err := service.Authenticate(ctx, issued.Token, "another-route"); !errors.Is(err, ErrAgentRouteForbidden) {
 		t.Fatalf("forbidden=%v", err)
 	}
