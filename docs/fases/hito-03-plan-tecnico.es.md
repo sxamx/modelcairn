@@ -12,9 +12,9 @@ detalla campos y límites; la retención del histórico de login espera decisió
 
 ## Resultado esperado
 
-Relevo actual: [ciclo de vida de AgentToken](../contratos/agent-token-lifecycle-v1.es.md).
-El [CRUD transaccional](../contratos/resource-mutations-v1.es.md) ya está implementado;
-el siguiente bloque emite y revoca bearers sin mezclarlos con sesiones administrativas.
+Relevo actual: paridad de CLI online. El
+[ciclo de vida de AgentToken](../contratos/agent-token-lifecycle-v1.es.md) y el
+[CRUD transaccional](../contratos/resource-mutations-v1.es.md) ya están implementados.
 
 Una instalación puede crear su administrador localmente, autenticar sesiones,
 administrar configuración y secretos mediante HTTP y emitir o revocar tokens de
@@ -271,7 +271,7 @@ el snapshot, y confirma sesión, consumo de nonce, grafo completo y auditoría e
 transacción. Una sesión revocada no consume el plan; la regresión reutiliza ese
 mismo plan con una sesión nueva y confirma éxito. El flujo HTTP integrado valida,
 planea, aplica y exporta un recurso sin reflejar el token. CRUD individual y
-secretos están conectados; CLI online y tokens de agentes continúan pendientes.
+secretos y tokens de agentes están conectados; la CLI online continúa pendiente.
 
 Las lecturas de recursos y metadatos de secretos ya exponen GET individual y lista
 paginada. Las consultas filtran por tipo y `id > cursor`, solicitan límite más uno

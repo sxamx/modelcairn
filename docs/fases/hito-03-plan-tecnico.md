@@ -10,9 +10,9 @@ login-history retention still requires an operator decision.
 
 ## Intended outcome
 
-Current handoff: [AgentToken lifecycle](../contratos/agent-token-lifecycle-v1.md).
-The [transactional CRUD](../contratos/resource-mutations-v1.md) is implemented;
-the next block issues and revokes bearers without mixing them with admin sessions.
+Current handoff: online CLI parity. The
+[AgentToken lifecycle](../contratos/agent-token-lifecycle-v1.md) and
+[transactional CRUD](../contratos/resource-mutations-v1.md) are implemented.
 
 An installation can bootstrap its administrator locally, authenticate sessions,
 manage configuration and secrets over HTTP, and issue/revoke agent tokens.
@@ -261,7 +261,7 @@ committing session, nonce consumption, complete graph and audit in one transacti
 A revoked session does not consume the plan; regression coverage reuses that same
 plan with a fresh session and confirms success. The integrated HTTP flow validates,
 plans, applies and exports a resource without reflecting its token. Individual CRUD
-and secrets are connected; online CLI and agent tokens remain outstanding.
+secrets and agent tokens are connected; online CLI remains outstanding.
 
 Resource and secret-metadata reads now expose individual GET and paginated lists.
 Queries filter by kind and `id > cursor`, request limit plus one and never load the

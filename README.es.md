@@ -44,7 +44,7 @@ ModelCairn se distribuye bajo [Apache License 2.0](LICENSE) e incluye
 
 ## Desarrollo
 
-Los Hitos 1 y 2 están completos; el Hito 3 es el siguiente. Con Go instalado:
+Los Hitos 1 y 2 están completos; el Hito 3 está en desarrollo. Con Go instalado:
 
 ```sh
 go test ./...

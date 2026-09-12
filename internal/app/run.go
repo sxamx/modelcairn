@@ -201,5 +201,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  modelcairn secret delete --version n [--data-dir path] <name>")
 	fmt.Fprintln(w, "  modelcairn admin bootstrap --username name --settings file [--data-dir path]")
 	fmt.Fprintln(w, "  modelcairn admin reset-password [--data-dir path]")
+	fmt.Fprintln(w, "  modelcairn admin login --server origin --username name [--session-file path]")
+	fmt.Fprintln(w, "  modelcairn admin whoami --server origin [--session-file path]")
+	fmt.Fprintln(w, "  modelcairn admin logout --server origin [--session-file path]")
 	fmt.Fprintln(w, "  modelcairn version")
 }
