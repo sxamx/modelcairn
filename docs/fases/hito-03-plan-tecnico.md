@@ -283,9 +283,10 @@ unknown fields and clears the value buffer after use. The API returns metadata a
 ETag only. An exceptional redaction-registration failure after commit closes the
 SecretStore so operation cannot continue with incomplete output protection.
 
-The complete milestone remains unfinished. Outstanding work includes VM measurements
-and integration acceptance. Identity, sessions, HTTP administration, access tokens,
-and CLI parity are implemented. Login aggregate retention remains an
+The automated integration gate now covers the complete administrative plane and is
+included in CI. The milestone still requires VM measurement and final independent
+review. Identity, sessions, HTTP administration, access tokens, and CLI parity are
+implemented. Login aggregate retention remains an
 explicit operator decision. The branch is published as draft PR #20, not a merged
 release. The design work now supports this concrete implementation
 handoff; it does not justify claiming the whole security design is accepted.

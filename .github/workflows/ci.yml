@@ -47,6 +47,8 @@ jobs:
           MAX_DATA_BYTES: "16777216"
           OUTPUT_FILE: /tmp/modelcairn-hito2.md
         run: bash scripts/verify-hito2.sh
+      - name: Milestone 3 administrative integration gate
+        run: bash scripts/verify-hito3.sh
       - name: Verify module files
         run: |
           go mod tidy

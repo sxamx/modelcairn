@@ -293,8 +293,10 @@ o desconocidos y el buffer del valor se limpia al terminar. La API devuelve solo
 metadatos/ETag. Un fallo excepcional de registro de redacción después del commit
 cierra el SecretStore para evitar continuar con una protección incompleta.
 
-El hito completo sigue pendiente: mediciones VM y aceptación integrada. Identidad,
-sesiones, administración HTTP, tokens de acceso y paridad CLI ya están implementados.
+La puerta integrada automatizada ya recorre el plano administrativo completo y
+está incluida en CI. El hito sigue pendiente de medición VM y revisión independiente
+final. Identidad, sesiones, administración HTTP, tokens de acceso y paridad CLI
+ya están implementados.
 Retención de agregados de login sigue requiriendo decisión explícita. El trabajo
 está publicado como PR #20 en borrador, no release fusionado. El diseño permite este
 relevo concreto; no implica que todo el diseño de seguridad esté aceptado.
