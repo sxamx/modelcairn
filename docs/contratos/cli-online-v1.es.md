@@ -2,8 +2,8 @@
 
 [English](cli-online-v1.md)
 
-Estado: sesión, configuración y ciclo de vida de AgentToken implementados;
-paridad de secretos pendiente.
+Estado: paridad funcional implementada para sesión, configuración, secretos y
+ciclo de vida de AgentToken.
 
 La CLI online usa exclusivamente la API administrativa y nunca abre el directorio
 de datos. `--server` es el origen público exacto, sin ruta, query ni credenciales.
@@ -19,6 +19,9 @@ modelcairn agent-token revoke --server origen [--session-file ruta] <nombre>
 modelcairn config plan --server origen [--session-file ruta] [--allow-delete] [--out plan.json] <archivo>
 modelcairn config apply --server origen [--session-file ruta] [--allow-delete] --plan plan.json <archivo>
 modelcairn config export --server origen [--session-file ruta]
+modelcairn secret set --server origen [--session-file ruta] [--version n] <nombre>
+modelcairn secret metadata --server origen [--session-file ruta] [nombre]
+modelcairn secret delete --server origen [--session-file ruta] --version n <nombre>
 ```
 
 Login lee la contraseña mediante terminal sin eco o stdin, nunca argv. La sesión
@@ -33,4 +36,5 @@ timeout. Ante 403 recupera CSRF mediante `session/me` y reintenta exactamente un
 vez. La CLI no imprime cookie ni CSRF. `agent-token issue` es la única salida que
 entrega intencionalmente el bearer una vez. Configuración online conserva el flujo
 plan/apply, el archivo de plan privado y la entrada exacta; no permite mezclar
-`--server` con `--data-dir`. Secretos reutilizará este cliente.
+`--server` con `--data-dir`. Secretos conserva entrada sin eco, precondiciones y
+respuestas solo de metadatos. La rotación de clave maestra permanece local/offline.

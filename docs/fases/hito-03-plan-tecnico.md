@@ -10,7 +10,9 @@ login-history retention still requires an operator decision.
 
 ## Intended outcome
 
-Current handoff: online CLI parity. The
+Current handoff: representative measurement and integrated acceptance. Online CLI
+parity now reuses the administrative API for sessions, configuration, secrets,
+and AgentToken. The
 [AgentToken lifecycle](../contratos/agent-token-lifecycle-v1.md) and
 [transactional CRUD](../contratos/resource-mutations-v1.md) are implemented.
 
@@ -261,7 +263,7 @@ committing session, nonce consumption, complete graph and audit in one transacti
 A revoked session does not consume the plan; regression coverage reuses that same
 plan with a fresh session and confirms success. The integrated HTTP flow validates,
 plans, applies and exports a resource without reflecting its token. Individual CRUD
-secrets and agent tokens are connected; online CLI remains outstanding.
+secrets, agent tokens, and online CLI are connected.
 
 Resource and secret-metadata reads now expose individual GET and paginated lists.
 Queries filter by kind and `id > cursor`, request limit plus one and never load the
@@ -281,9 +283,9 @@ unknown fields and clears the value buffer after use. The API returns metadata a
 ETag only. An exceptional redaction-registration failure after commit closes the
 SecretStore so operation cannot continue with incomplete output protection.
 
-The complete milestone remains unfinished. Outstanding implementation includes
-CLI parity, tokens, VM measurements and integration acceptance. Identity, sessions,
-and HTTP administration are implemented. Login aggregate retention remains an
+The complete milestone remains unfinished. Outstanding work includes VM measurements
+and integration acceptance. Identity, sessions, HTTP administration, access tokens,
+and CLI parity are implemented. Login aggregate retention remains an
 explicit operator decision. The branch is published as draft PR #20, not a merged
 release. The design work now supports this concrete implementation
 handoff; it does not justify claiming the whole security design is accepted.

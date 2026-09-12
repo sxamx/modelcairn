@@ -2,8 +2,8 @@
 
 [Español](cli-online-v1.es.md)
 
-Status: session, configuration, and AgentToken lifecycle implemented; secret
-parity pending.
+Status: functional parity implemented for sessions, configuration, secrets, and
+the AgentToken lifecycle.
 
 The online CLI exclusively uses the administrative API and never opens the data
 directory. `--server` is the exact public origin without path, query, or userinfo.
@@ -19,6 +19,9 @@ modelcairn agent-token revoke --server origin [--session-file path] <name>
 modelcairn config plan --server origin [--session-file path] [--allow-delete] [--out plan.json] <file>
 modelcairn config apply --server origin [--session-file path] [--allow-delete] --plan plan.json <file>
 modelcairn config export --server origin [--session-file path]
+modelcairn secret set --server origin [--session-file path] [--version n] <name>
+modelcairn secret metadata --server origin [--session-file path] [name]
+modelcairn secret delete --server origin [--session-file path] --version n <name>
 ```
 
 Login reads the password from a no-echo terminal or stdin, never argv. The session
@@ -33,4 +36,5 @@ and uses a timeout. A 403 triggers CSRF recovery through `session/me` and exactl
 one retry. Cookie and CSRF are never printed; `agent-token issue` is the sole
 intentional one-time bearer output. Online configuration preserves plan/apply,
 the private plan file, and exact input binding; `--server` cannot be mixed with
-`--data-dir`. Secret commands will reuse this client.
+`--data-dir`. Secrets preserve no-echo input, preconditions, and metadata-only
+responses. Master-key rotation remains local/offline.

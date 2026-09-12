@@ -209,3 +209,70 @@ func TestOnlineConfigurationPlanApplyExport(t *testing.T) {
 		t.Fatalf("export code=%d out=%q err=%q", code, out, errOut)
 	}
 }
+
+func TestOnlineSecretLifecycleDoesNotDiscloseValue(t *testing.T) {
+	const secretValue = "provider-secret-value"
+	var origin string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Origin") != origin {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		if r.URL.Path == "/api/v1/admin/secrets" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"items": []any{map[string]any{"name": "provider-key", "fingerprint": "sha256:test", "resourceVersion": 1, "updatedAt": time.Now()}}, "nextCursor": nil})
+			return
+		}
+		if r.URL.Path != "/api/v1/admin/secrets/provider-key" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		switch r.Method {
+		case http.MethodPut:
+			var body map[string]string
+			if json.NewDecoder(r.Body).Decode(&body) != nil || body["value"] != secretValue {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]any{"name": "provider-key", "fingerprint": "sha256:test", "resourceVersion": 1, "updatedAt": time.Now()})
+		case http.MethodGet:
+			_ = json.NewEncoder(w).Encode(map[string]any{"name": "provider-key", "fingerprint": "sha256:test", "resourceVersion": 1, "updatedAt": time.Now()})
+		case http.MethodDelete:
+			if r.Header.Get("If-Match") != `"1"` {
+				w.WriteHeader(http.StatusPreconditionRequired)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		}
+	}))
+	defer server.Close()
+	origin = server.URL
+	sessionFile := filepath.Join(t.TempDir(), "session.json")
+	if err := saveOnlineSession(sessionFile, onlineSession{Server: origin, SessionToken: "session", CSRFToken: "csrf", ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	base := []string{"--server", origin, "--session-file", sessionFile}
+	setArgs := append([]string{"secret", "set"}, base...)
+	setArgs = append(setArgs, "provider-key")
+	code, out, errOut := runCLI(t, setArgs, secretValue+"\n", false)
+	if code != 0 || strings.Contains(out+errOut, secretValue) || !strings.Contains(out, `"name": "provider-key"`) {
+		t.Fatalf("set code=%d out=%q err=%q", code, out, errOut)
+	}
+	metadataArgs := append([]string{"secret", "metadata"}, base...)
+	metadataArgs = append(metadataArgs, "provider-key")
+	code, out, errOut = runCLI(t, metadataArgs, "", false)
+	if code != 0 || strings.Contains(out+errOut, secretValue) || !strings.Contains(out, `"resourceVersion": 1`) {
+		t.Fatalf("metadata code=%d out=%q err=%q", code, out, errOut)
+	}
+	listArgs := append([]string{"secret", "metadata"}, base...)
+	code, out, errOut = runCLI(t, listArgs, "", false)
+	if code != 0 || strings.Contains(out+errOut, secretValue) || !strings.Contains(out, "provider-key") {
+		t.Fatalf("list code=%d out=%q err=%q", code, out, errOut)
+	}
+	deleteArgs := append([]string{"secret", "delete"}, base...)
+	deleteArgs = append(deleteArgs, "--version", "1", "provider-key")
+	code, out, errOut = runCLI(t, deleteArgs, "", false)
+	if code != 0 || out != "secret deleted\n" || strings.Contains(out+errOut, secretValue) {
+		t.Fatalf("delete code=%d out=%q err=%q", code, out, errOut)
+	}
+}
