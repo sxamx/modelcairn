@@ -39,7 +39,9 @@ type Snapshot struct {
 type Destination struct {
 	ID, Name, ModelID, ProviderModelID string
 	ConnectionID, BaseURL, Adapter     string
-	CredentialID, SecretID, EgressID   string
+	AllowPrivateNetwork                bool
+	CredentialID, SecretID, SecretName string
+	EgressID                           string
 	EgressType                         string
 	Weight                             int
 	Capabilities                       []chatcompletions.Capability
@@ -138,20 +140,21 @@ func (l *Loader) loadDestination(ctx context.Context, tx *sql.Tx, name string, r
 	var credentialStatus, providerID string
 	err := tx.QueryRowContext(ctx, `SELECT dr.id,dr.name,d.weight,d.enabled,
 		m.resource_id,m.provider_model_id,m.capabilities_json,m.enabled,
-		pc.resource_id,pc.base_url,json_extract(cr.spec_json,'$.adapter'),pc.enabled,
-		c.resource_id,c.secret_id,c.status,e.resource_id,e.egress_type,e.enabled,pa.provider_id
+		pc.resource_id,pc.base_url,json_extract(cr.spec_json,'$.adapter'),pc.allow_private_network,pc.enabled,
+		c.resource_id,c.secret_id,s.name,c.status,e.resource_id,e.egress_type,e.enabled,pa.provider_id
 		FROM resources dr JOIN destinations d ON d.resource_id=dr.id
 		JOIN models m ON m.resource_id=d.model_id
 		JOIN resources cr ON cr.id=m.connection_id
 		JOIN provider_connections pc ON pc.resource_id=m.connection_id
 		JOIN credentials c ON c.resource_id=d.credential_id
+		JOIN secrets s ON s.id=c.secret_id
 		JOIN egresses e ON e.resource_id=c.egress_id
 		JOIN provider_accounts pa ON pa.resource_id=c.provider_account_id
 		WHERE dr.kind='Destination' AND dr.name=?`, name).Scan(
 		&d.ID, &d.Name, &d.Weight, &destinationEnabled,
 		&d.ModelID, &d.ProviderModelID, &capabilitiesJSON, &modelEnabled,
-		&d.ConnectionID, &d.BaseURL, &d.Adapter, &connectionEnabled,
-		&d.CredentialID, &d.SecretID, &credentialStatus, &d.EgressID, &d.EgressType, &egressEnabled, &providerID)
+		&d.ConnectionID, &d.BaseURL, &d.Adapter, &d.AllowPrivateNetwork, &connectionEnabled,
+		&d.CredentialID, &d.SecretID, &d.SecretName, &credentialStatus, &d.EgressID, &d.EgressType, &egressEnabled, &providerID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Destination{}, &LoadError{Code: CodeInvalidGraph}
 	}

@@ -61,7 +61,7 @@ func TestLoadSnapshotPreservesAffinityBudgetsAndEligibility(t *testing.T) {
 		t.Fatalf("destinations=%d", len(snapshot.Destinations))
 	}
 	destination := snapshot.Destinations[0]
-	if !destination.Eligible() || destination.ProviderModelID != "physical-model" || destination.EgressType != "direct" || destination.SecretID != "secret-1" {
+	if !destination.Eligible() || destination.ProviderModelID != "physical-model" || destination.EgressType != "direct" || destination.SecretID != "secret-1" || destination.SecretName != "primary-secret" {
 		t.Fatalf("destination=%+v", destination)
 	}
 	if _, err := installation.DB().Exec(`INSERT INTO cooldowns(id,scope_kind,scope_resource_id,reason,starts_at,ends_at)
