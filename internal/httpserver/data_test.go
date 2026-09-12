@@ -17,12 +17,19 @@ import (
 
 func dataHandlerFixture(t *testing.T) (http.Handler, string, *int, *storage.Installation) {
 	t.Helper()
-	ctx := context.Background()
-	upstreamCalls := 0
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		upstreamCalls++
+	return dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"id":"chat-1","object":"chat.completion","model":"physical","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}`))
+	})
+}
+
+func dataHandlerFixtureWithUpstream(t *testing.T, upstreamHandler http.HandlerFunc) (http.Handler, string, *int, *storage.Installation) {
+	t.Helper()
+	ctx := context.Background()
+	upstreamCalls := 0
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalls++
+		upstreamHandler(w, r)
 	}))
 	t.Cleanup(upstream.Close)
 	installation, err := storage.OpenInstallation(ctx, t.TempDir())
@@ -54,7 +61,7 @@ func dataHandlerFixture(t *testing.T) (http.Handler, string, *int, *storage.Inst
 	put(storage.KindProviderConnection, "connection", `{"providerRef":{"name":"provider"},"baseUrl":"`+upstream.URL+`","adapter":"openai-chat-v1","allowPrivateNetwork":true,"enabled":true}`)
 	put(storage.KindEgress, "direct", `{"type":"direct","enabled":true}`)
 	put(storage.KindCredential, "credential", `{"providerAccountRef":{"name":"account"},"egressRef":{"name":"direct"},"secretRef":{"name":"provider-secret"},"enabled":true}`)
-	put(storage.KindModel, "model", `{"connectionRef":{"name":"connection"},"providerModelId":"physical","capabilities":["text"],"enabled":true}`)
+	put(storage.KindModel, "model", `{"connectionRef":{"name":"connection"},"providerModelId":"physical","capabilities":["text","stream"],"enabled":true}`)
 	put(storage.KindDestination, "destination", `{"modelRef":{"name":"model"},"credentialRef":{"name":"credential"},"weight":100,"enabled":true}`)
 	put(storage.KindStrategy, "strategy", `{"destinations":[{"name":"destination"}],"maxAttempts":1,"attemptTimeoutMs":1000,"totalTimeoutMs":2000}`)
 	put(storage.KindRoute, "route", `{"modelAlias":"assistant","strategyRef":{"name":"strategy"},"enabled":true}`)
@@ -76,6 +83,50 @@ func dataHandlerFixture(t *testing.T) (http.Handler, string, *int, *storage.Inst
 		t.Fatal(err)
 	}
 	return server.Handler, issued.Token, &upstreamCalls, installation
+}
+
+func TestDataChatCompletionsStreamingVerticalPath(t *testing.T) {
+	handler, token, calls, installation := dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+		_, _ = w.Write([]byte("data: {\"id\":\"chat-stream-1\",\"object\":\"chat.completion.chunk\",\"model\":\"physical\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"ok\"},\"finish_reason\":null}]}\n\ndata: [DONE]\n\n"))
+	})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}],"stream":true}`, token))
+	if recorder.Code != http.StatusOK || recorder.Header().Get("Content-Type") != "text/event-stream" || recorder.Header().Get("X-ModelCairn-Request-ID") == "" || *calls != 1 {
+		t.Fatalf("status=%d headers=%v calls=%d body=%s", recorder.Code, recorder.Header(), *calls, recorder.Body.String())
+	}
+	if body := recorder.Body.String(); !strings.Contains(body, `"model":"assistant"`) || !strings.HasSuffix(body, "data: [DONE]\n\n") {
+		t.Fatalf("body=%q", body)
+	}
+	assertRecordedRequest(t, installation, recorder.Header().Get("X-ModelCairn-Request-ID"), "success", http.StatusOK, "success")
+}
+
+func TestDataChatCompletionsPersistsCommittedStreamInterruption(t *testing.T) {
+	handler, token, _, installation := dataHandlerFixtureWithUpstream(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"id\":\"chat-stream-1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"partial\"},\"finish_reason\":null}]}\n\ndata: not-json\n\n"))
+	})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, dataRequest(`{"model":"assistant","messages":[{"role":"user","content":"hello"}],"stream":true}`, token))
+	if recorder.Code != http.StatusOK || strings.Contains(recorder.Body.String(), "modelcairn_error") || strings.Contains(recorder.Body.String(), "[DONE]") {
+		t.Fatalf("status=%d body=%q", recorder.Code, recorder.Body.String())
+	}
+	assertRecordedRequest(t, installation, recorder.Header().Get("X-ModelCairn-Request-ID"), "partial", http.StatusOK, "partial")
+}
+
+func assertRecordedRequest(t *testing.T, installation *storage.Installation, requestID, requestOutcome string, status int, attemptOutcome string) {
+	t.Helper()
+	var actualOutcome, actualAttempt string
+	var actualStatus int
+	if err := installation.DB().QueryRow("SELECT outcome,http_status FROM requests WHERE id=?", requestID).Scan(&actualOutcome, &actualStatus); err != nil {
+		t.Fatal(err)
+	}
+	if err := installation.DB().QueryRow("SELECT outcome FROM attempts WHERE request_id=?", requestID).Scan(&actualAttempt); err != nil {
+		t.Fatal(err)
+	}
+	if actualOutcome != requestOutcome || actualStatus != status || actualAttempt != attemptOutcome {
+		t.Fatalf("request outcome=%q status=%d attempt outcome=%q", actualOutcome, actualStatus, actualAttempt)
+	}
 }
 
 func dataRequest(body, token string) *http.Request {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -160,5 +161,61 @@ func TestPublicHTTPDestinationIsRejectedBeforeCredentialUse(t *testing.T) {
 	var adapterErr *Error
 	if !errors.As(err, &adapterErr) || adapterErr.Code != "invalid_destination" {
 		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestOpenStreamSendsStreamingRequestAndReturnsSSEBody(t *testing.T) {
+	var accept, model string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accept = r.Header.Get("Accept")
+		var request map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+		}
+		model, _ = request["model"].(string)
+		w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+	request := testRequest(t)
+	request.Stream = true
+	result, err := New(fixtureSecrets{name: "provider-key", value: []byte("fixture")}).OpenStream(context.Background(), testDestination(server), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer result.Body.Close()
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.StatusCode != http.StatusOK || accept != "text/event-stream" || model != "physical-model" || string(body) != "data: [DONE]\n\n" {
+		t.Fatalf("result=%+v accept=%q model=%q body=%q", result, accept, model, body)
+	}
+}
+
+func TestOpenStreamRejectsInvalidMediaTypeAndReturns429Metadata(t *testing.T) {
+	invalid := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer invalid.Close()
+	request := testRequest(t)
+	request.Stream = true
+	adapter := New(fixtureSecrets{name: "provider-key", value: []byte("fixture")})
+	_, err := adapter.OpenStream(context.Background(), testDestination(invalid), request)
+	var adapterErr *Error
+	if !errors.As(err, &adapterErr) || adapterErr.Code != "invalid_response" {
+		t.Fatalf("err=%v", err)
+	}
+
+	limited := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Retry-After", "11")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = w.Write([]byte("private"))
+	}))
+	defer limited.Close()
+	result, err := adapter.OpenStream(context.Background(), testDestination(limited), request)
+	if err != nil || result.StatusCode != http.StatusTooManyRequests || result.RetryAfter != "11" || result.Body != nil {
+		t.Fatalf("result=%+v err=%v", result, err)
 	}
 }

@@ -2,7 +2,7 @@
 
 [Español](hito-04-plan-tecnico.es.md)
 
-Status: Blocks 1–4 implemented for non-streaming; Block 6 persistence started.
+Status: Blocks 1–6 implemented for the direct path; Block 7 acceptance pending.
 Prerequisite: Milestone 3 merged and accepted.
 
 Implementation order approved by the operator: prove the router over direct
@@ -39,7 +39,7 @@ Those features must extend these contracts rather than bypass them.
 
 ## First supported adapter and egress
 
-The first adapter is `openai-chat-completions`. It joins the canonical connection
+The first adapter is `openai-chat-v1`. It joins the canonical connection
 base URL with `/chat/completions`, injects the referenced API-key secret into the
 upstream Authorization header, maps the logical alias to the selected physical
 model and validates the response media type and shape.
@@ -92,12 +92,14 @@ provider response into the same stream.
 7. **Acceptance:** grouped QA, race suite, simulated fault matrix and VM resource
    benchmark at 1, 2, 5, 10 and 20 concurrent streams.
 
-Blocks 1–4 now form an authenticated non-streaming path: contract and parser,
-simulator, published versions, snapshots, secure direct egress, and bounded
-fallback. The first grouped independent QA completed and its findings were fixed.
-Initial Block 6 persistence records requests, attempts, 429 observations, and
-cooldowns without content. Streaming, persistence completion, and acceptance are
-still pending.
+Blocks 1–6 form authenticated normal and streaming paths: contract and parser,
+simulator, published versions, snapshots, secure direct egress, bounded fallback,
+SSE relay, and operational persistence. The first grouped independent QA completed
+and its findings were fixed. Streaming commits `200` only after the first valid SSE
+event, normalizes the logical alias, requires `[DONE]` for success, and records any
+later interruption as `partial` without splicing another destination. Persistence
+records requests, attempts, 429 observations, and cooldowns without content. The
+full fault matrix, race run, VM benchmark, and grouped Block 7 acceptance QA remain.
 
 Each block receives focused tests. Independent QA is grouped at the state-machine
 boundary and at final acceptance rather than repeated for every small edit.

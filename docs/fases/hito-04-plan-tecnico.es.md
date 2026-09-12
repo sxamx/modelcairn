@@ -2,7 +2,7 @@
 
 [English](hito-04-plan-tecnico.md)
 
-Estado: bloques 1–4 implementados para no streaming; persistencia del Bloque 6 iniciada.
+Estado: bloques 1–6 implementados para el recorrido directo; aceptación del Bloque 7 pendiente.
 Prerrequisito: Hito 3 fusionado y aceptado.
 
 Orden aprobado por el operador: demostrar primero el router con salida directa y
@@ -39,7 +39,7 @@ proveedor. Esas funciones deberán ampliar estos contratos sin evitarlos.
 
 ## Primer adaptador y salida soportados
 
-El primer adaptador será `openai-chat-completions`. Une la URL base canónica con
+El primer adaptador es `openai-chat-v1`. Une la URL base canónica con
 `/chat/completions`, inyecta el secreto API key referenciado en Authorization,
 reemplaza el alias lógico por el modelo físico seleccionado y valida media type y
 forma de la respuesta.
@@ -91,12 +91,15 @@ el stream y registra `partial`; jamás mezcla otra respuesta en el mismo stream.
 7. **Aceptación:** QA agrupado, suite de carreras, matriz de fallos simulada y
    benchmark VM con 1, 2, 5, 10 y 20 streams concurrentes.
 
-Los Bloques 1–4 ya forman un recorrido autenticado no streaming: contrato y parser,
-simulador, versiones publicadas, snapshots, salida directa segura y fallback
-acotado. El primer QA agrupado se completó y sus hallazgos fueron corregidos. La
-persistencia inicial del Bloque 6 registra solicitudes, intentos, observaciones 429
-y cooldowns sin contenido. Streaming, cierre completo de persistencia y aceptación
-siguen pendientes.
+Los Bloques 1–6 forman recorridos autenticados normal y streaming: contrato y
+parser, simulador, versiones publicadas, snapshots, salida directa segura,
+fallback acotado, relay SSE y persistencia operativa. El primer QA agrupado se
+completó y sus hallazgos fueron corregidos. El streaming solo confirma `200`
+después del primer evento SSE válido, normaliza el alias lógico, exige `[DONE]`
+para éxito y registra como `partial` cualquier corte posterior sin mezclar otro
+destino. La persistencia registra solicitudes, intentos, observaciones 429 y
+cooldowns sin contenido. Restan la matriz integral, race, benchmark en VM y QA de
+aceptación del Bloque 7.
 
 Cada bloque recibe pruebas focales. El QA independiente se agrupa en la frontera
 de la máquina de estados y en la aceptación final, no en cada edición pequeña.

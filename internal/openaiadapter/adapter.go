@@ -139,6 +139,68 @@ func (a *Adapter) Execute(ctx context.Context, destination router.Destination, r
 	return result, nil
 }
 
+func (a *Adapter) OpenStream(ctx context.Context, destination router.Destination, request chatcompletions.Request) (router.StreamUpstream, error) {
+	if a == nil || a.secrets == nil || destination.Adapter != "openai-chat-v1" || destination.EgressType != "direct" || !request.Stream {
+		return router.StreamUpstream{}, &Error{Code: "unsupported_destination"}
+	}
+	endpoint, err := completionURL(destination.BaseURL, destination.AllowPrivateNetwork)
+	if err != nil {
+		return router.StreamUpstream{}, &Error{Code: "invalid_destination", Err: err}
+	}
+	request.Model = destination.ProviderModelID
+	payload, err := json.Marshal(request)
+	if err != nil {
+		return router.StreamUpstream{}, &Error{Code: "encode_request", Err: err}
+	}
+	defer clear(payload)
+	upstreamRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint.String(), bytes.NewReader(payload))
+	if err != nil {
+		return router.StreamUpstream{}, &Error{Code: "invalid_destination", Err: err}
+	}
+	upstreamRequest.Header.Set("Content-Type", "application/json")
+	upstreamRequest.Header.Set("Accept", "text/event-stream")
+	written := false
+	upstreamRequest = upstreamRequest.WithContext(httptrace.WithClientTrace(upstreamRequest.Context(), &httptrace.ClientTrace{WroteRequest: func(httptrace.WroteRequestInfo) { written = true }}))
+	client := a.public
+	if destination.AllowPrivateNetwork {
+		client = a.private
+	}
+	var result router.StreamUpstream
+	err = a.secrets.Use(ctx, destination.SecretName, func(secret []byte) error {
+		if len(secret) == 0 || bytes.IndexAny(secret, "\r\n") >= 0 {
+			return &Error{Code: "invalid_credential"}
+		}
+		upstreamRequest.Header.Set("Authorization", "Bearer "+string(secret))
+		response, requestErr := client.Do(upstreamRequest)
+		upstreamRequest.Header.Del("Authorization")
+		if requestErr != nil {
+			return &Error{Code: "transport_error", RequestWritten: written, Err: requestErr}
+		}
+		result = router.StreamUpstream{StatusCode: response.StatusCode, ContentType: boundedHeader(response.Header.Get("Content-Type")),
+			RetryAfter: boundedHeader(response.Header.Get("Retry-After")), ProviderRequestID: firstHeader(response.Header, "x-request-id", "request-id")}
+		if response.StatusCode < 200 || response.StatusCode >= 300 {
+			defer response.Body.Close()
+			_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 64<<10))
+			return nil
+		}
+		mediaType, _, parseErr := mime.ParseMediaType(result.ContentType)
+		if parseErr != nil || mediaType != "text/event-stream" {
+			_ = response.Body.Close()
+			return &Error{Code: "invalid_response", RequestWritten: true}
+		}
+		result.Body = response.Body
+		return nil
+	})
+	if err != nil {
+		var adapterErr *Error
+		if errors.As(err, &adapterErr) {
+			return router.StreamUpstream{}, adapterErr
+		}
+		return router.StreamUpstream{}, &Error{Code: "credential_unavailable", Err: err}
+	}
+	return result, nil
+}
+
 func completionURL(base string, allowPrivate bool) (*url.URL, error) {
 	parsed, err := url.Parse(base)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {

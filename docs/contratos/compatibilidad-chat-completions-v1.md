@@ -48,11 +48,19 @@ additional fields are documented and do not alter the shape required by clients.
 - `Content-Type: text/event-stream`.
 - Every emitted frame follows `data: <json>\n\n` and ends with `data: [DONE]\n\n`
   on normal completion.
+- The first complete valid JSON event is the commitment point. Fallback may occur
+  before it; the destination never changes after it.
+- Each event is capped at 1 MiB. Comments and non-`data` SSE fields are not
+  forwarded, and an empty stream, invalid JSON, or termination without `[DONE]`
+  is not a success.
+- The `model` field in every chunk is normalized to the requested logical alias.
 - Indices, `delta.role`, `delta.content`, tool-call deltas, and `finish_reason` are preserved.
 - An error after commitment closes the stream; it does not insert an incompatible
   JSON response or continue from another destination.
 - Usage is delivered in the stream only when the connection/adapter supports it
   and the request asks for it compatibly.
+- The ModelCairn request ID is returned in `X-ModelCairn-Request-ID` before the SSE
+  body starts.
 
 ## ModelCairn error
 
