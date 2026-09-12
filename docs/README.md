@@ -15,6 +15,7 @@
 9. [Milestone 2 technical delivery plan](fases/hito-02-plan-tecnico.md)
 10. [Milestone 3 technical delivery plan](fases/hito-03-plan-tecnico.md)
 11. [Local data and retention map](data-retention.md)
+12. [Milestone 4 technical delivery plan](fases/hito-04-plan-tecnico.md)
 
 ## Phase 1 executable contracts
 

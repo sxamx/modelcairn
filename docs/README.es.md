@@ -15,6 +15,7 @@
 9. [Plan técnico de entrega del Hito 2](fases/hito-02-plan-tecnico.es.md)
 10. [Plan técnico de entrega del Hito 3](fases/hito-03-plan-tecnico.es.md)
 11. [Mapa de datos locales y retención](retencion-de-datos.es.md)
+12. [Plan técnico de entrega del Hito 4](fases/hito-04-plan-tecnico.es.md)
 
 ## Contratos ejecutables de la Fase 1
 
