@@ -48,3 +48,10 @@ When the VM does not have Go, `MODELCAIRN_BINARY` accepts a prebuilt Linux binar
 DURATION_SECONDS=120 OUTPUT_FILE=benchmark-results/hito-02.md \
   bash scripts/verify-hito2.sh
 ```
+
+## Milestone 3 administrative gate
+
+`scripts/verify-hito3.sh` supports the same precompiled-binary pattern and samples
+RSS/swap throughout the complete administrative flow. `MEASURE_SECONDS` adds a
+steady period and `OUTPUT_FILE` creates the redacted report. The representative run
+is recorded in the [Milestone 3 evidence](evidencia/benchmark-hito-03-2026-09-12.md).
