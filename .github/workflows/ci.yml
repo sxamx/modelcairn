@@ -48,6 +48,8 @@ jobs:
           OUTPUT_FILE: /tmp/modelcairn-hito2.md
         run: bash scripts/verify-hito2.sh
       - name: Milestone 3 administrative integration gate
+        env:
+          MAX_RSS_KIB: "131072"
         run: bash scripts/verify-hito3.sh
       - name: Verify module files
         run: |
