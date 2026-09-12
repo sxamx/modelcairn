@@ -2,7 +2,7 @@
 
 [English](hito-04-plan-tecnico.md)
 
-Estado: plan de implementación aceptado; Bloque 1 iniciado.
+Estado: plan de implementación aceptado; Bloque 1 implementado y Bloque 2 iniciado.
 Prerrequisito: Hito 3 fusionado y aceptado.
 
 Orden aprobado por el operador: demostrar primero el router con salida directa y
@@ -90,6 +90,11 @@ el stream y registra `partial`; jamás mezcla otra respuesta en el mismo stream.
    rate limit normalizadas, sin cuerpos de prompt/respuesta.
 7. **Aceptación:** QA agrupado, suite de carreras, matriz de fallos simulada y
    benchmark VM con 1, 2, 5, 10 y 20 streams concurrentes.
+
+El Bloque 1 ya cuenta con OpenAPI de datos, parser estricto, simulador programable
+y matriz de fallos. Su QA independiente se agrupará con la primera máquina de
+estados. El Bloque 2 comenzó con publicación transaccional de versiones de
+estrategia y carga de snapshots inmutables; aún no constituye el router ejecutable.
 
 Cada bloque recibe pruebas focales. El QA independiente se agrupa en la frontera
 de la máquina de estados y en la aceptación final, no en cada edición pequeña.

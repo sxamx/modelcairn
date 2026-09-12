@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -298,6 +299,11 @@ func (r *Repository) Delete(ctx context.Context, kind ResourceKind, name string,
 		err = ensureNoLogicalReferences(ctx, tx, kind, name, id)
 	}
 	if err == nil {
+		if kind == KindStrategy {
+			_, err = tx.ExecContext(ctx, "DELETE FROM strategy_versions WHERE strategy_id=?", id)
+		}
+	}
+	if err == nil {
 		var result sql.Result
 		result, err = tx.ExecContext(ctx, "DELETE FROM resources WHERE id=? AND resource_version=?", id, current)
 		if err == nil {
@@ -575,7 +581,8 @@ func upsertTyped(ctx context.Context, tx *sql.Tx, id string, kind ResourceKind, 
 				return err
 			}
 		}
-		return nil
+		_, err := publishStrategyTx(ctx, tx, id, raw, now)
+		return err
 	case KindRoute:
 		var s routeSpec
 		if err := decodeSpec(raw, &s); err != nil {
@@ -585,7 +592,14 @@ func upsertTyped(ctx context.Context, tx *sql.Tx, id string, kind ResourceKind, 
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `INSERT INTO routes(resource_id,model_alias,strategy_id,active_strategy_version_id,enabled) VALUES(?,?,?,NULL,?) ON CONFLICT(resource_id) DO UPDATE SET model_alias=excluded.model_alias,strategy_id=excluded.strategy_id,enabled=excluded.enabled`, id, s.ModelAlias, strategy, s.Enabled)
+		var versionID string
+		if err = tx.QueryRowContext(ctx, "SELECT id FROM strategy_versions WHERE strategy_id=? ORDER BY version DESC LIMIT 1", strategy).Scan(&versionID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return &RepositoryError{Code: CodeReferenceMissing}
+			}
+			return err
+		}
+		_, err = tx.ExecContext(ctx, `INSERT INTO routes(resource_id,model_alias,strategy_id,active_strategy_version_id,enabled) VALUES(?,?,?,?,?) ON CONFLICT(resource_id) DO UPDATE SET model_alias=excluded.model_alias,strategy_id=excluded.strategy_id,active_strategy_version_id=excluded.active_strategy_version_id,enabled=excluded.enabled`, id, s.ModelAlias, strategy, versionID, s.Enabled)
 		return mapConstraint(err)
 	case KindAgentToken:
 		var s agentTokenSpec
@@ -619,6 +633,35 @@ func upsertTyped(ctx context.Context, tx *sql.Tx, id string, kind ResourceKind, 
 	default:
 		return &RepositoryError{Code: CodeInvalidResource}
 	}
+}
+
+func publishStrategyTx(ctx context.Context, tx *sql.Tx, strategyID string, definition json.RawMessage, now time.Time) (string, error) {
+	checksumBytes := sha256.Sum256(definition)
+	checksum := hex.EncodeToString(checksumBytes[:])
+	var versionID string
+	err := tx.QueryRowContext(ctx, "SELECT id FROM strategy_versions WHERE strategy_id=? AND checksum=?", strategyID, checksum).Scan(&versionID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return "", err
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		var version int
+		if err := tx.QueryRowContext(ctx, "SELECT COALESCE(MAX(version),0)+1 FROM strategy_versions WHERE strategy_id=?", strategyID).Scan(&version); err != nil {
+			return "", err
+		}
+		var createErr error
+		versionID, createErr = newUUID()
+		if createErr != nil {
+			return "", createErr
+		}
+		_, createErr = tx.ExecContext(ctx, `INSERT INTO strategy_versions(id,strategy_id,version,definition_json,checksum,published_at) VALUES(?,?,?,?,?,?)`, versionID, strategyID, version, string(definition), checksum, now.UTC().Format(time.RFC3339Nano))
+		if createErr != nil {
+			return "", createErr
+		}
+	}
+	if _, err := tx.ExecContext(ctx, "UPDATE routes SET active_strategy_version_id=? WHERE strategy_id=?", versionID, strategyID); err != nil {
+		return "", err
+	}
+	return versionID, nil
 }
 
 func mapConstraint(err error) error {

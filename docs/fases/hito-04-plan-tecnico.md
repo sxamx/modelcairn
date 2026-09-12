@@ -2,7 +2,7 @@
 
 [Español](hito-04-plan-tecnico.es.md)
 
-Status: accepted implementation plan; Block 1 started.
+Status: accepted implementation plan; Block 1 implemented and Block 2 started.
 Prerequisite: Milestone 3 merged and accepted.
 
 Implementation order approved by the operator: prove the router over direct
@@ -91,6 +91,11 @@ provider response into the same stream.
    rate-limit observations with no prompt/response bodies.
 7. **Acceptance:** grouped QA, race suite, simulated fault matrix and VM resource
    benchmark at 1, 2, 5, 10 and 20 concurrent streams.
+
+Block 1 now has the data OpenAPI, strict parser, programmable simulator, and
+failure matrix. Its independent QA will be grouped with the first state machine.
+Block 2 started with transactional strategy-version publication and immutable
+snapshot loading; this is not yet the executable router.
 
 Each block receives focused tests. Independent QA is grouped at the state-machine
 boundary and at final acceptance rather than repeated for every small edit.
