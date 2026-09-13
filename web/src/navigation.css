@@ -11,3 +11,10 @@
 }
 .app-shell aside nav button.active { background:#d8ded7; color:#18382d; }
 .app-shell aside nav button:disabled { opacity:.45; cursor:not-allowed; }
+@media (max-width:760px) {
+  .app-shell aside { display:block; position:fixed; inset:auto 0 0 0; z-index:5; padding:.45rem; overflow-x:auto; border:0; border-top:1px solid var(--line); }
+  .app-shell aside nav { display:flex; width:max-content; }
+  .app-shell aside nav button { font-size:.75rem; padding:.6rem .7rem; }
+  .app-shell aside .repo-link { display:none; }
+  .app-shell .content { padding-bottom:6rem; }
+}

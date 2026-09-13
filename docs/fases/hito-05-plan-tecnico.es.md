@@ -44,7 +44,7 @@ segunda fuente de configuración.
    optimista con ETag, secretos solo reemplazables y token visible una vez.
 6. **Diagnóstico e histórico (implementado):** filtros y paginación de solicitudes, intentos y
    errores; latencia, TTFT, tokens y fallback sin contenido.
-7. **Cierre:** pruebas de frontend y contrato, accesibilidad automatizada, build
+7. **Cierre (en ejecución):** pruebas de frontend y contrato, accesibilidad automatizada, build
    reproducible, presupuesto de bundle/RAM, prueba móvil/PWA y QA agrupado.
 
 ## Decisiones de implementación

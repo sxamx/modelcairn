@@ -42,7 +42,7 @@ remains the sole authority and the UI does not keep a second configuration sourc
    replace-only secrets, and one-time token display.
 6. **Diagnostics and history (implemented):** filters and pagination for requests, attempts and
    errors; latency, TTFT, tokens, and fallback without content.
-7. **Closeout:** frontend and contract tests, automated accessibility, reproducible
+7. **Closeout (in progress):** frontend and contract tests, automated accessibility, reproducible
    build, bundle/RAM budget, mobile/PWA exercise, and grouped QA.
 
 ## Implementation decisions
