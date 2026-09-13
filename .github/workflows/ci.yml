@@ -17,6 +17,18 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Verify embedded web console
+        run: |
+          npm --prefix web ci
+          npm --prefix web test
+          npm --prefix web run build
+          node scripts/verify-console.cjs
+          git diff --exit-code -- web/src/api/schema.d.ts internal/consoleui/dist
       - name: Verify formatting
         run: test -z "$(gofmt -l .)"
       - name: Vet

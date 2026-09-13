@@ -74,6 +74,8 @@ Output: first end-to-end call and deterministic contract suite.
 
 ## Milestone 5 — Console and PWA
 
+Status: in progress. See the [Milestone 5 technical plan](hito-05-plan-tecnico.md).
+
 - Onboarding from provider to published route.
 - Resource and secret management without revealing them.
 - Health, request, and attempt diagnostics.

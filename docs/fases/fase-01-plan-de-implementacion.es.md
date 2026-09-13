@@ -75,6 +75,8 @@ Salida: primera llamada end-to-end y suite de contrato determinista.
 
 ## Hito 5 — Consola y PWA
 
+Estado: en ejecución. Véase el [plan técnico del Hito 5](hito-05-plan-tecnico.es.md).
+
 - Onboarding desde proveedor hasta ruta publicada.
 - Gestión de recursos y secretos sin posibilidad de revelarlos.
 - Diagnóstico de salud, solicitudes e intentos.

@@ -19,6 +19,9 @@ coverage/
 work/
 node_modules/
 web/node_modules/
+web/*.tsbuildinfo
+web/vite.config.js
+web/vite.config.d.ts
 
 # Editor and operating-system files
 .idea/
