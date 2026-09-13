@@ -1,8 +1,16 @@
-const CACHE = "modelcairn-shell-v1";
+const CACHE = "modelcairn-shell-v2";
 const SHELL = ["/", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    const index = await fetch("/", { cache: "no-store" });
+    if (!index.ok) throw new Error("shell_index_unavailable");
+    const html = await index.clone().text();
+    const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((match) => match[1]);
+    await cache.put("/", index);
+    await cache.addAll([...SHELL.slice(1), ...new Set(assets)]);
+  })());
   self.skipWaiting();
 });
 

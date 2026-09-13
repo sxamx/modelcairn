@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import Resources from "./Resources";
 import Secrets from "./Secrets";
@@ -13,6 +13,23 @@ test("lists redacted resources from the selected server kind", async () => {
   expect(await screen.findByRole("heading", { name: "OpenRouter" })).toBeInTheDocument();
   expect(screen.getByText(/versión 2/)).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith("/api/v1/admin/resources/providers?limit=200", expect.anything());
+});
+
+test("updates a resource with optimistic concurrency", async () => {
+  const calls: Array<{ url:string; init?:RequestInit }> = [];
+  vi.spyOn(globalThis,"fetch").mockImplementation((input,init)=>{calls.push({url:String(input),init}); if(init?.method==="PUT") return json({kind:"Provider",state:"present",metadata:{name:"openrouter",resourceVersion:3},spec:{}}); return json({items:[{kind:"Provider",state:"present",metadata:{name:"openrouter",resourceVersion:2},spec:{}}]});});
+  render(<Resources/>); fireEvent.click(await screen.findByRole("button",{name:"Editar"})); fireEvent.click(screen.getByRole("button",{name:"Guardar recurso"}));
+  await waitFor(()=>expect(calls.some(call=>call.init?.method==="PUT")).toBe(true));
+  const update=calls.find(call=>call.init?.method==="PUT"); expect(update?.url).toContain("/resources/providers/openrouter"); expect(new Headers(update?.init?.headers).get("If-Match")).toBe('"2"');
+});
+
+test("publishes a strategy only after explicit confirmation", async () => {
+  vi.spyOn(globalThis,"confirm").mockReturnValue(true);
+  const calls:Array<{url:string;init?:RequestInit}>=[];
+  vi.spyOn(globalThis,"fetch").mockImplementation((input,init)=>{calls.push({url:String(input),init}); const url=String(input); if(url.includes("/strategies/demo/publish")) return json({kind:"Strategy",state:"present",metadata:{name:"demo",resourceVersion:2},spec:{destinations:[]}}); if(url.includes("/resources/strategies")) return json({items:[{kind:"Strategy",state:"present",metadata:{name:"demo",resourceVersion:2},spec:{destinations:[]}}]}); return json({items:[]});});
+  render(<Resources/>); fireEvent.click(screen.getByRole("tab",{name:"Estrategias"})); fireEvent.click(await screen.findByRole("button",{name:"Publicar"}));
+  await waitFor(()=>expect(calls.some(call=>call.url.includes("/strategies/demo/publish")&&call.init?.method==="POST")).toBe(true));
+  const publish=calls.find(call=>call.url.includes("/strategies/demo/publish")); expect(new Headers(publish?.init?.headers).get("If-Match")).toBe('"2"');
 });
 
 test("stores a secret value only in the write request and clears the field", async () => {

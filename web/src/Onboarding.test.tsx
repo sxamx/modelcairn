@@ -19,12 +19,16 @@ test("creates the complete first route and reveals the agent token once", async 
   fireEvent.change(screen.getByLabelText("Modelo del proveedor"), { target: { value: "model/free" } });
   fireEvent.change(screen.getByLabelText(/^API key/), { target: { value: "secret-key-value" } });
   fireEvent.click(screen.getByRole("button", { name: "Revisar y crear" }));
+  expect(await screen.findByRole("heading", { name: "Confirma los cambios" })).toBeInTheDocument();
+  expect(screen.getByRole("dialog")).toHaveFocus();
+  expect(calls.map((call) => call.url)).toEqual(["/api/v1/admin/config/plan"]);
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar y crear" }));
   expect(await screen.findByText("mc_at_v1_once-only")).toBeInTheDocument();
   expect(calls.map((call) => call.url)).toEqual([
-    "/api/v1/admin/secrets/openrouter-secret", "/api/v1/admin/config/plan",
+    "/api/v1/admin/config/plan", "/api/v1/admin/secrets/openrouter-secret",
     "/api/v1/admin/config/apply", "/api/v1/admin/agent-tokens/my-agent/issue",
   ]);
-  const configBodies = calls.slice(1, 3).map((call) => String(call.init?.body));
+  const configBodies = [calls[0],calls[2]].map((call) => String(call.init?.body));
   expect(configBodies.every((body) => !body.includes("secret-key-value"))).toBe(true);
   expect(configBodies[0]).toContain("openrouter-route");
   expect(localStorage.length).toBe(0); expect(sessionStorage.length).toBe(0);

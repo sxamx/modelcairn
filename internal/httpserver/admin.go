@@ -78,6 +78,7 @@ func (a *adminAPI) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/admin/resources/{kind}/{name}", a.getResource)
 	mux.HandleFunc("PUT /api/v1/admin/resources/{kind}/{name}", a.updateResource)
 	mux.HandleFunc("DELETE /api/v1/admin/resources/{kind}/{name}", a.deleteResource)
+	mux.HandleFunc("POST /api/v1/admin/strategies/{name}/publish", a.publishStrategy)
 	mux.HandleFunc("GET /api/v1/admin/secrets", a.listSecrets)
 	mux.HandleFunc("GET /api/v1/admin/secrets/{name}", a.getSecret)
 	mux.HandleFunc("PUT /api/v1/admin/secrets/{name}", a.putSecret)

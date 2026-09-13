@@ -2,7 +2,7 @@
 
 [Español](hito-05-plan-tecnico.es.md)
 
-Status: in progress since September 13, 2026.
+Status: completed on September 13, 2026.
 Prerequisite: Milestone 4 merged and accepted.
 
 ## Outcome
@@ -32,17 +32,17 @@ remains the sole authority and the UI does not keep a second configuration sourc
 1. **Web foundation (implemented):** reproducible frontend workspace, OpenAPI-derived types,
    accessible shell, embedded assets, safe navigation fallback, manifest, and a
    minimal service worker.
-2. **Access and session (initial implementation):** login, session recovery, logout, loading states, and
+2. **Access and session (implemented):** login, session recovery, logout, loading states, and
    uniform errors; no administrative route is visible while unauthenticated.
-3. **Operational overview (initial implementation):** health/readiness, resource counts, route and
+3. **Operational overview (implemented):** health/readiness, resource counts, route and
    destination status, recent requests and attempts through bounded DTOs.
-4. **Guided onboarding (initial implementation):** provider → account/connection → secret → model →
+4. **Guided onboarding (implemented):** provider → account/connection → secret → model →
    destination → strategy → route → token, with validation before confirmation.
-5. **Daily administration (advanced implementation):** resource lists and forms, optimistic ETag updates,
+5. **Daily administration (implemented):** resource lists and forms, optimistic ETag updates,
    replace-only secrets, and one-time token display.
 6. **Diagnostics and history (implemented):** filters and pagination for requests, attempts and
    errors; latency, TTFT, tokens, and fallback without content.
-7. **Closeout (in progress):** frontend and contract tests, automated accessibility, reproducible
+7. **Closeout (completed):** frontend and contract tests, automated accessibility, reproducible
    build, bundle/RAM budget, mobile/PWA exercise, and grouped QA.
 
 ## Implementation decisions

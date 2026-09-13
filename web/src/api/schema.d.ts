@@ -1597,7 +1597,13 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: components["responses"]["Resource"];
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
             409: components["responses"]["Error"];
+            412: components["responses"]["Error"];
+            428: components["responses"]["Error"];
         };
     };
     testProviderConnection: {

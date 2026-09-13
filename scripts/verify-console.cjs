@@ -23,6 +23,7 @@ const worker = fs.readFileSync(path.join(dist, "sw.js"), "utf8");
 for (const reserved of ["/api/", "/v1/", "/healthz", "/readyz"]) {
   if (!worker.includes(reserved)) throw new Error(`service worker does not exclude ${reserved}`);
 }
+if (!worker.includes("matchAll") || !worker.includes("\\/assets\\/")) throw new Error("service worker does not precache hashed JS/CSS assets");
 const manifest = JSON.parse(fs.readFileSync(path.join(dist, "manifest.webmanifest"), "utf8"));
 if (manifest.display !== "standalone" || manifest.start_url !== "/" || manifest.id !== "/" || !Array.isArray(manifest.icons) || manifest.icons.length === 0) throw new Error("manifest is not installable");
 const index = fs.readFileSync(path.join(dist, "index.html"), "utf8");

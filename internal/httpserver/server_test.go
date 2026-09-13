@@ -84,6 +84,14 @@ func TestUnknownAPIIsNeverConsoleHTML(t *testing.T) {
 	}
 }
 
+func TestStrategyPublishRouteIsRegistered(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	adminHandler(t).ServeHTTP(recorder, adminRequest(http.MethodPost, "/api/v1/admin/strategies/demo/publish", nil))
+	if recorder.Code == http.StatusNotFound {
+		t.Fatal("strategy publish route is not registered")
+	}
+}
+
 func BenchmarkHealthz(b *testing.B) {
 	handler := testHandler(NewReadinessProbe())
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)

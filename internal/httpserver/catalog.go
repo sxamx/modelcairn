@@ -190,6 +190,30 @@ func (a *adminAPI) deleteResource(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (a *adminAPI) publishStrategy(w http.ResponseWriter, r *http.Request) {
+	session, csrf, status := a.authorize(r, true)
+	if status != 0 {
+		writeAdminError(w, status, boundaryCode(status), false)
+		return
+	}
+	expected, present, err := optionalIfMatch(r)
+	if err != nil {
+		writeAdminError(w, http.StatusBadRequest, "invalid_precondition", false)
+		return
+	}
+	if !present {
+		writeAdminError(w, http.StatusPreconditionRequired, "precondition_required", false)
+		return
+	}
+	item, err := a.configuration.PublishStrategySession(r.Context(), r.PathValue("name"), expected, session, csrf)
+	if err != nil {
+		writeResourceMutationError(w, err)
+		return
+	}
+	w.Header().Set("ETag", quotedVersion(item.ResourceVersion))
+	writeJSON(w, http.StatusOK, a.resourceView(item))
+}
+
 func (a *adminAPI) resourceMutationAccess(w http.ResponseWriter, r *http.Request) (string, string, bool) {
 	session, csrf, status := a.authorize(r, true)
 	if status != 0 {

@@ -29,6 +29,8 @@
 - [Milestone 3 representative benchmark](evidencia/benchmark-hito-03-2026-09-12.md)
 - [Milestone 4 integrated router evidence](evidencia/hito-04-router-integrado.md)
 - [Milestone 4 representative benchmark](evidencia/benchmark-hito-04-2026-09-13.md)
+- [Milestone 5 console benchmark](evidencia/benchmark-hito-05-2026-09-13.md)
+- [Milestone 5 grouped QA](evidencia/qa-agrupado-hito-05.md)
 - [Example configuration](contratos/config/example-v1alpha1.yaml)
 - [Administrative OpenAPI](contratos/api/admin-v1.openapi.yaml)
 - [Data API OpenAPI](contratos/api/data-v1.openapi.yaml)

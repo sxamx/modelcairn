@@ -2,7 +2,7 @@
 
 [English](hito-05-plan-tecnico.md)
 
-Estado: en ejecución desde el 13 de septiembre de 2026.
+Estado: completado el 13 de septiembre de 2026.
 Prerrequisito: Hito 4 fusionado y aceptado.
 
 ## Resultado
@@ -34,17 +34,17 @@ segunda fuente de configuración.
 1. **Fundación web (implementada):** workspace frontend reproducible, generación de tipos desde
    OpenAPI, shell accesible, activos incrustados, fallback de navegación seguro,
    manifest y service worker mínimo.
-2. **Acceso y sesión (implementación inicial):** login, recuperación de sesión, logout, estados de carga y
+2. **Acceso y sesión (implementado):** login, recuperación de sesión, logout, estados de carga y
    errores uniformes; ninguna ruta administrativa visible sin autenticar.
-3. **Resumen operativo (implementación inicial):** salud/readiness, conteos de recursos, estado de rutas y
+3. **Resumen operativo (implementado):** salud/readiness, conteos de recursos, estado de rutas y
    destinos, solicitudes e intentos recientes mediante DTOs acotados.
-4. **Onboarding guiado (implementación inicial):** flujo proveedor → cuenta/conexión → secreto → modelo →
+4. **Onboarding guiado (implementado):** flujo proveedor → cuenta/conexión → secreto → modelo →
    destino → estrategia → ruta → token, con validación antes de confirmar.
-5. **Administración cotidiana (implementación avanzada):** listas y formularios de recursos, actualización
+5. **Administración cotidiana (implementada):** listas y formularios de recursos, actualización
    optimista con ETag, secretos solo reemplazables y token visible una vez.
 6. **Diagnóstico e histórico (implementado):** filtros y paginación de solicitudes, intentos y
    errores; latencia, TTFT, tokens y fallback sin contenido.
-7. **Cierre (en ejecución):** pruebas de frontend y contrato, accesibilidad automatizada, build
+7. **Cierre (completado):** pruebas de frontend y contrato, accesibilidad automatizada, build
    reproducible, presupuesto de bundle/RAM, prueba móvil/PWA y QA agrupado.
 
 ## Decisiones de implementación
