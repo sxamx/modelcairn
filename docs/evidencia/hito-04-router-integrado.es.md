@@ -2,7 +2,7 @@
 
 [English](hito-04-router-integrado.md)
 
-- Estado: implementación y QA de los Bloques 1–6 verificados; aceptación final pendiente.
+- Estado: Bloques 1–7 y benchmark VM verificados; CI final y fusión pendientes.
 - Fecha: 12 de septiembre de 2026.
 - Superficie: `POST /v1/chat/completions`, normal y streaming SSE.
 
@@ -55,10 +55,10 @@ Las regresiones correspondientes forman parte de la suite.
 
 ## Pendientes para aceptar el hito
 
-- ejecutar la compuerta con duración representativa en la VM objetivo;
-- publicar un informe redactado que omita hostname, IP, usuario, rutas,
-  credenciales e identificadores de revisión;
 - volver a ejecutar todas las puertas sobre la revisión final.
+
+La medición representativa ya está
+[publicada](benchmark-hito-04-2026-09-13.es.md).
 
 Esta evidencia no afirma todavía soporte de relay remoto, HTTP CONNECT, SOCKS,
 editor visual, estimador adaptativo ni dialectos adicionales.

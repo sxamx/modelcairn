@@ -2,7 +2,7 @@
 
 [Español](hito-04-router-integrado.es.md)
 
-- Status: Blocks 1–6 implementation and QA verified; final acceptance pending.
+- Status: Blocks 1–7 and VM benchmark verified; final CI and merge pending.
 - Date: September 12, 2026.
 - Surface: `POST /v1/chat/completions`, normal and SSE streaming.
 
@@ -55,10 +55,10 @@ part of the suite.
 
 ## Remaining before milestone acceptance
 
-- run the gate for a representative duration on the target VM;
-- publish a redacted report omitting hostname, IP, user, paths, credentials, and
-  revision identifiers;
 - rerun every gate on the final revision.
+
+The representative measurement is now
+[published](benchmark-hito-04-2026-09-13.md).
 
 This evidence does not yet claim remote relay, HTTP CONNECT, SOCKS, visual editor,
 adaptive estimator, or additional protocol dialect support.

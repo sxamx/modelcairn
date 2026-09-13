@@ -2,7 +2,7 @@
 
 [English](hito-04-plan-tecnico.md)
 
-Estado: bloques 1–6 implementados para el recorrido directo; aceptación del Bloque 7 pendiente.
+Estado: bloques 1–7 implementados y evidencia VM aprobada; CI final y fusión pendientes.
 Prerrequisito: Hito 3 fusionado y aceptado.
 
 Orden aprobado por el operador: demostrar primero el router con salida directa y
@@ -98,8 +98,9 @@ completó y sus hallazgos fueron corregidos. El streaming solo confirma `200`
 después del primer evento SSE válido, normaliza el alias lógico, exige `[DONE]`
 para éxito y registra como `partial` cualquier corte posterior sin mezclar otro
 destino. La persistencia registra solicitudes, intentos, observaciones 429 y
-cooldowns sin contenido. Restan la matriz integral, race, benchmark en VM y QA de
-aceptación del Bloque 7.
+cooldowns sin contenido. La matriz HTTP integral, race, QA independiente y
+benchmark representativo en VM están completados. Solo restan el CI de la revisión
+documental final y la fusión de la PR para aceptar formalmente el hito.
 
 Cada bloque recibe pruebas focales. El QA independiente se agrupa en la frontera
 de la máquina de estados y en la aceptación final, no en cada edición pequeña.

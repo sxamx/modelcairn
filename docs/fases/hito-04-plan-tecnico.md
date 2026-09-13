@@ -2,7 +2,7 @@
 
 [Español](hito-04-plan-tecnico.es.md)
 
-Status: Blocks 1–6 implemented for the direct path; Block 7 acceptance pending.
+Status: Blocks 1–7 implemented and VM evidence approved; final CI and merge pending.
 Prerequisite: Milestone 3 merged and accepted.
 
 Implementation order approved by the operator: prove the router over direct
@@ -99,7 +99,9 @@ and its findings were fixed. Streaming commits `200` only after the first valid 
 event, normalizes the logical alias, requires `[DONE]` for success, and records any
 later interruption as `partial` without splicing another destination. Persistence
 records requests, attempts, 429 observations, and cooldowns without content. The
-full fault matrix, race run, VM benchmark, and grouped Block 7 acceptance QA remain.
+full HTTP matrix, race run, independent QA, and representative VM benchmark are
+complete. Only CI for the final documentation revision and PR merge remain before
+formal milestone acceptance.
 
 Each block receives focused tests. Independent QA is grouped at the state-machine
 boundary and at final acceptance rather than repeated for every small edit.
