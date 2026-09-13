@@ -140,9 +140,41 @@ func (s *AgentTokenService) Authenticate(ctx context.Context, bearer, routeID st
 	if routeID == "" {
 		return AgentIdentity{}, &RepositoryError{Code: CodeInvalidResource}
 	}
+	identity, routes, err := s.authenticateBearer(ctx, bearer)
+	if err != nil {
+		return AgentIdentity{}, err
+	}
+	if routeAllowed(routes, routeID) {
+		return identity, nil
+	}
+	return AgentIdentity{}, ErrAgentRouteForbidden
+}
+
+// AuthenticateAlias validates the bearer before resolving the requested route,
+// preventing unauthenticated callers from probing which aliases exist.
+func (s *AgentTokenService) AuthenticateAlias(ctx context.Context, bearer, alias string) (AgentIdentity, string, error) {
+	identity, routes, err := s.authenticateBearer(ctx, bearer)
+	if err != nil {
+		return AgentIdentity{}, "", err
+	}
+	var routeID string
+	err = s.db.QueryRowContext(ctx, "SELECT resource_id FROM routes WHERE model_alias=?", alias).Scan(&routeID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return AgentIdentity{}, "", &RepositoryError{Code: CodeNotFound}
+	}
+	if err != nil {
+		return AgentIdentity{}, "", fmt.Errorf("resolve agent route alias: %w", err)
+	}
+	if !routeAllowed(routes, routeID) {
+		return AgentIdentity{}, "", ErrAgentRouteForbidden
+	}
+	return identity, routeID, nil
+}
+
+func (s *AgentTokenService) authenticateBearer(ctx context.Context, bearer string) (AgentIdentity, []string, error) {
 	verifier, ok := parseAgentToken(bearer)
 	if !ok {
-		return AgentIdentity{}, ErrAgentTokenInvalid
+		return AgentIdentity{}, nil, ErrAgentTokenInvalid
 	}
 	var identity AgentIdentity
 	var expiresAt, revokedAt sql.NullString
@@ -151,30 +183,34 @@ func (s *AgentTokenService) Authenticate(ctx context.Context, bearer, routeID st
 		FROM agent_tokens a JOIN resources r ON r.id=a.resource_id
 		WHERE a.verifier_sha256=? AND r.kind=?`, verifier[:], KindAgentToken).Scan(&identity.ResourceID, &identity.Name, &expiresAt, &revokedAt, &allowed)
 	if errors.Is(err, sql.ErrNoRows) {
-		return AgentIdentity{}, ErrAgentTokenInvalid
+		return AgentIdentity{}, nil, ErrAgentTokenInvalid
 	}
 	if err != nil {
-		return AgentIdentity{}, fmt.Errorf("authenticate agent token: %w", err)
+		return AgentIdentity{}, nil, fmt.Errorf("authenticate agent token: %w", err)
 	}
 	if revokedAt.Valid {
-		return AgentIdentity{}, ErrAgentTokenInvalid
+		return AgentIdentity{}, nil, ErrAgentTokenInvalid
 	}
 	if expiresAt.Valid {
 		expires, err := time.Parse(time.RFC3339Nano, expiresAt.String)
 		if err != nil || !s.now().UTC().Before(expires) {
-			return AgentIdentity{}, ErrAgentTokenInvalid
+			return AgentIdentity{}, nil, ErrAgentTokenInvalid
 		}
 	}
 	var routes []string
 	if err := json.Unmarshal([]byte(allowed), &routes); err != nil {
-		return AgentIdentity{}, fmt.Errorf("decode agent routes: %w", err)
+		return AgentIdentity{}, nil, fmt.Errorf("decode agent routes: %w", err)
 	}
+	return identity, routes, nil
+}
+
+func routeAllowed(routes []string, routeID string) bool {
 	for _, allowedID := range routes {
 		if allowedID == routeID {
-			return identity, nil
+			return true
 		}
 	}
-	return AgentIdentity{}, ErrAgentRouteForbidden
+	return false
 }
 
 type agentTokenRow struct {

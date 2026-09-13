@@ -28,6 +28,7 @@ type adminAPI struct {
 	repository    *storage.Repository
 	agentTokens   *storage.AgentTokenService
 	boundary      adminBoundary
+	data          *dataAPI
 }
 
 type loginRequest struct {
@@ -56,6 +57,9 @@ type settingsState struct {
 }
 
 func (a *adminAPI) routes(mux *http.ServeMux) {
+	if a.data != nil {
+		mux.HandleFunc("POST /v1/chat/completions", a.data.chatCompletions)
+	}
 	mux.HandleFunc("POST /api/v1/admin/session", a.createSession)
 	mux.HandleFunc("DELETE /api/v1/admin/session", a.deleteSession)
 	mux.HandleFunc("GET /api/v1/admin/session/me", a.currentSession)
