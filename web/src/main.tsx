@@ -5,6 +5,7 @@ import "./styles.css";
 import "./overview.css";
 import "./onboarding.css";
 import "./navigation.css";
+import "./management.css";
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
 

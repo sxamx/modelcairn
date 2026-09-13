@@ -4,6 +4,8 @@ export type SessionContext = components["schemas"]["SessionContext"];
 export type Overview = components["schemas"]["Overview"];
 export type Configuration = components["schemas"]["modelcairn-config-v1alpha1.schema"];
 export type ConfigurationPlan = components["schemas"]["Plan"];
+export type Resource = components["schemas"]["Resource"];
+export type SecretMetadata = components["schemas"]["SecretMetadata"];
 
 type APIErrorBody = { error?: { code?: string; message?: string; requestId?: string } | string };
 
@@ -72,4 +74,8 @@ export const api = {
   issueAgentToken(name: string) {
     return request<{ token: string; tokenStatus: components["schemas"]["AgentTokenStatus"] }>(`/agent-tokens/${encodeURIComponent(name)}/issue`, { method: "POST" });
   },
+  listResources(kind: string) { return request<components["schemas"]["ResourcePage"]>(`/resources/${encodeURIComponent(kind)}?limit=200`); },
+  deleteResource(kind: string, name: string, version: number) { return request<void>(`/resources/${encodeURIComponent(kind)}/${encodeURIComponent(name)}`, { method: "DELETE", headers: { "If-Match": `"${version}"` } }); },
+  listSecrets() { return request<{ items: SecretMetadata[]; nextCursor?: string | null }>("/secrets?limit=200"); },
+  deleteSecret(name: string, version: number) { return request<void>(`/secrets/${encodeURIComponent(name)}`, { method: "DELETE", headers: { "If-Match": `"${version}"` } }); },
 };

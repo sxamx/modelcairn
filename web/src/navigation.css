@@ -9,3 +9,5 @@
   font-size: .9rem;
   cursor: pointer;
 }
+.app-shell aside nav button.active { background:#d8ded7; color:#18382d; }
+.app-shell aside nav button:disabled { opacity:.45; cursor:not-allowed; }
