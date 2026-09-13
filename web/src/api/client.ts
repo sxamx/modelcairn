@@ -2,6 +2,8 @@ import type { components } from "./schema";
 
 export type SessionContext = components["schemas"]["SessionContext"];
 export type Overview = components["schemas"]["Overview"];
+export type Configuration = components["schemas"]["modelcairn-config-v1alpha1.schema"];
+export type ConfigurationPlan = components["schemas"]["Plan"];
 
 type APIErrorBody = { error?: { code?: string; message?: string; requestId?: string } | string };
 
@@ -48,4 +50,26 @@ export const api = {
     try { await request<void>("/session", { method: "DELETE" }); } finally { csrfToken = ""; }
   },
   overview() { return request<Overview>("/overview"); },
+  putSecret(name: string, value: string, version?: number) {
+    const headers = version === undefined ? undefined : { "If-Match": `"${version}"` };
+    return request<components["schemas"]["SecretMetadata"]>(`/secrets/${encodeURIComponent(name)}`, { method: "PUT", headers, body: JSON.stringify({ value }) });
+  },
+  getSecret(name: string) { return request<components["schemas"]["SecretMetadata"]>(`/secrets/${encodeURIComponent(name)}`); },
+  async saveSecret(name: string, value: string) {
+    try { return await this.putSecret(name, value); }
+    catch (error) {
+      if (!(error instanceof APIError) || error.code !== "precondition_required") throw error;
+      const metadata = await this.getSecret(name);
+      return this.putSecret(name, value, metadata.resourceVersion);
+    }
+  },
+  planConfiguration(configuration: Configuration) {
+    return request<ConfigurationPlan>("/config/plan", { method: "POST", body: JSON.stringify(configuration) });
+  },
+  applyConfiguration(configuration: Configuration, planToken: string) {
+    return request<components["schemas"]["ApplyResult"]>("/config/apply", { method: "POST", headers: { "X-ModelCairn-Plan-Token": planToken }, body: JSON.stringify(configuration) });
+  },
+  issueAgentToken(name: string) {
+    return request<{ token: string; tokenStatus: components["schemas"]["AgentTokenStatus"] }>(`/agent-tokens/${encodeURIComponent(name)}/issue`, { method: "POST" });
+  },
 };

@@ -36,7 +36,7 @@ remains the sole authority and the UI does not keep a second configuration sourc
    uniform errors; no administrative route is visible while unauthenticated.
 3. **Operational overview (initial implementation):** health/readiness, resource counts, route and
    destination status, recent requests and attempts through bounded DTOs.
-4. **Guided onboarding:** provider → account/connection → secret → model →
+4. **Guided onboarding (initial implementation):** provider → account/connection → secret → model →
    destination → strategy → route → token, with validation before confirmation.
 5. **Daily administration:** resource lists and forms, optimistic ETag updates,
    replace-only secrets, and one-time token display.

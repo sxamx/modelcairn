@@ -1,0 +1,11 @@
+.app-shell aside nav button {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: .75rem .9rem;
+  border-radius: .55rem;
+  color: #4d6057;
+  font-weight: 600;
+  font-size: .9rem;
+  cursor: pointer;
+}

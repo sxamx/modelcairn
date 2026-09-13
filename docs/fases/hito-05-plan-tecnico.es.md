@@ -38,7 +38,7 @@ segunda fuente de configuración.
    errores uniformes; ninguna ruta administrativa visible sin autenticar.
 3. **Resumen operativo (implementación inicial):** salud/readiness, conteos de recursos, estado de rutas y
    destinos, solicitudes e intentos recientes mediante DTOs acotados.
-4. **Onboarding guiado:** flujo proveedor → cuenta/conexión → secreto → modelo →
+4. **Onboarding guiado (implementación inicial):** flujo proveedor → cuenta/conexión → secreto → modelo →
    destino → estrategia → ruta → token, con validación antes de confirmar.
 5. **Administración cotidiana:** listas y formularios de recursos, actualización
    optimista con ETag, secretos solo reemplazables y token visible una vez.
