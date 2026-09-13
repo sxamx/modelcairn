@@ -52,10 +52,23 @@ test("shows a uniform login error", async () => {
 test("renders the content-free operational overview", async () => {
   vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
     if (String(input).endsWith("/session/me")) return response(200, { admin: { id: "id", username: "sam" }, csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z" });
+    if (String(input).endsWith("/readyz")) return response(200, { status: "ready", components: { persistence: { Ready: true, Reason: "" } } });
     return response(200, { resourceCounts: { Route: 2, Destination: 3 }, requests24h: { total: 11, success: 10, error: 1 }, activeCooldowns: 1, recentRequests: [], generatedAt: "2026-09-13T12:00:00Z" });
   });
   render(<App />);
   expect(await screen.findByText("11")).toBeInTheDocument();
   expect(screen.getByText("Cooldowns activos").closest("article")).toHaveTextContent("1");
   expect(screen.getByText("Rutas").closest("article")).toHaveTextContent("2");
+  expect(screen.getByText("Gateway").closest("article")).toHaveTextContent("Listo");
+});
+
+test("explains which local dependency is not ready", async () => {
+  vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+    if (String(input).endsWith("/session/me")) return response(200, { admin: { id: "id", username: "sam" }, csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z" });
+    if (String(input).endsWith("/readyz")) return response(503, { status: "not_ready", components: { persistence: { Ready: false, Reason: "database unavailable" } } });
+    return response(200, { resourceCounts: {}, requests24h: { total: 0, success: 0, error: 0 }, activeCooldowns: 0, recentRequests: [], generatedAt: "2026-09-13T12:00:00Z" });
+  });
+  render(<App />);
+  expect(await screen.findByText("La instalación necesita atención")).toBeInTheDocument();
+  expect(screen.getByText("persistence: database unavailable")).toBeInTheDocument();
 });

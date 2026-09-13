@@ -12,6 +12,10 @@ export type SettingsSpec = components["schemas"]["spec"] & { publicOrigin: strin
 export type SettingsDocument = components["schemas"]["document"] & { resourceVersion: number; spec: SettingsSpec };
 export type SettingsState = { desired: SettingsDocument; effective: SettingsDocument; restartRequired: boolean };
 export type SettingsPlan = Omit<components["schemas"]["AdminSettingsPlan"], "desired"> & { desired: SettingsDocument };
+export type Readiness = {
+  status: "ready" | "not_ready";
+  components: Record<string, { Ready: boolean; Reason: string }>;
+};
 
 type APIErrorBody = { error?: { code?: string; message?: string; requestId?: string } | string };
 
@@ -45,6 +49,12 @@ function rememberSession(session: SessionContext): SessionContext {
 }
 
 export const api = {
+  async readiness(): Promise<Readiness> {
+    const response = await fetch("/readyz", { headers: { Accept: "application/json" }, credentials: "same-origin" });
+    const body = await response.json() as Readiness;
+    if (body.status !== "ready" && body.status !== "not_ready") throw new APIError(response.status, "invalid_readiness");
+    return body;
+  },
   async login(username: string, password: string) {
     return rememberSession(await request<SessionContext>("/session", {
       method: "POST",

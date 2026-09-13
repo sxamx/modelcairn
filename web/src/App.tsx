@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { api, APIError, Overview, SessionContext } from "./api/client";
+import { api, APIError, Overview, Readiness, SessionContext } from "./api/client";
 import Onboarding from "./Onboarding";
 import Resources from "./Resources";
 import Secrets from "./Secrets";
@@ -46,20 +46,30 @@ function Login({ onAuthenticated, online }: { onAuthenticated: (session: Session
 
 function Console({ session, online, onLogout }: { session: SessionContext; online: boolean; onLogout: () => void }) {
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [onboarding, setOnboarding] = useState(false);
   const [page, setPage] = useState<"overview" | "resources" | "secrets" | "tokens" | "activity" | "settings">("overview");
-  const load = useCallback(() => { setUnavailable(false); api.overview().then(setOverview).catch(() => setUnavailable(true)); }, []);
+  const load = useCallback(() => {
+    setUnavailable(false);
+    api.overview().then(setOverview).catch(() => setUnavailable(true));
+    api.readiness().then(setReadiness).catch(() => setReadiness(null));
+  }, []);
   useEffect(load, [load]);
   const routes = overview?.resourceCounts.Route ?? 0;
   return <div className="app-shell">
     <header><Brand/><div className="header-actions"><span className="signal"><span className={online ? "dot online" : "dot"}/>{online ? "En línea" : "Sin conexión"}</span><button className="text-button" onClick={onLogout}>Cerrar sesión</button></div></header>
     <aside aria-label="Navegación principal"><nav><button className={page==="overview"?"active":""} onClick={() => setPage("overview")}>Resumen</button><button onClick={() => setOnboarding(true)}>Crear primera ruta</button><button className={page==="resources"?"active":""} onClick={() => setPage("resources")}>Recursos</button><button className={page==="secrets"?"active":""} onClick={() => setPage("secrets")}>Secretos</button><button className={page==="tokens"?"active":""} onClick={() => setPage("tokens")}>Tokens de agente</button><button className={page==="activity"?"active":""} onClick={() => setPage("activity")}>Actividad</button><button className={page==="settings"?"active":""} onClick={() => setPage("settings")}>Configuración</button></nav><a className="repo-link" href="https://github.com/sxamx/modelcairn" rel="noreferrer">ModelCairn · Código abierto</a></aside>
     <main className="content" id={page}>{page === "resources" ? <Resources/> : page === "secrets" ? <Secrets/> : page === "tokens" ? <AgentTokens/> : page === "activity" ? <Activity/> : page === "settings" ? <Settings/> : <><p className="eyebrow">RESUMEN</p><h1>Hola, {session.admin.username}</h1><p className="lede">Una vista privada del estado y la actividad de esta instalación.</p>{unavailable && <div className="form-error" role="status">El resumen no está disponible. Tus rutas siguen funcionando de forma independiente.</div>}
-      <section className="metric-grid" aria-label="Estado de la instalación"><Metric label="Rutas" value={overview ? routes : "—"}/><Metric label="Destinos" value={overview ? overview.resourceCounts.Destination ?? 0 : "—"}/><Metric label="Solicitudes · 24 h" value={overview ? overview.requests24h.total : "—"}/><Metric label="Cooldowns activos" value={overview ? overview.activeCooldowns : "—"}/></section>
+      <section className="metric-grid" aria-label="Estado de la instalación"><Metric label="Gateway" value={readiness ? (readiness.status === "ready" ? "Listo" : "Requiere atención") : "Sin verificar"} tone={readiness?.status}/><Metric label="Rutas" value={overview ? routes : "—"}/><Metric label="Destinos" value={overview ? overview.resourceCounts.Destination ?? 0 : "—"}/><Metric label="Solicitudes · 24 h" value={overview ? overview.requests24h.total : "—"}/><Metric label="Cooldowns activos" value={overview ? overview.activeCooldowns : "—"}/></section>
+      {readiness?.status === "not_ready" && <ReadinessNotice readiness={readiness}/>} 
       {overview && overview.recentRequests.length > 0 ? <Recent overview={overview}/> : <section className="empty-state"><span className="brand-mark large" aria-hidden="true"><i/><i/><i/></span><div><h2>{routes ? "Aún no hay solicitudes" : "Construyamos tu primera ruta"}</h2><p>{routes ? "La actividad aparecerá aquí cuando un agente use el gateway." : "El asistente te guiará desde el proveedor hasta un token listo para tu agente."}</p></div><button onClick={() => setOnboarding(true)}>{routes ? "Añadir otra ruta" : "Comenzar configuración"}</button></section>}
     </>}</main>{onboarding && <Onboarding onClose={() => setOnboarding(false)} onComplete={load}/>}</div>;
 }
 
 function Recent({ overview }: { overview: Overview }) { return <section className="recent"><div><p className="step">ACTIVIDAD RECIENTE</p><h2>Últimas solicitudes</h2></div><ul>{overview.recentRequests.map((item) => <li key={item.id}><span><strong>{item.requestedAlias}</strong><small>{new Date(item.startedAt).toLocaleString()}</small></span><span className={`outcome ${item.outcome ?? "pending"}`}>{item.outcome ?? "en curso"}</span><span>{item.durationMs == null ? "—" : `${item.durationMs} ms`}</span></li>)}</ul></section>; }
-function Metric({ label, value }: { label: string; value: string | number }) { return <article className="metric"><span>{label}</span><strong>{value}</strong></article>; }
+function Metric({ label, value, tone }: { label: string; value: string | number; tone?: Readiness["status"] }) { return <article className={`metric ${tone ?? ""}`}><span>{label}</span><strong>{value}</strong></article>; }
+function ReadinessNotice({ readiness }: { readiness: Readiness }) {
+  const affected = Object.entries(readiness.components).filter(([, state]) => !state.Ready);
+  return <section className="readiness-notice" role="status"><strong>La instalación necesita atención</strong><ul>{affected.map(([name, state]) => <li key={name}>{name}: {state.Reason || "no disponible"}</li>)}</ul></section>;
+}
