@@ -74,6 +74,8 @@ export const api = {
   issueAgentToken(name: string) {
     return request<{ token: string; tokenStatus: components["schemas"]["AgentTokenStatus"] }>(`/agent-tokens/${encodeURIComponent(name)}/issue`, { method: "POST" });
   },
+  agentTokenStatus(name: string) { return request<{ tokenStatus: components["schemas"]["AgentTokenStatus"] }>(`/agent-tokens/${encodeURIComponent(name)}/status`); },
+  revokeAgentToken(name: string) { return request<void>(`/agent-tokens/${encodeURIComponent(name)}/revoke`, { method: "POST" }); },
   listResources(kind: string) { return request<components["schemas"]["ResourcePage"]>(`/resources/${encodeURIComponent(kind)}?limit=200`); },
   deleteResource(kind: string, name: string, version: number) { return request<void>(`/resources/${encodeURIComponent(kind)}/${encodeURIComponent(name)}`, { method: "DELETE", headers: { "If-Match": `"${version}"` } }); },
   listSecrets() { return request<{ items: SecretMetadata[]; nextCursor?: string | null }>("/secrets?limit=200"); },

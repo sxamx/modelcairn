@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import Resources from "./Resources";
 import Secrets from "./Secrets";
+import AgentTokens from "./AgentTokens";
 
 const json = (body: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }));
 afterEach(() => vi.restoreAllMocks());
@@ -32,5 +33,19 @@ test("stores a secret value only in the write request and clears the field", asy
   const write = calls.find((call) => call.init?.method === "PUT");
   expect(write?.init?.body).toBe(JSON.stringify({ value: "private-value" }));
   expect(document.body.textContent).not.toContain("private-value");
+  expect(localStorage.length).toBe(0); expect(sessionStorage.length).toBe(0);
+});
+
+test("issues an agent token through one-time delivery without browser persistence", async () => {
+  vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+    const url = String(input);
+    if (url.includes("/resources/agent-tokens")) return json({ items: [{ kind: "AgentToken", state: "present", metadata: { name: "my-agent", resourceVersion: 1 }, spec: { allowedRouteRefs: [{ name: "route" }], expiresAt: null, enabled: true } }] });
+    if (url.endsWith("/status")) return json({ tokenStatus: { state: "unissued" } });
+    if (url.endsWith("/issue") && init?.method === "POST") return json({ token: "mc_at_v1_one-time-value", tokenStatus: { state: "active", prefix: "mc_at_v1_one-time" } }, 201);
+    throw new Error(`unexpected request ${url}`);
+  });
+  render(<AgentTokens />);
+  fireEvent.click(await screen.findByRole("button", { name: "Emitir token" }));
+  expect(await screen.findByText("mc_at_v1_one-time-value")).toBeInTheDocument();
   expect(localStorage.length).toBe(0); expect(sessionStorage.length).toBe(0);
 });
