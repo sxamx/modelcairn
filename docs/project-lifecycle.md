@@ -129,3 +129,4 @@ Includes incorporating the license chosen in Stage C, completing the contributio
 | 2026-09-06 | Milestone 2 prepared | Persistence, configuration, secret-store contracts, delivery order, and independent QA |
 | 2026-09-08 | First three Milestone 2 items accepted | Persistence, repositories, and encrypted secrets; CI and representative measurement without swap |
 | 2026-09-09 | Milestone 2 completed | Six accepted items; transactional CLI, CI, grouped QA, and representative gate without swap |
+| 2026-09-13 | Milestone 4 completed | Normal and SSE vertical router, bounded fallback, metrics, CI, grouped QA, and 760-stream VM benchmark without swap |

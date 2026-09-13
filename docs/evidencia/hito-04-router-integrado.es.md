@@ -2,7 +2,7 @@
 
 [English](hito-04-router-integrado.md)
 
-- Estado: Bloques 1–7 y benchmark VM verificados; CI final y fusión pendientes.
+- Estado: aceptada; bloques 1–7, CI, QA agrupado, benchmark VM y fusión completos.
 - Fecha: 12 de septiembre de 2026.
 - Superficie: `POST /v1/chat/completions`, normal y streaming SSE.
 

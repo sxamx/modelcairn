@@ -2,7 +2,8 @@
 
 [English](hito-04-plan-tecnico.md)
 
-Estado: bloques 1–7 implementados y evidencia VM aprobada; CI final y fusión pendientes.
+Estado: completado y aceptado el 13 de septiembre de 2026; CI, QA agrupado,
+benchmark representativo en VM y fusión aprobados.
 Prerrequisito: Hito 3 fusionado y aceptado.
 
 Orden aprobado por el operador: demostrar primero el router con salida directa y

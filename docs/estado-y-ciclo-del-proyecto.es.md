@@ -149,3 +149,4 @@ Incluye incorporar la licencia elegida en la Etapa C, completar la guía de cont
 | 2026-09-06 | Hito 2 preparado | Contratos de persistencia, configuración y secretos, orden de entrega y QA independiente |
 | 2026-09-08 | Primeros tres puntos del Hito 2 aceptados | Persistencia, repositorios y secretos cifrados; CI y medición representativa sin swap |
 | 2026-09-09 | Hito 2 completado | Seis puntos aceptados; CLI transaccional, CI, QA agrupado y compuerta representativa sin swap |
+| 2026-09-13 | Hito 4 completado | Router vertical normal y SSE, fallback acotado, métricas, CI, QA agrupado y benchmark VM de 760 streams sin swap |
