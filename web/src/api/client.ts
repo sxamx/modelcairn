@@ -6,6 +6,8 @@ export type Configuration = components["schemas"]["modelcairn-config-v1alpha1.sc
 export type ConfigurationPlan = components["schemas"]["Plan"];
 export type Resource = components["schemas"]["Resource"];
 export type SecretMetadata = components["schemas"]["SecretMetadata"];
+export type OperationalRequest = components["schemas"]["OperationalRequest"];
+export type OperationalAttempt = components["schemas"]["OperationalAttempt"];
 
 type APIErrorBody = { error?: { code?: string; message?: string; requestId?: string } | string };
 
@@ -80,4 +82,10 @@ export const api = {
   deleteResource(kind: string, name: string, version: number) { return request<void>(`/resources/${encodeURIComponent(kind)}/${encodeURIComponent(name)}`, { method: "DELETE", headers: { "If-Match": `"${version}"` } }); },
   listSecrets() { return request<{ items: SecretMetadata[]; nextCursor?: string | null }>("/secrets?limit=200"); },
   deleteSecret(name: string, version: number) { return request<void>(`/secrets/${encodeURIComponent(name)}`, { method: "DELETE", headers: { "If-Match": `"${version}"` } }); },
+  listRequests(filters: { outcome?: string; alias?: string; from?: string; to?: string; cursor?: string }) {
+    const query = new URLSearchParams({ limit: "50" });
+    for (const [key,value] of Object.entries(filters)) if (value) query.set(key,value);
+    return request<components["schemas"]["OperationalRequestPage"]>(`/requests?${query}`);
+  },
+  listAttempts(id: string) { return request<{ items: OperationalAttempt[] }>(`/requests/${encodeURIComponent(id)}/attempts`); },
 };

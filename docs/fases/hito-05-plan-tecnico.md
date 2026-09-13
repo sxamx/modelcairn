@@ -40,7 +40,7 @@ remains the sole authority and the UI does not keep a second configuration sourc
    destination → strategy → route → token, with validation before confirmation.
 5. **Daily administration (initial implementation):** resource lists and forms, optimistic ETag updates,
    replace-only secrets, and one-time token display.
-6. **Diagnostics and history:** filters and pagination for requests, attempts and
+6. **Diagnostics and history (implemented):** filters and pagination for requests, attempts and
    errors; latency, TTFT, tokens, and fallback without content.
 7. **Closeout:** frontend and contract tests, automated accessibility, reproducible
    build, bundle/RAM budget, mobile/PWA exercise, and grouped QA.

@@ -54,6 +54,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Content-free operational history ordered by start time and immutable request id. */
+        get: operations["listOperationalRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOperationalAttempts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/settings": {
         parameters: {
             query?: never;
@@ -384,6 +417,41 @@ export interface components {
             }[];
             /** Format: date-time */
             generatedAt: string;
+        };
+        OperationalRequestPage: {
+            items: components["schemas"]["OperationalRequest"][];
+            nextCursor?: string | null;
+        };
+        OperationalRequest: {
+            id: string;
+            requestedAlias: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt?: string | null;
+            /** @enum {string|null} */
+            outcome?: "success" | "error" | "partial" | "cancelled" | "indeterminate" | null;
+            httpStatus?: number | null;
+            inputTokens?: number | null;
+            outputTokens?: number | null;
+            ttftMillis?: number | null;
+            durationMillis?: number | null;
+            attempts: number;
+        };
+        OperationalAttempt: {
+            sequence: number;
+            destinationID?: string | null;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt?: string | null;
+            /** @enum {string} */
+            outcome: "success" | "error" | "partial" | "cancelled" | "indeterminate";
+            errorClass?: string | null;
+            providerStatus?: number | null;
+            providerRequestID?: string | null;
+            retryable: boolean;
+            fallbackReason?: string | null;
         };
         Resource: components["schemas"]["resource"];
         ResourcePage: {
@@ -1025,6 +1093,62 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Overview"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    listOperationalRequests: {
+        parameters: {
+            query?: {
+                outcome?: "success" | "error" | "partial" | "cancelled" | "indeterminate";
+                alias?: string;
+                from?: string;
+                to?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationalRequestPage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    listOperationalAttempts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description At most 32 attempts ordered by sequence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["OperationalAttempt"][];
+                    };
                 };
             };
             401: components["responses"]["Error"];

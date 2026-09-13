@@ -42,7 +42,7 @@ segunda fuente de configuración.
    destino → estrategia → ruta → token, con validación antes de confirmar.
 5. **Administración cotidiana (implementación inicial):** listas y formularios de recursos, actualización
    optimista con ETag, secretos solo reemplazables y token visible una vez.
-6. **Diagnóstico e histórico:** filtros y paginación de solicitudes, intentos y
+6. **Diagnóstico e histórico (implementado):** filtros y paginación de solicitudes, intentos y
    errores; latencia, TTFT, tokens y fallback sin contenido.
 7. **Cierre:** pruebas de frontend y contrato, accesibilidad automatizada, build
    reproducible, presupuesto de bundle/RAM, prueba móvil/PWA y QA agrupado.
