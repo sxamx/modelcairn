@@ -38,7 +38,7 @@ remains the sole authority and the UI does not keep a second configuration sourc
    destination status, recent requests and attempts through bounded DTOs.
 4. **Guided onboarding (initial implementation):** provider → account/connection → secret → model →
    destination → strategy → route → token, with validation before confirmation.
-5. **Daily administration (initial implementation):** resource lists and forms, optimistic ETag updates,
+5. **Daily administration (advanced implementation):** resource lists and forms, optimistic ETag updates,
    replace-only secrets, and one-time token display.
 6. **Diagnostics and history (implemented):** filters and pagination for requests, attempts and
    errors; latency, TTFT, tokens, and fallback without content.

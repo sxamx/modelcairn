@@ -8,6 +8,10 @@ export type Resource = components["schemas"]["Resource"];
 export type SecretMetadata = components["schemas"]["SecretMetadata"];
 export type OperationalRequest = components["schemas"]["OperationalRequest"];
 export type OperationalAttempt = components["schemas"]["OperationalAttempt"];
+export type SettingsSpec = components["schemas"]["spec"] & { publicOrigin: string };
+export type SettingsDocument = components["schemas"]["document"] & { resourceVersion: number; spec: SettingsSpec };
+export type SettingsState = { desired: SettingsDocument; effective: SettingsDocument; restartRequired: boolean };
+export type SettingsPlan = Omit<components["schemas"]["AdminSettingsPlan"], "desired"> & { desired: SettingsDocument };
 
 type APIErrorBody = { error?: { code?: string; message?: string; requestId?: string } | string };
 
@@ -88,4 +92,7 @@ export const api = {
     return request<components["schemas"]["OperationalRequestPage"]>(`/requests?${query}`);
   },
   listAttempts(id: string) { return request<{ items: OperationalAttempt[] }>(`/requests/${encodeURIComponent(id)}/attempts`); },
+  getSettings() { return request<SettingsState>("/settings"); },
+  planSettings(document: SettingsDocument) { return request<SettingsPlan>("/settings/plan", { method: "POST", body: JSON.stringify(document) }); },
+  applySettings(document: SettingsDocument, planToken: string) { return request<components["schemas"]["AdminSettingsApplyResult"]>("/settings/apply", { method: "POST", headers: { "X-ModelCairn-Plan-Token": planToken }, body: JSON.stringify(document) }); },
 };
