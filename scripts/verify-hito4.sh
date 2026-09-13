@@ -10,6 +10,7 @@ upstream_origin="http://127.0.0.1:${MODELCAIRN_HITO4_UPSTREAM_PORT:-18085}"
 max_rss_kib="${MAX_RSS_KIB:-131072}"
 output_file="${OUTPUT_FILE:-}"
 python_command="${PYTHON_COMMAND:-python3}"
+batches_per_level="${BATCHES_PER_LEVEL:-1}"
 service_pid=""
 upstream_pid=""
 sampler_pid=""
@@ -36,6 +37,8 @@ if ! "$python_command" --version >/dev/null 2>&1; then
 fi
 [[ "$max_rss_kib" =~ ^[1-9][0-9]*$ ]] ||
   { echo "MAX_RSS_KIB must be a positive integer" >&2; exit 2; }
+[[ "$batches_per_level" =~ ^[1-9][0-9]*$ ]] ||
+  { echo "BATCHES_PER_LEVEL must be a positive integer" >&2; exit 2; }
 cd "$repository_root"
 
 if [[ -n "${MODELCAIRN_BINARY:-}" ]]; then
@@ -97,16 +100,18 @@ curl --fail --silent --show-error --config "$work/curl-auth" -H 'Content-Type: a
 printf '%s\n' '{"model":"example-assistant","messages":[{"role":"user","content":"stream-canary"}],"stream":true}' >"$work/stream.json"
 : >"$work/results"
 for concurrency in 1 2 5 10 20; do
-  pids=()
-  for worker in $(seq 1 "$concurrency"); do
-    curl --fail --silent --show-error --config "$work/curl-auth" -H 'Content-Type: application/json' --data-binary "@$work/stream.json" -o "$work/stream-$concurrency-$worker.sse" -w '%{time_total}' "$origin/v1/chat/completions" >"$work/time-$concurrency-$worker" &
-    pids+=("$!")
+  for batch in $(seq 1 "$batches_per_level"); do
+    pids=()
+    for worker in $(seq 1 "$concurrency"); do
+      curl --fail --silent --show-error --config "$work/curl-auth" -H 'Content-Type: application/json' --data-binary "@$work/stream.json" -o "$work/stream-$concurrency-$batch-$worker.sse" -w '%{time_total}' "$origin/v1/chat/completions" >"$work/time-$concurrency-$batch-$worker" &
+      pids+=("$!")
+    done
+    for pid in "${pids[@]}"; do wait "$pid"; done
   done
-  for pid in "${pids[@]}"; do wait "$pid"; done
-  "$python_command" -c 'import glob,sys; root,n=sys.argv[1],int(sys.argv[2]); files=glob.glob(f"{root}/stream-{n}-*.sse"); assert len(files)==n; bodies=[open(path).read() for path in files]; assert all(body.endswith("data: [DONE]\n\n") and "\"model\":\"example-assistant\"" in body and "modelcairn_error" not in body for body in bodies)' "$work" "$concurrency"
+  "$python_command" -c 'import glob,sys; root,n,b=sys.argv[1],int(sys.argv[2]),int(sys.argv[3]); files=glob.glob(f"{root}/stream-{n}-*.sse"); assert len(files)==n*b; bodies=[open(path).read() for path in files]; assert all(body.endswith("data: [DONE]\n\n") and "\"model\":\"example-assistant\"" in body and "modelcairn_error" not in body for body in bodies)' "$work" "$concurrency" "$batches_per_level"
   average="$(awk '{sum += $1} END {printf "%.6f", sum/NR}' "$work"/time-"$concurrency"-*)"
   maximum="$(awk 'BEGIN {max=0} $1>max {max=$1} END {printf "%.6f", max}' "$work"/time-"$concurrency"-*)"
-  printf '%s %s %s\n' "$concurrency" "$average" "$maximum" >>"$work/results"
+  printf '%s %s %s %s\n' "$concurrency" "$((concurrency * batches_per_level))" "$average" "$maximum" >>"$work/results"
 done
 
 kill "$sampler_pid" 2>/dev/null || true
@@ -144,11 +149,12 @@ if [[ -n "$output_file" ]]; then
     echo "- Peak service RSS: $peak_rss KiB"
     echo "- Enforced peak RSS budget: $max_rss_kib KiB"
     echo "- Peak service swap: $peak_swap KiB"
+    echo "- Batches per concurrency level: $batches_per_level"
     echo
     echo "| Concurrent streams | Successful | Average latency (s) | Maximum latency (s) |"
     echo "|---:|---:|---:|---:|"
-    while read -r concurrency average maximum; do
-      echo "| $concurrency | $concurrency | $average | $maximum |"
+    while read -r concurrency successful average maximum; do
+      echo "| $concurrency | $successful | $average | $maximum |"
     done <"$work/results"
   } >"$output_file"
 fi

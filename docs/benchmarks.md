@@ -74,3 +74,5 @@ direct adapter, persistence, and a deterministic local HTTP upstream. It measure
 RSS, swap, and latency at all five levels and rejects persisted content or secrets
 in logs. CI uses it as a smoke gate; closure still requires its redacted report
 from the representative VM.
+For a longer measurement, `BATCHES_PER_LEVEL` repeats complete batches at every
+level without changing its exact concurrency; CI retains the default value of 1.

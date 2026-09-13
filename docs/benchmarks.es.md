@@ -76,3 +76,5 @@ sesión administrativa, configuración publicada, AgentToken, adaptador directo,
 persistencia y un upstream HTTP local determinista. Mide RSS, swap y latencia en
 los cinco niveles, y rechaza contenido persistido o secretos en logs. CI la usa
 como humo; el cierre aún exige su informe redactado en la VM representativa.
+Para una medición prolongada, `BATCHES_PER_LEVEL` repite lotes completos en cada
+nivel sin modificar la concurrencia exacta; CI conserva el valor predeterminado 1.
