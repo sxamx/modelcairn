@@ -1,6 +1,7 @@
 import type { components } from "./schema";
 
 export type SessionContext = components["schemas"]["SessionContext"];
+export type Overview = components["schemas"]["Overview"];
 
 type APIErrorBody = { error?: { code?: string; message?: string; requestId?: string } | string };
 
@@ -46,4 +47,5 @@ export const api = {
   async logout() {
     try { await request<void>("/session", { method: "DELETE" }); } finally { csrfToken = ""; }
   },
+  overview() { return request<Overview>("/overview"); },
 };

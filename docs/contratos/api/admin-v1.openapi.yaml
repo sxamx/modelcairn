@@ -58,6 +58,16 @@ paths:
           content: { application/json: { schema: { $ref: '#/components/schemas/SessionContext' } } }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
+  /overview:
+    get:
+      operationId: getOverview
+      description: Bounded content-free operational summary for the console landing page.
+      responses:
+        '200':
+          description: Resource totals, last-24-hour outcomes, active cooldown count, and at most five recent requests.
+          content: { application/json: { schema: { $ref: '#/components/schemas/Overview' } } }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
   /settings:
     get:
       operationId: getAdminSettings
@@ -439,6 +449,40 @@ components:
         admin: { $ref: '#/components/schemas/Admin' }
         csrfToken: { type: string, description: Kept in SPA memory and sent as X-CSRF-Token }
         expiresAt: { type: string, format: date-time }
+    Overview:
+      type: object
+      additionalProperties: false
+      required: [resourceCounts, requests24h, activeCooldowns, recentRequests, generatedAt]
+      properties:
+        resourceCounts:
+          type: object
+          additionalProperties: { type: integer, minimum: 0 }
+        requests24h:
+          type: object
+          additionalProperties: false
+          required: [total, success, error]
+          properties:
+            total: { type: integer, minimum: 0 }
+            success: { type: integer, minimum: 0 }
+            error: { type: integer, minimum: 0 }
+        activeCooldowns: { type: integer, minimum: 0 }
+        recentRequests:
+          type: array
+          maxItems: 5
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, requestedAlias, startedAt, attempts]
+            properties:
+              id: { type: string, format: uuid }
+              requestedAlias: { type: string }
+              startedAt: { type: string, format: date-time }
+              completedAt: { type: [string, 'null'], format: date-time }
+              outcome: { type: [string, 'null'], enum: [success, error, partial, cancelled, indeterminate, null] }
+              httpStatus: { type: [integer, 'null'], minimum: 100, maximum: 599 }
+              durationMs: { type: [integer, 'null'], minimum: 0 }
+              attempts: { type: integer, minimum: 0 }
+        generatedAt: { type: string, format: date-time }
     Resource:
       $ref: '../config/modelcairn-config-v1alpha1.schema.json#/$defs/resource'
     ResourcePage:

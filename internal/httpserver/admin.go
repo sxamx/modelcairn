@@ -63,6 +63,7 @@ func (a *adminAPI) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/admin/session", a.createSession)
 	mux.HandleFunc("DELETE /api/v1/admin/session", a.deleteSession)
 	mux.HandleFunc("GET /api/v1/admin/session/me", a.currentSession)
+	mux.HandleFunc("GET /api/v1/admin/overview", a.getOverview)
 	mux.HandleFunc("GET /api/v1/admin/settings", a.getSettings)
 	mux.HandleFunc("POST /api/v1/admin/settings/plan", a.planSettings)
 	mux.HandleFunc("POST /api/v1/admin/settings/apply", a.applySettings)

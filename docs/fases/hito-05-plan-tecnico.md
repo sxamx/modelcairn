@@ -34,7 +34,7 @@ remains the sole authority and the UI does not keep a second configuration sourc
    minimal service worker.
 2. **Access and session (initial implementation):** login, session recovery, logout, loading states, and
    uniform errors; no administrative route is visible while unauthenticated.
-3. **Operational overview:** health/readiness, resource counts, route and
+3. **Operational overview (initial implementation):** health/readiness, resource counts, route and
    destination status, recent requests and attempts through bounded DTOs.
 4. **Guided onboarding:** provider → account/connection → secret → model →
    destination → strategy → route → token, with validation before confirmation.

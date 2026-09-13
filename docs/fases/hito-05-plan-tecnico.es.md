@@ -36,7 +36,7 @@ segunda fuente de configuración.
    manifest y service worker mínimo.
 2. **Acceso y sesión (implementación inicial):** login, recuperación de sesión, logout, estados de carga y
    errores uniformes; ninguna ruta administrativa visible sin autenticar.
-3. **Resumen operativo:** salud/readiness, conteos de recursos, estado de rutas y
+3. **Resumen operativo (implementación inicial):** salud/readiness, conteos de recursos, estado de rutas y
    destinos, solicitudes e intentos recientes mediante DTOs acotados.
 4. **Onboarding guiado:** flujo proveedor → cuenta/conexión → secreto → modelo →
    destino → estrategia → ruta → token, con validación antes de confirmar.

@@ -32,7 +32,7 @@ test("signs in without persisting the password", async () => {
   fireEvent.change(await screen.findByLabelText("Usuario"), { target: { value: "sam" } });
   fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "correct horse" } });
   fireEvent.click(screen.getByRole("button", { name: "Entrar a ModelCairn" }));
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/api/v1/admin/session")).toBe(true));
   expect(await screen.findByRole("heading", { name: "Hola, sam" })).toBeInTheDocument();
   expect(localStorage.length).toBe(0);
   expect(sessionStorage.length).toBe(0);
@@ -47,4 +47,15 @@ test("shows a uniform login error", async () => {
   fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "wrong" } });
   fireEvent.click(screen.getByRole("button", { name: "Entrar a ModelCairn" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("El usuario o la contraseña no son correctos.");
+});
+
+test("renders the content-free operational overview", async () => {
+  vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+    if (String(input).endsWith("/session/me")) return response(200, { admin: { id: "id", username: "sam" }, csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z" });
+    return response(200, { resourceCounts: { Route: 2, Destination: 3 }, requests24h: { total: 11, success: 10, error: 1 }, activeCooldowns: 1, recentRequests: [], generatedAt: "2026-09-13T12:00:00Z" });
+  });
+  render(<App />);
+  expect(await screen.findByText("11")).toBeInTheDocument();
+  expect(screen.getByText("Cooldowns activos").closest("article")).toHaveTextContent("1");
+  expect(screen.getByText("Rutas").closest("article")).toHaveTextContent("2");
 });

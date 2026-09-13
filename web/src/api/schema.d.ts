@@ -37,6 +37,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Bounded content-free operational summary for the console landing page. */
+        get: operations["getOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/settings": {
         parameters: {
             query?: never;
@@ -340,6 +357,33 @@ export interface components {
             csrfToken: string;
             /** Format: date-time */
             expiresAt: string;
+        };
+        Overview: {
+            resourceCounts: {
+                [key: string]: number;
+            };
+            requests24h: {
+                total: number;
+                success: number;
+                error: number;
+            };
+            activeCooldowns: number;
+            recentRequests: {
+                /** Format: uuid */
+                id: string;
+                requestedAlias: string;
+                /** Format: date-time */
+                startedAt: string;
+                /** Format: date-time */
+                completedAt?: string | null;
+                /** @enum {string|null} */
+                outcome?: "success" | "error" | "partial" | "cancelled" | "indeterminate" | null;
+                httpStatus?: number | null;
+                durationMs?: number | null;
+                attempts: number;
+            }[];
+            /** Format: date-time */
+            generatedAt: string;
         };
         Resource: components["schemas"]["resource"];
         ResourcePage: {
@@ -959,6 +1003,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionContext"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    getOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resource totals, last-24-hour outcomes, active cooldown count, and at most five recent requests. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Overview"];
                 };
             };
             401: components["responses"]["Error"];
