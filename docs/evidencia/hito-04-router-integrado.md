@@ -2,7 +2,7 @@
 
 [Español](hito-04-router-integrado.es.md)
 
-- Status: Blocks 1–7 and VM benchmark verified; final CI and merge pending.
+- Status: accepted; Blocks 1–7, CI, grouped QA, VM benchmark, and merge complete.
 - Date: September 12, 2026.
 - Surface: `POST /v1/chat/completions`, normal and SSE streaming.
 

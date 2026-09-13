@@ -2,7 +2,8 @@
 
 [Español](hito-04-plan-tecnico.es.md)
 
-Status: Blocks 1–7 implemented and VM evidence approved; final CI and merge pending.
+Status: completed and accepted on September 13, 2026; CI, grouped QA,
+representative VM benchmark, and merge approved.
 Prerequisite: Milestone 3 merged and accepted.
 
 Implementation order approved by the operator: prove the router over direct
