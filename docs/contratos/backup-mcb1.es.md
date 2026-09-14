@@ -20,6 +20,10 @@ El lector acepta exclusivamente:
 - work factor dentro del rango admitido por la versión fijada y la política local;
 - payload autenticado por el formato age.
 
+ModelCairn v1 crea archivos con `logN=16` y acepta solamente valores entre 15 y
+18. Este rango limita el trabajo y la memoria impuestos por un archivo no confiable;
+cambiarlo requiere benchmark y una revisión compatible del perfil.
+
 No existe un checksum circular ni parámetros criptográficos definidos por un
 header propio. La biblioteca age limita e interpreta su KDF; ModelCairn rechazará
 el archivo antes de crear una generación si el header, recipient o tamaño físico
@@ -41,6 +45,17 @@ negativos, overflow y bytes posteriores no declarados. Se calcula SHA-256 de cad
 entrada mientras se escribe y se compara con `checksums.json` después de que age
 haya autenticado el stream completo.
 
+`checksums.json` declara `algorithm: SHA-256` y los hashes hexadecimales de
+`manifest.json`, `database.sqlite` y `secrets.jsonl`. No incluye su propio hash,
+porque hacerlo produciría una referencia circular. El manifiesto sí enumera las
+cuatro entradas, en ese orden, con sus tamaños exactos.
+
+Cada línea de `secrets.jsonl` es un objeto JSON estricto con `id`, `name`,
+`resourceVersion`, `createdAt`, `updatedAt` y `value`. JSON representa `value` como
+base64. ID, nombre, versión y fechas deben coincidir con la fila de la instantánea;
+así se conservan las referencias de credenciales. El valor admite de 1 a 16.384
+bytes en MCB1 v1.
+
 Los secretos se descifran uno a uno durante creación y entran directamente al
 writer age; nunca se escriben en un temporal plaintext. Durante restore se leen uno
 a uno desde age y se recifran directamente con la nueva clave maestra.
@@ -54,10 +69,20 @@ a uno desde age y se recifran directamente con la nueva clave maestra.
    filesystem.
 5. Realizar una lectura de verificación antes de informar éxito.
 
+El destino no puede existir. El archivo cifrado se crea con permiso `0600` en un
+temporal del mismo directorio y se publica mediante rename; un fallo no reemplaza
+un backup anterior.
+
 ## Restauración generacional
 
 Los datos activos viven en `data/generations/<id>/` con `database.sqlite` y
 `master.key`; `data/current` apunta a una generación completa.
+
+La implementación materializa la clave como `keys/v1.key` dentro de la generación.
+Una instalación anterior sin `current` conserva su layout plano hasta que el
+operador ejecuta explícitamente un restore. La primera generación registra
+`legacy` como predecesora; las siguientes registran el ID anterior. Un rollback
+cambia solamente `current` y no elimina datos.
 
 La restauración descifra hacia una generación privada nueva, genera otra clave
 maestra, migra la base y recifra secretos. Después de autenticar hasta EOF,

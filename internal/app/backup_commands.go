@@ -20,7 +20,7 @@ const maxBackupPassphraseInput = 1024
 
 func runBackup(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "backup requires create, verify, or restore")
+		fmt.Fprintln(stderr, "backup requires create, verify, restore, or rollback")
 		return 2
 	}
 	switch args[0] {
@@ -30,10 +30,28 @@ func runBackup(ctx context.Context, args []string, stdin io.Reader, stdout, stde
 		return runBackupVerify(ctx, args[1:], stdin, stdout, stderr, interactive)
 	case "restore":
 		return runBackupRestore(ctx, args[1:], stdin, stdout, stderr, interactive)
+	case "rollback":
+		return runBackupRollback(args[1:], stdout, stderr)
 	default:
 		fmt.Fprintln(stderr, "unknown backup command")
 		return 2
 	}
+}
+
+func runBackupRollback(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("backup rollback", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	dataDir := flags.String("data-dir", defaultDataDirectory(), "private ModelCairn data directory")
+	if flags.Parse(args) != nil || flags.NArg() != 0 {
+		fmt.Fprintln(stderr, "usage: modelcairn backup rollback [--data-dir path]")
+		return 2
+	}
+	from, to, err := storage.RollbackGeneration(*dataDir)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	fmt.Fprintf(stdout, "generation rolled back: from=%s to=%s; restart ModelCairn and verify readiness\n", from, to)
+	return 0
 }
 
 func runBackupRestore(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {

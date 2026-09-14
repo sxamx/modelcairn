@@ -44,6 +44,7 @@
 - [MCB1 backup format](contratos/backup-mcb1.md)
 - [Linux installation contract](contratos/instalacion-linux-v1.md)
 - [Local, private network, and Tailscale access](operacion/acceso-red-v1.md)
+- [MCB1 backup and recovery](operacion/backup-recovery-v1.md)
 - [Requirements traceability](fases/fase-01-trazabilidad.md)
 - [Risks and quality gates](fases/fase-01-riesgos-y-puertas.md)
 

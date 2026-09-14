@@ -212,6 +212,13 @@ func (r *GenerationRestore) Activate() error {
 	if !r.sealed || r.activated {
 		return fmt.Errorf("restore generation is not ready for activation")
 	}
+	previous, err := activeGenerationName(r.root)
+	if err != nil {
+		return err
+	}
+	if err := writePreviousGeneration(r.dir, previous); err != nil {
+		return err
+	}
 	if err := activateGeneration(r.root, r.name); err != nil {
 		return err
 	}
@@ -252,3 +259,97 @@ func (r *GenerationRestore) Abort() error {
 }
 
 func (r *GenerationRestore) Generation() string { return r.name }
+
+func activeGenerationName(root string) (string, error) {
+	state, err := resolveStateDirectory(root)
+	if err != nil {
+		return "", err
+	}
+	if filepath.Clean(state) == filepath.Clean(root) {
+		return "legacy", nil
+	}
+	name := filepath.Base(state)
+	if !generationNamePattern.MatchString(name) {
+		return "", fmt.Errorf("active generation name is invalid")
+	}
+	return name, nil
+}
+
+func writePreviousGeneration(generationDir, previous string) error {
+	if previous != "legacy" && !generationNamePattern.MatchString(previous) {
+		return fmt.Errorf("previous generation name is invalid")
+	}
+	path := filepath.Join(generationDir, ".previous")
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return fmt.Errorf("create rollback marker: %w", err)
+	}
+	_, writeErr := io.WriteString(file, previous+"\n")
+	if writeErr == nil {
+		writeErr = file.Sync()
+	}
+	closeErr := file.Close()
+	if writeErr == nil {
+		writeErr = closeErr
+	}
+	if writeErr != nil {
+		_ = os.Remove(path)
+		return fmt.Errorf("write rollback marker: %w", writeErr)
+	}
+	if err := syncDirectory(generationDir); err != nil {
+		return fmt.Errorf("sync rollback marker: %w", err)
+	}
+	return nil
+}
+
+// RollbackGeneration atomically selects the predecessor recorded by the active
+// generation. Neither the active nor predecessor data is deleted.
+func RollbackGeneration(dataDir string) (string, string, error) {
+	lock, err := AcquireLock(dataDir)
+	if err != nil {
+		return "", "", err
+	}
+	defer lock.Close()
+	state, err := resolveStateDirectory(dataDir)
+	if err != nil {
+		return "", "", err
+	}
+	if filepath.Clean(state) == filepath.Clean(dataDir) {
+		return "", "", fmt.Errorf("legacy layout has no recorded predecessor")
+	}
+	active := filepath.Base(state)
+	file, err := os.Open(filepath.Join(state, ".previous"))
+	if err != nil {
+		return "", "", fmt.Errorf("open rollback marker: %w", err)
+	}
+	raw, readErr := io.ReadAll(io.LimitReader(file, 65))
+	closeErr := file.Close()
+	if readErr == nil {
+		readErr = closeErr
+	}
+	if readErr != nil || len(raw) > 64 {
+		return "", "", fmt.Errorf("read rollback marker")
+	}
+	previous := string(raw)
+	if len(previous) == 0 || previous[len(previous)-1] != '\n' {
+		return "", "", fmt.Errorf("invalid rollback marker")
+	}
+	previous = previous[:len(previous)-1]
+	if previous == "legacy" {
+		if err := deactivateGeneration(dataDir); err != nil {
+			return "", "", err
+		}
+	} else {
+		if !generationNamePattern.MatchString(previous) {
+			return "", "", fmt.Errorf("invalid rollback target")
+		}
+		info, err := os.Lstat(filepath.Join(dataDir, "generations", previous))
+		if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			return "", "", fmt.Errorf("rollback target is unavailable")
+		}
+		if err := activateGeneration(dataDir, previous); err != nil {
+			return "", "", err
+		}
+	}
+	return active, previous, nil
+}
