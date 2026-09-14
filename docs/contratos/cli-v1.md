@@ -50,6 +50,25 @@ resource version, key version, and timestamps. Delete requires an exact version
 and fails while a Credential references the secret. Rotate never prints key
 material.
 
+## Backup and recovery workflow
+
+```text
+modelcairn backup create --out file.mcb.age [--data-dir path]
+modelcairn backup verify file.mcb.age
+modelcairn backup restore [--data-dir path] file.mcb.age
+modelcairn backup rollback [--data-dir path]
+```
+
+Create, restore, and rollback require exclusive offline ownership; verify does not
+open the installation. The passphrase is read without echo from a terminal or from
+bounded stdin, never from arguments or environment variables. Create confirms it,
+refuses an existing destination, and verifies the file before reporting success.
+
+Restore completes preflight before creating a generation, validates the archive
+again while re-encrypting secrets, and activates only a sealed generation. Rollback
+selects the recorded predecessor without deleting data. The
+[MCB1 contract](backup-mcb1.md) defines the details.
+
 ## Stable exit classes
 
 | Code | Meaning |
