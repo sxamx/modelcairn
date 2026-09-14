@@ -79,13 +79,24 @@ func TestLoadSnapshotPreservesAffinityBudgetsAndEligibility(t *testing.T) {
 }
 
 func TestLoadedSnapshotRemainsImmutableAfterStrategyPublication(t *testing.T) {
-	loader, repository, _, items := seedSnapshotGraph(t)
+	loader, repository, installation, items := seedSnapshotGraph(t)
 	first, err := loader.Load(context.Background(), "assistant", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	updated := json.RawMessage(`{"destinations":[{"name":"destination"}],"maxAttempts":1,"attemptTimeoutMs":500,"totalTimeoutMs":900}`)
 	if _, err := repository.Put(context.Background(), storage.PutResource{Kind: storage.KindStrategy, Name: "strategy", Spec: updated, ExpectedVersion: items[storage.KindStrategy].ResourceVersion}, storage.Actor{Type: "system"}); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := installation.DB().BeginTx(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := storage.PublishStrategyTx(context.Background(), tx, "strategy", items[storage.KindStrategy].ResourceVersion+1, storage.Actor{Type: "system"}); err != nil {
+		_ = tx.Rollback()
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
 	second, err := loader.Load(context.Background(), "assistant", nil)

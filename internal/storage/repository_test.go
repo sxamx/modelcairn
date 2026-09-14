@@ -225,7 +225,7 @@ func TestTypedProjectionsPersistResolvedReferences(t *testing.T) {
 	}
 }
 
-func TestStrategyUpdatesPublishImmutableVersionsAndActivateRoutes(t *testing.T) {
+func TestStrategyDraftRequiresPublicationBeforeActivatingRoutes(t *testing.T) {
 	repository, installation := repositoryForTest(t)
 	items := seedRepositoryGraph(t, repository, installation)
 	var firstID, firstDefinition string
@@ -243,6 +243,24 @@ func TestStrategyUpdatesPublishImmutableVersionsAndActivateRoutes(t *testing.T) 
 	if _, err := repository.Put(context.Background(), PutResource{
 		Kind: KindStrategy, Name: items[KindStrategy].Name, Spec: updatedDefinition, ExpectedVersion: 1,
 	}, testActor); err != nil {
+		t.Fatal(err)
+	}
+	var draftActiveID string
+	if err := installation.DB().QueryRow("SELECT active_strategy_version_id FROM routes WHERE resource_id=?", items[KindRoute].ID).Scan(&draftActiveID); err != nil {
+		t.Fatal(err)
+	}
+	if draftActiveID != firstID {
+		t.Fatal("saving the strategy draft changed active traffic")
+	}
+	tx, err := installation.DB().BeginTx(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PublishStrategyTx(context.Background(), tx, items[KindStrategy].Name, 2, testActor); err != nil {
+		_ = tx.Rollback()
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
 	var activeID, activeDefinition string

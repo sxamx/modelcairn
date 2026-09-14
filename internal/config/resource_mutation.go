@@ -30,6 +30,16 @@ type ResourceMutationResult struct {
 	Noop     bool
 }
 
+func (m *Manager) PublishStrategySession(ctx context.Context, name string, expectedVersion int64, sessionToken, csrfToken string) (storage.Resource, error) {
+	var result storage.Resource
+	err := m.secrets.ExecuteAdminMutation(ctx, sessionToken, csrfToken, func(tx *sql.Tx, actor storage.Actor) error {
+		var err error
+		result, err = storage.PublishStrategyTx(ctx, tx, name, expectedVersion, actor)
+		return err
+	})
+	return result, err
+}
+
 // MutateResourceSession validates an individual mutation against the complete
 // stored graph and persists it with session authorization and audit atomically.
 func (m *Manager) MutateResourceSession(ctx context.Context, input ResourceMutationInput) (ResourceMutationResult, error) {

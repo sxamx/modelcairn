@@ -581,8 +581,10 @@ func upsertTyped(ctx context.Context, tx *sql.Tx, id string, kind ResourceKind, 
 				return err
 			}
 		}
-		_, err := publishStrategyTx(ctx, tx, id, raw, now)
-		return err
+		// The canonical resource is the mutable draft. Publication is an
+		// explicit operation, except for the first route that makes a new
+		// strategy usable (see KindRoute below).
+		return nil
 	case KindRoute:
 		var s routeSpec
 		if err := decodeSpec(raw, &s); err != nil {
@@ -595,9 +597,17 @@ func upsertTyped(ctx context.Context, tx *sql.Tx, id string, kind ResourceKind, 
 		var versionID string
 		if err = tx.QueryRowContext(ctx, "SELECT id FROM strategy_versions WHERE strategy_id=? ORDER BY version DESC LIMIT 1", strategy).Scan(&versionID); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return &RepositoryError{Code: CodeReferenceMissing}
+				var draftJSON string
+				if readErr := tx.QueryRowContext(ctx, "SELECT spec_json FROM resources WHERE id=?", strategy).Scan(&draftJSON); readErr != nil {
+					return readErr
+				}
+				versionID, err = publishStrategyTx(ctx, tx, strategy, json.RawMessage(draftJSON), now)
+				if err != nil {
+					return err
+				}
+			} else {
+				return err
 			}
-			return err
 		}
 		_, err = tx.ExecContext(ctx, `INSERT INTO routes(resource_id,model_alias,strategy_id,active_strategy_version_id,enabled) VALUES(?,?,?,?,?) ON CONFLICT(resource_id) DO UPDATE SET model_alias=excluded.model_alias,strategy_id=excluded.strategy_id,active_strategy_version_id=excluded.active_strategy_version_id,enabled=excluded.enabled`, id, s.ModelAlias, strategy, versionID, s.Enabled)
 		return mapConstraint(err)

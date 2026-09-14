@@ -32,6 +32,12 @@ uses its corresponding typed table from `schema-v1.sql`. Strategy destination
 references and AgentToken route references are resolved and protected explicitly
 because the physical schema stores those arrays as JSON.
 
+Saving a `Strategy` changes only its draft. Publishing creates or reuses an
+immutable version and atomically moves associated routes. When the first route is
+created for a strategy that has never been published, that initial definition is
+published in the same transaction so the route can never be born without a usable
+version.
+
 AgentToken revocation is irreversible for one resource identity. Changing
 `enabled` from false back to true is rejected as `invalid_resource`; issuing a new
 usable token requires a new identity through the dedicated token operation. The

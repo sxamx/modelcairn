@@ -1,0 +1,13 @@
+import { useEffect, useState } from "react";
+import { api, Resource } from "./api/client";
+
+type TokenRow = { name: string; state: string; prefix?: string };
+
+export default function AgentTokens() {
+  const [rows,setRows]=useState<TokenRow[]>([]); const [loading,setLoading]=useState(true); const [message,setMessage]=useState(""); const [issued,setIssued]=useState<{name:string;token:string}|null>(null);
+  const load=()=>{setLoading(true);setMessage("");api.listResources("agent-tokens").then(async(page)=>Promise.all(page.items.map(async(item:Resource)=>{const name=(item.metadata as {name:string}).name;const status=await api.agentTokenStatus(name);return{name,...status.tokenStatus};}))).then(setRows).catch(()=>setMessage("No pudimos cargar los tokens de agente.")).finally(()=>setLoading(false));};
+  useEffect(load,[]);
+  async function issue(name:string){try{const value=await api.issueAgentToken(name);setIssued({name,token:value.token});load();}catch{setMessage("No se pudo emitir. Si el token sigue activo, revócalo antes de crear otro.");}}
+  async function revoke(name:string){if(!confirm(`¿Revocar inmediatamente el token de ${name}? Los agentes que lo usan dejarán de autenticarse.`))return;try{await api.revokeAgentToken(name);load();}catch{setMessage("No se pudo revocar el token.");}}
+  return <section aria-labelledby="tokens-title"><p className="eyebrow">ACCESO DE AGENTES</p><h1 id="tokens-title">Tokens de agente</h1><p className="lede">Cada token permite utilizar solamente las rutas asociadas a su recurso.</p>{message&&<div className="form-error" role="alert">{message}</div>}{loading?<div className="loading" role="status"><span className="spinner"/>Cargando tokens…</div>:rows.length===0?<div className="list-empty">Crea primero un recurso AgentToken desde el asistente.</div>:<div className="token-list">{rows.map(row=><article key={row.name}><div><h2>{row.name}</h2><p>{row.prefix?`Prefijo ${row.prefix}`:"Nunca emitido"}</p></div><span className={`outcome ${row.state}`}>{row.state}</span>{row.state==="active"?<button className="danger" onClick={()=>revoke(row.name)}>Revocar</button>:<button onClick={()=>issue(row.name)}>Emitir token</button>}</article>)}</div>}{issued&&<div className="dialog-backdrop"><section className="wizard result" role="dialog" aria-modal="true" aria-labelledby="issued-title"><p className="step">ENTREGA ÚNICA</p><h2 id="issued-title">Token para {issued.name}</h2><p>Guárdalo ahora. Al cerrar esta ventana, el servidor no podrá recuperarlo.</p><output>{issued.token}</output><button onClick={()=>navigator.clipboard.writeText(issued.token)}>Copiar token</button><button className="secondary" onClick={()=>setIssued(null)}>Ya lo guardé</button></section></div>}</section>;
+}

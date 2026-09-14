@@ -2,7 +2,7 @@
 
 [English](fase-01-plan-de-implementacion.md)
 
-- Estado: aceptado; Hitos 0 a 3 completados, Hito 4 es el siguiente
+- Estado: aceptado; Hitos 0 a 5 completados, Hito 6 es el siguiente
 - Regla de entrega: cada hito incluye código, pruebas y documentación; no se marca
   completo por una demostración visual
 
@@ -74,6 +74,8 @@ Salida: plano de control seguro cubierto por integración HTTP.
 Salida: primera llamada end-to-end y suite de contrato determinista.
 
 ## Hito 5 — Consola y PWA
+
+Estado: completado. Véase el [plan técnico del Hito 5](hito-05-plan-tecnico.es.md).
 
 - Onboarding desde proveedor hasta ruta publicada.
 - Gestión de recursos y secretos sin posibilidad de revelarlos.

@@ -1,0 +1,15 @@
+{
+  "name": "ModelCairn Console",
+  "short_name": "ModelCairn",
+  "description": "Administra tu gateway de proveedores de IA desde tu propia infraestructura.",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3f0e8",
+  "theme_color": "#101b18",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -33,6 +33,11 @@ configuración usan su tabla tipada de `schema-v1.sql`. Las referencias a destin
 de Strategy y a rutas de AgentToken se resuelven y protegen explícitamente porque
 el schema físico almacena esos arreglos como JSON.
 
+Guardar una `Strategy` modifica solamente su borrador. Publicarla crea o reutiliza
+una versión inmutable y mueve atómicamente las rutas asociadas. Al crear la primera
+ruta de una estrategia todavía inédita, esa definición inicial se publica dentro
+de la misma transacción para que la ruta nunca nazca sin una versión utilizable.
+
 La revocación de un AgentToken es irreversible para una identidad de recurso.
 Cambiar `enabled` de false nuevamente a true se rechaza como `invalid_resource`;
 emitir otro token utilizable exige una identidad nueva mediante la operación

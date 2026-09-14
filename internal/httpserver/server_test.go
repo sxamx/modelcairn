@@ -71,8 +71,24 @@ func TestRequestLogDoesNotRecordRawPath(t *testing.T) {
 	if strings.Contains(output.String(), secret) {
 		t.Fatalf("request log leaked raw path: %s", output.String())
 	}
-	if !strings.Contains(output.String(), `"route":"unmatched"`) {
-		t.Fatalf("request log did not use safe route label: %s", output.String())
+	if !strings.Contains(output.String(), `"route":"GET /"`) {
+		t.Fatalf("request log did not use the safe SPA route label: %s", output.String())
+	}
+}
+
+func TestUnknownAPIIsNeverConsoleHTML(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	testHandler(NewReadinessProbe()).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/unknown", nil))
+	if recorder.Code != http.StatusNotFound || strings.Contains(recorder.Body.String(), "<html") {
+		t.Fatalf("unknown API response = %d %q", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestStrategyPublishRouteIsRegistered(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	adminHandler(t).ServeHTTP(recorder, adminRequest(http.MethodPost, "/api/v1/admin/strategies/demo/publish", nil))
+	if recorder.Code == http.StatusNotFound {
+		t.Fatal("strategy publish route is not registered")
 	}
 }
 

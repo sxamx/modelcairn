@@ -36,7 +36,100 @@ type RequestCompletion struct {
 
 type OperationalRecorder struct{ db *sql.DB }
 
+type OperationalOverview struct {
+	ResourceCounts  map[string]int64
+	RequestsTotal   int64
+	RequestsSuccess int64
+	RequestsError   int64
+	ActiveCooldowns int64
+	RecentRequests  []RecentRequest
+	GeneratedAt     time.Time
+}
+
+type RecentRequest struct {
+	ID, RequestedAlias string
+	StartedAt          time.Time
+	CompletedAt        *time.Time
+	Outcome            *string
+	HTTPStatus         *int
+	DurationMillis     *int64
+	Attempts           int64
+}
+
 func NewOperationalRecorder(db *sql.DB) *OperationalRecorder { return &OperationalRecorder{db: db} }
+
+func ReadOperationalOverview(ctx context.Context, db *sql.DB, now time.Time) (OperationalOverview, error) {
+	result := OperationalOverview{ResourceCounts: map[string]int64{}, RecentRequests: []RecentRequest{}, GeneratedAt: now.UTC()}
+	if db == nil || now.IsZero() {
+		return result, &RepositoryError{Code: CodeInvalidResource}
+	}
+	rows, err := db.QueryContext(ctx, "SELECT kind,count(*) FROM resources GROUP BY kind")
+	if err != nil {
+		return result, fmt.Errorf("count resources: %w", err)
+	}
+	for rows.Next() {
+		var kind string
+		var count int64
+		if err := rows.Scan(&kind, &count); err != nil {
+			rows.Close()
+			return result, fmt.Errorf("scan resource count: %w", err)
+		}
+		result.ResourceCounts[kind] = count
+	}
+	if err := rows.Close(); err != nil {
+		return result, fmt.Errorf("close resource counts: %w", err)
+	}
+	since := now.UTC().Add(-24 * time.Hour).Format(time.RFC3339Nano)
+	if err := db.QueryRowContext(ctx, `SELECT count(*),coalesce(sum(outcome='success'),0),coalesce(sum(outcome='error'),0) FROM requests WHERE started_at>=?`, since).Scan(&result.RequestsTotal, &result.RequestsSuccess, &result.RequestsError); err != nil {
+		return result, fmt.Errorf("summarize requests: %w", err)
+	}
+	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM cooldowns WHERE ends_at>?", now.UTC().Format(time.RFC3339Nano)).Scan(&result.ActiveCooldowns); err != nil {
+		return result, fmt.Errorf("count cooldowns: %w", err)
+	}
+	recent, err := db.QueryContext(ctx, `SELECT r.id,r.requested_alias,r.started_at,r.completed_at,r.outcome,r.http_status,r.duration_ms,count(a.id)
+		FROM requests r LEFT JOIN attempts a ON a.request_id=r.id GROUP BY r.id ORDER BY r.started_at DESC,r.id DESC LIMIT 5`)
+	if err != nil {
+		return result, fmt.Errorf("list recent requests: %w", err)
+	}
+	defer recent.Close()
+	for recent.Next() {
+		var item RecentRequest
+		var started string
+		var completed, outcome sql.NullString
+		var status sql.NullInt64
+		var duration sql.NullInt64
+		if err := recent.Scan(&item.ID, &item.RequestedAlias, &started, &completed, &outcome, &status, &duration, &item.Attempts); err != nil {
+			return result, fmt.Errorf("scan recent request: %w", err)
+		}
+		item.StartedAt, err = time.Parse(time.RFC3339Nano, started)
+		if err != nil {
+			return result, fmt.Errorf("parse request start: %w", err)
+		}
+		if completed.Valid {
+			parsed, parseErr := time.Parse(time.RFC3339Nano, completed.String)
+			if parseErr != nil {
+				return result, fmt.Errorf("parse request completion: %w", parseErr)
+			}
+			item.CompletedAt = &parsed
+		}
+		if outcome.Valid {
+			item.Outcome = &outcome.String
+		}
+		if status.Valid {
+			value := int(status.Int64)
+			item.HTTPStatus = &value
+		}
+		if duration.Valid {
+			value := duration.Int64
+			item.DurationMillis = &value
+		}
+		result.RecentRequests = append(result.RecentRequests, item)
+	}
+	if err := recent.Err(); err != nil {
+		return result, fmt.Errorf("iterate recent requests: %w", err)
+	}
+	return result, nil
+}
 
 func (r *OperationalRecorder) Begin(ctx context.Context, input RequestStart) error {
 	if r == nil || r.db == nil || input.ID == "" || input.AgentTokenID == "" || input.RouteID == "" || input.RequestedAlias == "" || input.StartedAt.IsZero() {

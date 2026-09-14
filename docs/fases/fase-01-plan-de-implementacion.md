@@ -2,7 +2,7 @@
 
 [Español](fase-01-plan-de-implementacion.es.md)
 
-- Status: accepted; Milestones 0 through 3 complete, with Milestone 4 next
+- Status: accepted; Milestones 0 through 5 complete, with Milestone 6 next
 - Delivery rule: every milestone includes code, tests, and documentation; a visual
   demonstration alone does not make it complete
 
@@ -73,6 +73,8 @@ Output: secure control plane covered by HTTP integration.
 Output: first end-to-end call and deterministic contract suite.
 
 ## Milestone 5 — Console and PWA
+
+Status: completed. See the [Milestone 5 technical plan](hito-05-plan-tecnico.md).
 
 - Onboarding from provider to published route.
 - Resource and secret management without revealing them.

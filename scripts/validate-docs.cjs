@@ -8,7 +8,7 @@ const markdownFiles = [];
 
 function walk(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if (entry.name === ".git") continue;
+    if ([".git", "node_modules", "dist"].includes(entry.name)) continue;
     const absolute = path.join(directory, entry.name);
     if (entry.isDirectory()) walk(absolute);
     else if (entry.name.endsWith(".md")) markdownFiles.push(absolute);

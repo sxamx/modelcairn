@@ -10,6 +10,7 @@ import (
 
 	"github.com/sxamx/modelcairn/internal/adminsettings"
 	"github.com/sxamx/modelcairn/internal/config"
+	"github.com/sxamx/modelcairn/internal/consoleui"
 	"github.com/sxamx/modelcairn/internal/openaiadapter"
 	"github.com/sxamx/modelcairn/internal/router"
 	"github.com/sxamx/modelcairn/internal/storage"
@@ -139,6 +140,10 @@ func newServer(address string, readiness *ReadinessProbe, logger *slog.Logger, a
 	if admin != nil {
 		admin.routes(mux)
 	}
+	// This catch-all is less specific than every API and probe route. The UI
+	// handler also rejects reserved prefixes so an unknown API can never receive
+	// the SPA document.
+	mux.Handle("GET /", consoleui.Handler())
 
 	return &http.Server{
 		Addr:              address,

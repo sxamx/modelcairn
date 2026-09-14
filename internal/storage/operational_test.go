@@ -2,9 +2,41 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 )
+
+func TestOperationalOverviewIsBoundedAndContentFree(t *testing.T) {
+	repository, installation := repositoryForTest(t)
+	items := seedRepositoryGraph(t, repository, installation)
+	recorder := NewOperationalRecorder(installation.DB())
+	now := time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
+	for index := 0; index < 7; index++ {
+		id := fmt.Sprintf("overview-%d", index)
+		started := now.Add(-time.Duration(index) * time.Minute)
+		if err := recorder.Begin(context.Background(), RequestStart{ID: id, AgentTokenID: items[KindAgentToken].ID, RouteID: items[KindRoute].ID, RequestedAlias: "assistant", StartedAt: started}); err != nil {
+			t.Fatal(err)
+		}
+		outcome, status := "success", 200
+		if index == 1 {
+			outcome, status = "error", 503
+		}
+		if err := recorder.Complete(context.Background(), id, RequestCompletion{Outcome: outcome, HTTPStatus: status, CompletedAt: started.Add(time.Millisecond), Attempts: []AttemptCompletion{{Sequence: 1, DestinationID: items[KindDestination].ID, Outcome: outcome, ProviderStatus: status, StartedAt: started, CompletedAt: started.Add(time.Millisecond)}}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	overview, err := ReadOperationalOverview(context.Background(), installation.DB(), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if overview.RequestsTotal != 7 || overview.RequestsSuccess != 6 || overview.RequestsError != 1 || len(overview.RecentRequests) != 5 {
+		t.Fatalf("overview=%+v", overview)
+	}
+	if overview.ResourceCounts[string(KindRoute)] != 1 || overview.RecentRequests[0].ID != "overview-0" || overview.RecentRequests[0].Attempts != 1 {
+		t.Fatalf("counts/recent=%+v", overview)
+	}
+}
 
 func TestOperationalRecorderCompletesRequestAndAttemptsWithoutContent(t *testing.T) {
 	repository, installation := repositoryForTest(t)

@@ -58,6 +58,49 @@ paths:
           content: { application/json: { schema: { $ref: '#/components/schemas/SessionContext' } } }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
+  /overview:
+    get:
+      operationId: getOverview
+      description: Bounded content-free operational summary for the console landing page.
+      responses:
+        '200':
+          description: Resource totals, last-24-hour outcomes, active cooldown count, and at most five recent requests.
+          content: { application/json: { schema: { $ref: '#/components/schemas/Overview' } } }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /requests:
+    get:
+      operationId: listOperationalRequests
+      description: Content-free operational history ordered by start time and immutable request id.
+      parameters:
+        - { name: outcome, in: query, schema: { type: string, enum: [success, error, partial, cancelled, indeterminate] } }
+        - { name: alias, in: query, schema: { type: string, maxLength: 128 } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: cursor, in: query, schema: { type: string, maxLength: 512 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        '200': { description: Bounded page, content: { application/json: { schema: { $ref: '#/components/schemas/OperationalRequestPage' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /requests/{id}/attempts:
+    get:
+      operationId: listOperationalAttempts
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, maxLength: 128 } }
+      responses:
+        '200':
+          description: At most 32 attempts ordered by sequence.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties: { items: { type: array, maxItems: 32, items: { $ref: '#/components/schemas/OperationalAttempt' } } }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
   /settings:
     get:
       operationId: getAdminSettings
@@ -298,7 +341,13 @@ paths:
         - $ref: '#/components/parameters/IfMatch'
       responses:
         '200': { $ref: '#/components/responses/Resource' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '412': { $ref: '#/components/responses/Error' }
+        '428': { $ref: '#/components/responses/Error' }
   /connections/{name}/test:
     post:
       operationId: testProviderConnection
@@ -439,6 +488,78 @@ components:
         admin: { $ref: '#/components/schemas/Admin' }
         csrfToken: { type: string, description: Kept in SPA memory and sent as X-CSRF-Token }
         expiresAt: { type: string, format: date-time }
+    Overview:
+      type: object
+      additionalProperties: false
+      required: [resourceCounts, requests24h, activeCooldowns, recentRequests, generatedAt]
+      properties:
+        resourceCounts:
+          type: object
+          additionalProperties: { type: integer, minimum: 0 }
+        requests24h:
+          type: object
+          additionalProperties: false
+          required: [total, success, error]
+          properties:
+            total: { type: integer, minimum: 0 }
+            success: { type: integer, minimum: 0 }
+            error: { type: integer, minimum: 0 }
+        activeCooldowns: { type: integer, minimum: 0 }
+        recentRequests:
+          type: array
+          maxItems: 5
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, requestedAlias, startedAt, attempts]
+            properties:
+              id: { type: string, format: uuid }
+              requestedAlias: { type: string }
+              startedAt: { type: string, format: date-time }
+              completedAt: { type: [string, 'null'], format: date-time }
+              outcome: { type: [string, 'null'], enum: [success, error, partial, cancelled, indeterminate, null] }
+              httpStatus: { type: [integer, 'null'], minimum: 100, maximum: 599 }
+              durationMs: { type: [integer, 'null'], minimum: 0 }
+              attempts: { type: integer, minimum: 0 }
+        generatedAt: { type: string, format: date-time }
+    OperationalRequestPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/OperationalRequest' } }
+        nextCursor: { type: [string, 'null'], maxLength: 512 }
+    OperationalRequest:
+      type: object
+      additionalProperties: false
+      required: [id, requestedAlias, startedAt, attempts]
+      properties:
+        id: { type: string, maxLength: 128 }
+        requestedAlias: { type: string, maxLength: 128 }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        outcome: { type: [string, 'null'], enum: [success, error, partial, cancelled, indeterminate, null] }
+        httpStatus: { type: [integer, 'null'], minimum: 100, maximum: 599 }
+        inputTokens: { type: [integer, 'null'], minimum: 0 }
+        outputTokens: { type: [integer, 'null'], minimum: 0 }
+        ttftMillis: { type: [integer, 'null'], minimum: 0 }
+        durationMillis: { type: [integer, 'null'], minimum: 0 }
+        attempts: { type: integer, minimum: 0, maximum: 32 }
+    OperationalAttempt:
+      type: object
+      additionalProperties: false
+      required: [sequence, startedAt, outcome, retryable]
+      properties:
+        sequence: { type: integer, minimum: 1, maximum: 32 }
+        destinationID: { type: [string, 'null'] }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        outcome: { type: string, enum: [success, error, partial, cancelled, indeterminate] }
+        errorClass: { type: [string, 'null'] }
+        providerStatus: { type: [integer, 'null'], minimum: 100, maximum: 599 }
+        providerRequestID: { type: [string, 'null'] }
+        retryable: { type: boolean }
+        fallbackReason: { type: [string, 'null'] }
     Resource:
       $ref: '../config/modelcairn-config-v1alpha1.schema.json#/$defs/resource'
     ResourcePage:

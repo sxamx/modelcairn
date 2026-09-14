@@ -60,3 +60,29 @@ func AuditResourceNoopTx(ctx context.Context, tx *sql.Tx, item Resource, actor A
 		Result: "success", Version: item.ResourceVersion,
 	})
 }
+
+// PublishStrategyTx turns the current draft into an immutable version and moves
+// every route using the strategy atomically. The resource version protects the
+// operator from publishing a draft that changed in another session.
+func PublishStrategyTx(ctx context.Context, tx *sql.Tx, name string, expectedVersion int64, actor Actor) (Resource, error) {
+	if err := validateActor(actor); err != nil {
+		return Resource{}, err
+	}
+	item, err := GetResourceTx(ctx, tx, KindStrategy, name)
+	if err != nil {
+		return Resource{}, err
+	}
+	if expectedVersion < 1 || item.ResourceVersion != expectedVersion {
+		return Resource{}, &RepositoryError{Code: CodeVersionConflict}
+	}
+	if _, err := publishStrategyTx(ctx, tx, item.ID, item.Spec, time.Now().UTC()); err != nil {
+		return Resource{}, err
+	}
+	if err := insertAudit(ctx, tx, time.Now(), actor, auditRecord{Action: "strategy.publish", Kind: KindStrategy, ResourceID: item.ID, Result: "success", Version: item.ResourceVersion}); err != nil {
+		return Resource{}, err
+	}
+	if err := bumpConfigRevisionTx(ctx, tx, time.Now()); err != nil {
+		return Resource{}, err
+	}
+	return item, nil
+}

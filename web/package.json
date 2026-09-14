@@ -1,0 +1,30 @@
+{
+  "name": "modelcairn-console",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "types:api": "openapi-typescript ../docs/contratos/api/admin-v1.openapi.yaml -o src/api/schema.d.ts",
+    "build": "npm run types:api && tsc -b && vite build",
+    "test": "vitest run",
+    "check": "npm run types:api && tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "6.1.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "vite": "8.3.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "axe-core": "4.13.0",
+    "jsdom": "27.0.0",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.0"
+  }
+}
