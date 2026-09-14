@@ -34,3 +34,21 @@ func activateGeneration(root, name string) error {
 	}
 	return nil
 }
+
+func deactivateGeneration(root string) error {
+	random := make([]byte, 8)
+	if _, err := rand.Read(random); err != nil {
+		return err
+	}
+	retired := filepath.Join(root, ".current-retired-"+hex.EncodeToString(random)+".tmp")
+	if err := os.Rename(filepath.Join(root, "current"), retired); err != nil {
+		return fmt.Errorf("deactivate generation pointer: %w", err)
+	}
+	if err := syncDirectory(root); err != nil {
+		return fmt.Errorf("sync deactivated generation pointer: %w", err)
+	}
+	if err := os.Remove(retired); err != nil {
+		return fmt.Errorf("remove retired generation pointer: %w", err)
+	}
+	return syncDirectory(root)
+}

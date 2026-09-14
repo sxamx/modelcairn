@@ -214,5 +214,6 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  modelcairn backup create --out file.mcb.age [--data-dir path]")
 	fmt.Fprintln(w, "  modelcairn backup verify file.mcb.age")
 	fmt.Fprintln(w, "  modelcairn backup restore [--data-dir path] file.mcb.age")
+	fmt.Fprintln(w, "  modelcairn backup rollback [--data-dir path]")
 	fmt.Fprintln(w, "  modelcairn version")
 }
