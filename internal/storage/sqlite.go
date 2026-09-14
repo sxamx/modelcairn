@@ -42,9 +42,11 @@ func OpenSQLite(ctx context.Context, path string) (*sql.DB, error) {
 // Installation is the exclusive owner of one local data directory. Closing it
 // closes SQLite before releasing the operating-system lock.
 type Installation struct {
-	db      *sql.DB
-	lock    *Lock
-	secrets *SecretStore
+	db       *sql.DB
+	lock     *Lock
+	secrets  *SecretStore
+	rootDir  string
+	stateDir string
 }
 
 // OpenInstallation exclusively owns dataDir, migrates its database, and checks
@@ -54,7 +56,12 @@ func OpenInstallation(ctx context.Context, dataDir string) (*Installation, error
 	if err != nil {
 		return nil, err
 	}
-	db, err := OpenSQLite(ctx, filepath.Join(dataDir, "modelcairn.db"))
+	stateDir, err := resolveStateDirectory(dataDir)
+	if err != nil {
+		_ = lock.Close()
+		return nil, err
+	}
+	db, err := OpenSQLite(ctx, filepath.Join(stateDir, "modelcairn.db"))
 	if err != nil {
 		_ = lock.Close()
 		return nil, err
@@ -74,7 +81,7 @@ func OpenInstallation(ctx context.Context, dataDir string) (*Installation, error
 		_ = lock.Close()
 		return nil, err
 	}
-	keys, err := openKeyring(dataDir)
+	keys, err := openKeyring(stateDir)
 	if err != nil {
 		_ = db.Close()
 		_ = lock.Close()
@@ -86,7 +93,7 @@ func OpenInstallation(ctx context.Context, dataDir string) (*Installation, error
 		_ = lock.Close()
 		return nil, err
 	}
-	return &Installation{db: db, lock: lock, secrets: secrets}, nil
+	return &Installation{db: db, lock: lock, secrets: secrets, rootDir: dataDir, stateDir: stateDir}, nil
 }
 
 // DB returns the installation database. The caller must not close it directly.
@@ -94,6 +101,10 @@ func (i *Installation) DB() *sql.DB { return i.db }
 
 // Secrets returns the verified secret-store owner for internal application use.
 func (i *Installation) Secrets() *SecretStore { return i.secrets }
+
+// StateDirectory is the resolved active generation, or the legacy root before
+// the first explicit generational restore.
+func (i *Installation) StateDirectory() string { return i.stateDir }
 
 // Close releases durable resources in the required order.
 func (i *Installation) Close() error {
