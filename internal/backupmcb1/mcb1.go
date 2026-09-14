@@ -159,6 +159,9 @@ func Create(ctx context.Context, options CreateOptions) (Verification, error) {
 	if plaintextSize > maxPlaintextBytes {
 		return Verification{}, fmt.Errorf("backup payload exceeds MCB1 limit")
 	}
+	if err := storage.RequireFreeSpace(parent, uint64(plaintextSize)+(16<<20)); err != nil {
+		return Verification{}, err
+	}
 	temporary, err := os.CreateTemp(parent, "."+filepath.Base(destination)+".*.tmp")
 	if err != nil {
 		return Verification{}, fmt.Errorf("create private backup file: %w", err)
@@ -380,6 +383,9 @@ func Verify(ctx context.Context, path string, passphrase []byte) (Verification, 
 	databasePath := filepath.Join(work, "database.sqlite")
 	verification, err := readArchive(path, passphrase, archiveSink{
 		database: func(reader io.Reader, size int64) error {
+			if err := storage.RequireFreeSpace(work, uint64(size)+(16<<20)); err != nil {
+				return err
+			}
 			file, err := os.OpenFile(databasePath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 			if err != nil {
 				return err
