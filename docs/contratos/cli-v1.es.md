@@ -49,6 +49,25 @@ nombre, fingerprint, versión de recurso, versión de clave y fechas. Delete exi
 la versión exacta y falla mientras una Credential use el secreto. Rotate nunca
 muestra material de clave.
 
+## Flujo de backup y recuperación
+
+```text
+modelcairn backup create --out archivo.mcb.age [--data-dir ruta]
+modelcairn backup verify archivo.mcb.age
+modelcairn backup restore [--data-dir ruta] archivo.mcb.age
+modelcairn backup rollback [--data-dir ruta]
+```
+
+Create, restore y rollback requieren propiedad offline exclusiva; verify no abre la
+instalación. La contraseña se lee sin eco desde una terminal o desde stdin acotado,
+nunca desde argumentos o variables de entorno. Create confirma la contraseña,
+rechaza un destino existente y verifica el archivo antes de informar éxito.
+
+Restore ejecuta preflight completo antes de crear una generación, vuelve a validar
+el archivo mientras recifra secretos y activa solamente una generación sellada.
+Rollback selecciona el predecesor registrado sin eliminar datos. Los detalles se
+definen en el [contrato MCB1](backup-mcb1.es.md).
+
 ## Clases estables de salida
 
 | Código | Significado |
