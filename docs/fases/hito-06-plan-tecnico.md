@@ -40,6 +40,16 @@ without exposing passwords or secrets.
 7. **Closeout:** clean-VM install and restore, recovered route test, induced failures,
    RAM/disk budget, CI, and grouped QA.
 
+## Verified progress
+
+- [x] Installation contract and access matrix.
+- [x] Native installer and `systemd` unit.
+- [x] Guided bootstrap without secrets in arguments.
+- [x] Localhost, private-network, and Tailscale Serve guide.
+- [ ] MCB1 backup and verification without restore.
+- [ ] Generational restore and rollback.
+- [ ] Complete operations, VM trial, benchmark, and grouped closeout.
+
 ## Initial decisions
 
 - Recommended layout: `/usr/local/bin/modelcairn`, `/etc/modelcairn`,

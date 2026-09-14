@@ -41,6 +41,16 @@ restaurar un backup MCB1 sin exponer contraseñas ni secretos.
 7. **Cierre:** instalación y restore desde cero en VM objetivo, prueba funcional de
    ruta recuperada, fallos inducidos, presupuesto RAM/disco, CI y QA agrupado.
 
+## Avance comprobado
+
+- [x] Contrato de instalación y matriz de acceso.
+- [x] Instalador nativo y unidad `systemd`.
+- [x] Bootstrap guiado sin secretos en argumentos.
+- [x] Guía de localhost, red privada y Tailscale Serve.
+- [ ] Backup MCB1 y verificación sin restaurar.
+- [ ] Restore generacional y rollback.
+- [ ] Operación completa, prueba en VM, benchmark y cierre agrupado.
+
 ## Decisiones iniciales
 
 - Layout recomendado: binario en `/usr/local/bin/modelcairn`, configuración de
