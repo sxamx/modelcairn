@@ -17,6 +17,15 @@ func TestBackupCLIRequiresOutputAndNeverAcceptsPassphraseFlag(t *testing.T) {
 	}
 }
 
+func TestBackupRestoreRejectsPassphraseArgument(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	code := run(context.Background(), []string{"backup", "restore", "--passphrase", "exposed", "one.mcb.age"},
+		strings.NewReader("strong-passphrase\n"), &stdout, &stderr, false)
+	if code != 2 {
+		t.Fatalf("restore code=%d, want 2; stderr=%s", code, stderr.String())
+	}
+}
+
 func TestBackupCLICreateAndVerifyFromStdin(t *testing.T) {
 	dataDir := t.TempDir()
 	backupPath := filepath.Join(t.TempDir(), "one.mcb.age")

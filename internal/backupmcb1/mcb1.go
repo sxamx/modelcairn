@@ -369,8 +369,53 @@ func writeSecretsEntry(ctx context.Context, writer *tar.Writer, store *storage.S
 // Verify authenticates the whole age stream, validates structure and checksums,
 // and runs SQLite integrity/schema checks in a private temporary directory.
 func Verify(ctx context.Context, path string, passphrase []byte) (Verification, error) {
+	work, err := os.MkdirTemp("", "modelcairn-verify-")
+	if err != nil {
+		return Verification{}, err
+	}
+	defer os.RemoveAll(work)
+	if err := os.Chmod(work, 0o700); err != nil {
+		return Verification{}, err
+	}
+	databasePath := filepath.Join(work, "database.sqlite")
+	verification, err := readArchive(path, passphrase, archiveSink{
+		database: func(reader io.Reader, size int64) error {
+			file, err := os.OpenFile(databasePath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+			if err != nil {
+				return err
+			}
+			written, copyErr := io.CopyN(file, reader, size)
+			if copyErr == nil && written != size {
+				copyErr = io.ErrUnexpectedEOF
+			}
+			closeErr := file.Close()
+			if copyErr == nil {
+				copyErr = closeErr
+			}
+			return copyErr
+		},
+		secret: func(secretRecord) error { return nil },
+	})
+	if err != nil {
+		return Verification{}, err
+	}
+	if err := verifySQLite(ctx, databasePath); err != nil {
+		return Verification{}, err
+	}
+	return verification, nil
+}
+
+type archiveSink struct {
+	database func(io.Reader, int64) error
+	secret   func(secretRecord) error
+}
+
+func readArchive(path string, passphrase []byte, sink archiveSink) (Verification, error) {
 	if err := validatePassphrase(passphrase); err != nil {
 		return Verification{}, err
+	}
+	if sink.database == nil || sink.secret == nil {
+		return Verification{}, fmt.Errorf("MCB1 archive sink is incomplete")
 	}
 	info, err := os.Stat(path)
 	if err != nil {
@@ -396,20 +441,12 @@ func Verify(ctx context.Context, path string, passphrase []byte) (Verification, 
 	if err != nil {
 		return Verification{}, fmt.Errorf("decrypt MCB1 backup: %w", err)
 	}
-	work, err := os.MkdirTemp("", "modelcairn-verify-")
-	if err != nil {
-		return Verification{}, err
-	}
-	defer os.RemoveAll(work)
-	if err := os.Chmod(work, 0o700); err != nil {
-		return Verification{}, err
-	}
-	tarReader := tar.NewReader(io.LimitReader(decrypted, maxPlaintextBytes+1))
+	plain := &io.LimitedReader{R: decrypted, N: maxPlaintextBytes + 1}
+	tarReader := tar.NewReader(plain)
 	var manifest Manifest
 	actualHashes := make(map[string]string)
 	actualSizes := make(map[string]int64)
 	secretCount := 0
-	databasePath := filepath.Join(work, "database.sqlite")
 	var expected Checksums
 	for index, expectedName := range entryOrder {
 		header, err := tarReader.Next()
@@ -424,37 +461,19 @@ func Verify(ctx context.Context, path string, passphrase []byte) (Verification, 
 			return Verification{}, fmt.Errorf("MCB1 entry %q exceeds limit", expectedName)
 		}
 		hash := sha256.New()
-		bounded := io.LimitReader(tarReader, header.Size)
-		var target io.Writer = hash
+		bounded := &countingReader{reader: io.LimitReader(tarReader, header.Size)}
 		var buffer bytes.Buffer
-		var database *os.File
-		var secrets *secretValidator
 		if expectedName == entryOrder[0] || expectedName == entryOrder[3] {
-			target = io.MultiWriter(hash, &buffer)
+			_, err = io.Copy(io.MultiWriter(hash, &buffer), bounded)
 		} else if expectedName == entryOrder[1] {
-			database, err = os.OpenFile(databasePath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-			if err != nil {
-				return Verification{}, err
-			}
-			target = io.MultiWriter(hash, database)
+			err = sink.database(io.TeeReader(bounded, hash), header.Size)
 		} else {
-			secrets = newSecretValidator(&secretCount)
-			target = io.MultiWriter(hash, secrets)
+			secretCount, err = scanSecretRecords(io.TeeReader(bounded, hash), sink.secret)
 		}
-		written, copyErr := io.Copy(target, bounded)
-		if secrets != nil && copyErr == nil {
-			copyErr = secrets.Finish()
+		if err != nil || bounded.count != header.Size {
+			return Verification{}, fmt.Errorf("read MCB1 entry %q: %w", expectedName, err)
 		}
-		if database != nil {
-			closeErr := database.Close()
-			if copyErr == nil {
-				copyErr = closeErr
-			}
-		}
-		if copyErr != nil || written != header.Size {
-			return Verification{}, fmt.Errorf("read MCB1 entry %q: %w", expectedName, copyErr)
-		}
-		actualSizes[expectedName] = written
+		actualSizes[expectedName] = bounded.count
 		actualHashes[expectedName] = hex.EncodeToString(hash.Sum(nil))
 		if expectedName == entryOrder[0] {
 			if err := decodeExactJSON(buffer.Bytes(), &manifest); err != nil {
@@ -472,7 +491,7 @@ func Verify(ctx context.Context, path string, passphrase []byte) (Verification, 
 	if header, err := tarReader.Next(); err != io.EOF || header != nil {
 		return Verification{}, fmt.Errorf("MCB1 contains undeclared tar entries")
 	}
-	trailing, err := io.Copy(io.Discard, decrypted)
+	trailing, err := io.Copy(io.Discard, plain)
 	if err != nil {
 		return Verification{}, fmt.Errorf("authenticate MCB1 payload: %w", err)
 	}
@@ -490,10 +509,18 @@ func Verify(ctx context.Context, path string, passphrase []byte) (Verification, 
 			return Verification{}, fmt.Errorf("MCB1 checksum mismatch for %q", name)
 		}
 	}
-	if err := verifySQLite(ctx, databasePath); err != nil {
-		return Verification{}, err
-	}
 	return Verification{Manifest: manifest, Secrets: secretCount}, nil
+}
+
+type countingReader struct {
+	reader io.Reader
+	count  int64
+}
+
+func (r *countingReader) Read(data []byte) (int, error) {
+	n, err := r.reader.Read(data)
+	r.count += int64(n)
+	return n, err
 }
 
 func validateAgeHeader(path string) error {
@@ -576,72 +603,6 @@ func validateSizes(manifest Manifest, actual map[string]int64) error {
 	return nil
 }
 
-type secretValidator struct {
-	count       *int
-	pending     []byte
-	identifiers map[string]struct{}
-	names       map[string]struct{}
-}
-
-func newSecretValidator(count *int) *secretValidator {
-	return &secretValidator{count: count, identifiers: make(map[string]struct{}), names: make(map[string]struct{})}
-}
-
-func (v *secretValidator) Write(data []byte) (int, error) {
-	original := len(data)
-	for len(data) > 0 {
-		newline := bytes.IndexByte(data, '\n')
-		if newline < 0 {
-			v.pending = append(v.pending, data...)
-			if len(v.pending) > 32<<10 {
-				return 0, fmt.Errorf("secret record exceeds MCB1 limit")
-			}
-			return original, nil
-		}
-		v.pending = append(v.pending, data[:newline]...)
-		if err := v.validateLine(); err != nil {
-			return 0, err
-		}
-		data = data[newline+1:]
-	}
-	return original, nil
-}
-
-func (v *secretValidator) validateLine() error {
-	defer func() {
-		clear(v.pending)
-		v.pending = v.pending[:0]
-	}()
-	if len(v.pending) == 0 || len(v.pending) > 32<<10 {
-		return fmt.Errorf("invalid secret record size")
-	}
-	var record secretRecord
-	if err := decodeExactJSON(v.pending, &record); err != nil {
-		return fmt.Errorf("invalid secret record: %w", err)
-	}
-	defer clear(record.Value)
-	if record.ID == "" || !secretNamePattern.MatchString(record.Name) || record.ResourceVersion < 1 || record.CreatedAt.IsZero() || record.UpdatedAt.Before(record.CreatedAt) || len(record.Value) < 1 || len(record.Value) > maxSecretValueBytes {
-		return fmt.Errorf("invalid secret record")
-	}
-	if _, exists := v.identifiers[record.ID]; exists {
-		return fmt.Errorf("duplicate secret identifier")
-	}
-	if _, exists := v.names[record.Name]; exists {
-		return fmt.Errorf("duplicate secret name")
-	}
-	v.identifiers[record.ID] = struct{}{}
-	v.names[record.Name] = struct{}{}
-	*v.count++
-	return nil
-}
-
-func (v *secretValidator) Finish() error {
-	if len(v.pending) != 0 {
-		return fmt.Errorf("unterminated secret record")
-	}
-	return nil
-}
-
 func verifySQLite(ctx context.Context, path string) error {
 	dsn := "file:" + filepath.ToSlash(path) + "?mode=ro&immutable=1"
 	db, err := sql.Open("sqlite", dsn)
@@ -680,15 +641,27 @@ func scanSecretRecords(reader io.Reader, callback func(secretRecord) error) (int
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 32<<10), 32<<10)
 	count := 0
+	identifiers := make(map[string]struct{})
+	names := make(map[string]struct{})
 	for scanner.Scan() {
 		var record secretRecord
 		if err := decodeExactJSON(scanner.Bytes(), &record); err != nil {
 			return count, err
 		}
-		if record.ID == "" || record.Name == "" || record.ResourceVersion < 1 || record.CreatedAt.IsZero() || record.UpdatedAt.IsZero() || len(record.Value) < 1 || len(record.Value) > maxSecretValueBytes {
+		if record.ID == "" || !secretNamePattern.MatchString(record.Name) || record.ResourceVersion < 1 || record.CreatedAt.IsZero() || record.UpdatedAt.Before(record.CreatedAt) || len(record.Value) < 1 || len(record.Value) > maxSecretValueBytes {
 			clear(record.Value)
 			return count, fmt.Errorf("invalid secret record")
 		}
+		if _, exists := identifiers[record.ID]; exists {
+			clear(record.Value)
+			return count, fmt.Errorf("duplicate secret identifier")
+		}
+		if _, exists := names[record.Name]; exists {
+			clear(record.Value)
+			return count, fmt.Errorf("duplicate secret name")
+		}
+		identifiers[record.ID] = struct{}{}
+		names[record.Name] = struct{}{}
 		if err := callback(record); err != nil {
 			clear(record.Value)
 			return count, err

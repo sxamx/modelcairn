@@ -20,7 +20,7 @@ const maxBackupPassphraseInput = 1024
 
 func runBackup(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "backup requires create or verify")
+		fmt.Fprintln(stderr, "backup requires create, verify, or restore")
 		return 2
 	}
 	switch args[0] {
@@ -28,10 +28,34 @@ func runBackup(ctx context.Context, args []string, stdin io.Reader, stdout, stde
 		return runBackupCreate(ctx, args[1:], stdin, stdout, stderr, interactive)
 	case "verify":
 		return runBackupVerify(ctx, args[1:], stdin, stdout, stderr, interactive)
+	case "restore":
+		return runBackupRestore(ctx, args[1:], stdin, stdout, stderr, interactive)
 	default:
 		fmt.Fprintln(stderr, "unknown backup command")
 		return 2
 	}
+}
+
+func runBackupRestore(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
+	flags := flag.NewFlagSet("backup restore", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	dataDir := flags.String("data-dir", defaultDataDirectory(), "private ModelCairn data directory")
+	if flags.Parse(args) != nil || flags.NArg() != 1 {
+		fmt.Fprintln(stderr, "usage: modelcairn backup restore [--data-dir path] file.mcb.age")
+		return 2
+	}
+	passphrase, err := readBackupPassphrase(stdin, stderr, interactive, false)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	defer clear(passphrase)
+	result, err := backupmcb1.Restore(ctx, flags.Arg(0), passphrase, *dataDir)
+	if err != nil {
+		return writeCLIError(stderr, err)
+	}
+	fmt.Fprintf(stdout, "backup restored and activated: generation=%s schema=%d secrets=%d; restart ModelCairn and verify readiness\n",
+		result.Generation, result.Manifest.SchemaVersion, result.Secrets)
+	return 0
 }
 
 func runBackupCreate(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
