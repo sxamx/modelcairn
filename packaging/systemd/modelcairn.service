@@ -1,0 +1,36 @@
+[Unit]
+Description=ModelCairn AI gateway
+Documentation=https://github.com/sxamx/modelcairn
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=modelcairn
+Group=modelcairn
+EnvironmentFile=/etc/modelcairn/service.env
+ExecStart=/usr/local/bin/modelcairn serve --data-dir /var/lib/modelcairn --listen ${MODELCAIRN_LISTEN}
+Restart=on-failure
+RestartSec=3s
+TimeoutStopSec=20s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/var/lib/modelcairn
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target
