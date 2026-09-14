@@ -80,7 +80,6 @@ Inicio automático: $enable
 Servicio iniciado: $start
 
 Si aún no creaste el administrador, detén el servicio y ejecuta:
-  sudo systemctl stop modelcairn
-  sudo -u modelcairn /usr/local/bin/modelcairn admin bootstrap --data-dir /var/lib/modelcairn --username TU_USUARIO --settings TU_ARCHIVO
-Luego inicia con: sudo systemctl start modelcairn
+  sudo ./scripts/bootstrap-linux.sh
+El asistente detendrá y restaurará el servicio cuando sea necesario.
 EOF
