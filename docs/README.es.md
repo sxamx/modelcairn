@@ -43,6 +43,7 @@
 - [Sesiones administrativas](contratos/sesiones-admin-v1.es.md)
 - [Formato de backup MCB1](contratos/backup-mcb1.es.md)
 - [Contrato de instalación Linux](contratos/instalacion-linux-v1.es.md)
+- [Acceso local, privado y mediante Tailscale](operacion/acceso-red-v1.es.md)
 - [Trazabilidad de requisitos](fases/fase-01-trazabilidad.es.md)
 - [Riesgos y puertas de calidad](fases/fase-01-riesgos-y-puertas.es.md)
 
