@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -69,6 +70,13 @@ func BeginGenerationRestore(dataDir string) (*GenerationRestore, error) {
 func (r *GenerationRestore) WriteDatabase(ctx context.Context, reader io.Reader, size int64) error {
 	if r.db != nil || r.sealed || size < 1 {
 		return fmt.Errorf("invalid restore database state")
+	}
+	required := uint64(size)
+	if required > (math.MaxUint64-(16<<20))/2 {
+		return fmt.Errorf("restored database size overflows disk budget")
+	}
+	if err := RequireFreeSpace(r.dir, required*2+(16<<20)); err != nil {
+		return err
 	}
 	path := filepath.Join(r.dir, "modelcairn.db")
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
