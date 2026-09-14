@@ -20,6 +20,8 @@ Tailscale, or remove data.
 
 `--enable` controls boot startup; `--start` controls current execution. Interactive
 mode asks separately. Non-interactive mode requires both choices explicitly.
+`--no-start` stops an already-running instance, so updating the executable never
+leaves the old version silently running.
 
 The default address is `127.0.0.1:8080`. Using `0.0.0.0` or `[::]` exposes the
 service to reachable networks and requires operator-managed firewall and HTTPS.

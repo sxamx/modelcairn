@@ -6,6 +6,14 @@ listen="127.0.0.1:8080"
 enable="ask"
 start="ask"
 interactive=1
+binary_tmp=""
+environment_tmp=""
+
+cleanup_install() {
+  [[ -z "$binary_tmp" || ! -e "$binary_tmp" ]] || rm -f -- "$binary_tmp"
+  [[ -z "$environment_tmp" || ! -e "$environment_tmp" ]] || rm -f -- "$environment_tmp"
+}
+trap cleanup_install EXIT
 
 usage() {
   cat <<'EOF'
@@ -61,16 +69,20 @@ getent group modelcairn >/dev/null || groupadd --system modelcairn
 id -u modelcairn >/dev/null 2>&1 || useradd --system --gid modelcairn --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin modelcairn
 install -d -o root -g modelcairn -m 0750 /etc/modelcairn
 install -d -o modelcairn -g modelcairn -m 0700 /var/lib/modelcairn
-install -o root -g root -m 0755 "$binary" /usr/local/bin/.modelcairn.new
-mv -f /usr/local/bin/.modelcairn.new /usr/local/bin/modelcairn
-printf 'MODELCAIRN_LISTEN=%s\n' "$listen" > /etc/modelcairn/.service.env.new
-chown root:root /etc/modelcairn/.service.env.new
-chmod 0644 /etc/modelcairn/.service.env.new
-mv -f /etc/modelcairn/.service.env.new /etc/modelcairn/service.env
+binary_tmp="$(mktemp /usr/local/bin/.modelcairn.XXXXXX)"
+install -o root -g root -m 0755 "$binary" "$binary_tmp"
+mv -f "$binary_tmp" /usr/local/bin/modelcairn
+binary_tmp=""
+environment_tmp="$(mktemp /etc/modelcairn/.service.env.XXXXXX)"
+printf 'MODELCAIRN_LISTEN=%s\n' "$listen" > "$environment_tmp"
+chown root:modelcairn "$environment_tmp"
+chmod 0640 "$environment_tmp"
+mv -f "$environment_tmp" /etc/modelcairn/service.env
+environment_tmp=""
 install -o root -g root -m 0644 "$unit_source" /etc/systemd/system/modelcairn.service
 systemctl daemon-reload
 if [[ "$enable" == yes ]]; then systemctl enable modelcairn.service; else systemctl disable modelcairn.service >/dev/null 2>&1 || true; fi
-if [[ "$start" == yes ]]; then systemctl restart modelcairn.service; fi
+if [[ "$start" == yes ]]; then systemctl restart modelcairn.service; else systemctl stop modelcairn.service >/dev/null 2>&1 || true; fi
 
 cat <<EOF
 

@@ -21,6 +21,8 @@ Tailscale y no elimina datos.
 `--enable` controla arranque tras reinicio; `--start` controla la ejecución actual.
 En modo interactivo ambas decisiones se preguntan por separado. El modo no
 interactivo exige expresarlas y falla si quedan implícitas.
+`--no-start` detiene una instancia ya activa, de modo que actualizar el binario no
+deja ejecutándose silenciosamente la versión anterior.
 
 La dirección predeterminada es `127.0.0.1:8080`. Usar `0.0.0.0` o `[::]` expone el
 servicio a la red alcanzable y requiere que el operador configure firewall y HTTPS.
