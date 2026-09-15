@@ -227,10 +227,16 @@ func (r *GenerationRestore) Activate() error {
 	if err := writePreviousGeneration(r.dir, previous); err != nil {
 		return err
 	}
-	if err := activateGeneration(r.root, r.name); err != nil {
+	linked, err := activateGeneration(r.root, r.name)
+	if linked {
+		r.activated = true
+	}
+	if err != nil {
+		if linked {
+			_ = r.releaseLock()
+		}
 		return err
 	}
-	r.activated = true
 	return r.releaseLock()
 }
 
@@ -246,7 +252,7 @@ func (r *GenerationRestore) releaseLock() error {
 // Abort removes only an unreferenced generation and never changes current.
 func (r *GenerationRestore) Abort() error {
 	if r.activated {
-		return nil
+		return r.releaseLock()
 	}
 	if r.tx != nil {
 		_ = r.tx.Rollback()
@@ -355,7 +361,7 @@ func RollbackGeneration(dataDir string) (string, string, error) {
 		if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 			return "", "", fmt.Errorf("rollback target is unavailable")
 		}
-		if err := activateGeneration(dataDir, previous); err != nil {
+		if _, err := activateGeneration(dataDir, previous); err != nil {
 			return "", "", err
 		}
 	}

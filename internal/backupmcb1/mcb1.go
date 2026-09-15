@@ -39,6 +39,7 @@ const (
 	maxAgeHeaderBytes   = 64 << 10
 	maxSecretValueBytes = 16 << 10
 	maxPassphraseBytes  = 1024
+	maxSecretRecords    = 4096
 	minPassphraseBytes  = 8
 	defaultScryptLogN   = 16
 	minimumScryptLogN   = 15
@@ -82,6 +83,7 @@ type CreateOptions struct {
 	Passphrase         []byte
 	ApplicationVersion string
 	Now                time.Time
+	beforePublish      func()
 }
 
 type Verification struct {
@@ -218,7 +220,10 @@ func Create(ctx context.Context, options CreateOptions) (Verification, error) {
 	if err != nil {
 		return Verification{}, fmt.Errorf("verify newly created backup: %w", err)
 	}
-	if err := os.Rename(temporaryPath, destination); err != nil {
+	if options.beforePublish != nil {
+		options.beforePublish()
+	}
+	if err := storage.PublishNoReplace(temporaryPath, destination); err != nil {
 		return Verification{}, fmt.Errorf("publish backup atomically: %w", err)
 	}
 	keepTemporary = true
@@ -298,6 +303,9 @@ func measureSecrets(ctx context.Context, store *storage.SecretStore) (int64, str
 		}
 		_, _ = hash.Write(line)
 		count++
+		if count > maxSecretRecords {
+			return fmt.Errorf("secret record count exceeds MCB1 limit")
+		}
 		return nil
 	})
 	return size, hex.EncodeToString(hash.Sum(nil)), count, err
@@ -650,6 +658,9 @@ func scanSecretRecords(reader io.Reader, callback func(secretRecord) error) (int
 	identifiers := make(map[string]struct{})
 	names := make(map[string]struct{})
 	for scanner.Scan() {
+		if count >= maxSecretRecords {
+			return count, fmt.Errorf("secret record count exceeds MCB1 limit")
+		}
 		var record secretRecord
 		if err := decodeExactJSON(scanner.Bytes(), &record); err != nil {
 			return count, err

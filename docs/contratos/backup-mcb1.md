@@ -36,7 +36,7 @@ reduces complexity, RAM spikes, and expansion attacks. It permits only:
 
 - `manifest.json` (maximum 1 MiB);
 - `database.sqlite` (default maximum 64 GiB and limited by free space);
-- `secrets.jsonl` (maximum 64 MiB, one record per line);
+- `secrets.jsonl` (maximum 64 MiB and 4096 records, one record per line);
 - `checksums.json` (maximum 1 MiB).
 
 At most four entries and 65 GiB of plaintext are allowed. Reading is sequential
