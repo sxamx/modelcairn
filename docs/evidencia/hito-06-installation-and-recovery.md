@@ -32,9 +32,10 @@ preserved state. Observed permissions match the contract:
 | systemd unit | `root:root` | `0644` |
 
 The process consumed approximately 5.8 MiB immediately after installation. After a
-VM reboot, `systemd` started it automatically, health and readiness responded, and
-observed consumption was approximately 37.2 MiB, within the 128 MiB limit. These are
-point observations; the final benchmark must record duration, samples, and peaks.
+VM reboot, `systemd` started it automatically and health and readiness responded. A
+later 120-second window collected 59 samples while polling both endpoints: average
+15.8 MiB, peak 28.7 MiB, and 0 KiB swap. The binary measured 13.4 MiB and configured
+state approximately 312 KiB. The peak remains comfortably within the 128 MiB limit.
 
 ## Finding from the real installation
 
@@ -49,5 +50,4 @@ altering the pre-existing service.
 
 - complete route → backup → restore → route without secret re-entry;
 - exercise wrong passphrase, truncated file, session invalidation, and rollback;
-- sample the process for a defined interval and document average, peak, and swap;
 - decide and perform conservative cleanup of the test artifacts.
