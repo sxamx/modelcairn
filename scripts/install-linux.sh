@@ -52,6 +52,18 @@ ask_choice() {
   reply="${reply:-$default}"
   [[ "$reply" =~ ^[sSyY]$ ]] && printf yes || printf no
 }
+
+verify_service_started() {
+  local attempt
+  for attempt in {1..20}; do
+    sleep 0.1
+    if ! systemctl is-active --quiet modelcairn.service; then
+      systemctl stop modelcairn.service >/dev/null 2>&1 || true
+      echo "ModelCairn did not remain active. Check whether $listen is already in use, then inspect: journalctl -u modelcairn.service" >&2
+      return 1
+    fi
+  done
+}
 if (( interactive )); then
   echo "ModelCairn native installer"
   echo "Binary: /usr/local/bin/modelcairn"
@@ -82,7 +94,12 @@ environment_tmp=""
 install -o root -g root -m 0644 "$unit_source" /etc/systemd/system/modelcairn.service
 systemctl daemon-reload
 if [[ "$enable" == yes ]]; then systemctl enable modelcairn.service; else systemctl disable modelcairn.service >/dev/null 2>&1 || true; fi
-if [[ "$start" == yes ]]; then systemctl restart modelcairn.service; else systemctl stop modelcairn.service >/dev/null 2>&1 || true; fi
+if [[ "$start" == yes ]]; then
+  systemctl restart modelcairn.service
+  verify_service_started
+else
+  systemctl stop modelcairn.service >/dev/null 2>&1 || true
+fi
 
 cat <<EOF
 

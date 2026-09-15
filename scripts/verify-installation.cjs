@@ -24,5 +24,8 @@ if (!unit.includes("EnvironmentFile=/etc/modelcairn/service.env") || !unit.inclu
 for (const required of ["disable --now modelcairn.service", "rm -f -- /etc/systemd/system/modelcairn.service", "rm -f -- /usr/local/bin/modelcairn", "Configuration and data remain in /etc/modelcairn and /var/lib/modelcairn"]) {
   if (!uninstaller.includes(required)) throw new Error(`conservative uninstaller invariant missing: ${required}`);
 }
-if (!installer.includes("else systemctl stop modelcairn.service")) throw new Error("--no-start must leave the service stopped");
+if (!installer.includes("systemctl stop modelcairn.service >/dev/null 2>&1 || true")) throw new Error("--no-start must leave the service stopped");
+for (const required of ["verify_service_started", "systemctl is-active --quiet modelcairn.service", "journalctl -u modelcairn.service"]) {
+  if (!installer.includes(required)) throw new Error(`verified service-start invariant missing: ${required}`);
+}
 console.log("Linux installation assets satisfy structural and safety invariants.");

@@ -5,6 +5,9 @@
 Requisitos: Linux AMD64 o ARM64 con `systemd`, un binario ModelCairn local para la
 arquitectura correcta y privilegios `sudo`. El instalador no descarga software, no
 abre puertos y no instala Tailscale.
+Si se solicita iniciar el servicio, comprueba que permanezca activo. Un puerto
+ocupado u otro fallo de arranque produce error, detiene el bucle de reinicios y
+remite al journal; nunca confirma falsamente una instalación lista.
 
 ## Primera instalación
 
@@ -59,4 +62,3 @@ una acción manual posterior a un backup verificado.
 Para red privada o Tailscale consulta la [guía de acceso](acceso-red-v1.es.md). Para
 copias y restore consulta la [guía MCB1](backup-recuperacion-v1.es.md). El operador
 administra firewall, DNS, certificados, sistema y retención de `journald`.
-
