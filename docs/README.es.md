@@ -32,6 +32,7 @@
 - [Benchmark representativo del Hito 4](evidencia/benchmark-hito-04-2026-09-13.es.md)
 - [Benchmark de la consola del Hito 5](evidencia/benchmark-hito-05-2026-09-13.es.md)
 - [QA agrupado del Hito 5](evidencia/qa-agrupado-hito-05.es.md)
+- [Evidencia del Hito 6: instalación y recuperación](evidencia/hito-06-instalacion-y-recuperacion.es.md)
 - [Configuración de ejemplo](contratos/config/example-v1alpha1.yaml)
 - [OpenAPI administrativa](contratos/api/admin-v1.openapi.yaml)
 - [OpenAPI de datos](contratos/api/data-v1.openapi.yaml)
