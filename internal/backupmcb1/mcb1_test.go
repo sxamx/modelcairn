@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -72,6 +74,34 @@ func TestCreateRefusesToReplaceExistingDestination(t *testing.T) {
 	}
 }
 
+func TestCreateRefusesDestinationCreatedWhileBackupIsPrepared(t *testing.T) {
+	ctx := context.Background()
+	installation, err := storage.OpenInstallation(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer installation.Close()
+	destination := filepath.Join(t.TempDir(), "raced.mcb.age")
+	sentinel := []byte("created-by-another-process")
+	_, err = Create(ctx, CreateOptions{
+		Installation: installation,
+		Destination:  destination,
+		Passphrase:   []byte("strong-backup-passphrase"),
+		beforePublish: func() {
+			if writeErr := os.WriteFile(destination, sentinel, 0o600); writeErr != nil {
+				t.Fatalf("create competing destination: %v", writeErr)
+			}
+		},
+	})
+	if err == nil {
+		t.Fatal("destination created during backup preparation was replaced")
+	}
+	contents, readErr := os.ReadFile(destination)
+	if readErr != nil || !bytes.Equal(contents, sentinel) {
+		t.Fatalf("competing destination changed: %q err=%v", contents, readErr)
+	}
+}
+
 func TestVerifyRejectsNonScryptRecipientAndUnexpectedPath(t *testing.T) {
 	x25519, err := age.GenerateX25519Identity()
 	if err != nil {
@@ -91,6 +121,25 @@ func TestVerifyRejectsNonScryptRecipientAndUnexpectedPath(t *testing.T) {
 	writeTestAgeTar(t, unexpected, recipient, "../manifest.json")
 	if _, err := Verify(context.Background(), unexpected, []byte("strong-backup-passphrase")); err == nil {
 		t.Fatal("unexpected tar path was accepted")
+	}
+}
+
+func TestScanSecretRecordsEnforcesRecordLimit(t *testing.T) {
+	var input bytes.Buffer
+	created := time.Date(2026, 9, 15, 12, 0, 0, 0, time.UTC)
+	encoder := json.NewEncoder(&input)
+	for index := 0; index <= maxSecretRecords; index++ {
+		record := secretRecord{
+			ID: fmt.Sprintf("id-%d", index), Name: fmt.Sprintf("s%04d", index),
+			ResourceVersion: 1, CreatedAt: created, UpdatedAt: created, Value: []byte("v"),
+		}
+		if err := encoder.Encode(record); err != nil {
+			t.Fatal(err)
+		}
+	}
+	count, err := scanSecretRecords(&input, func(secretRecord) error { return nil })
+	if err == nil || count != maxSecretRecords {
+		t.Fatalf("expected record-limit rejection after %d records, got count=%d err=%v", maxSecretRecords, count, err)
 	}
 }
 

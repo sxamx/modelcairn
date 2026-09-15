@@ -12,12 +12,17 @@ function response(status: number, body?: unknown) {
 }
 
 test("recovers an existing administrative session", async () => {
-  vi.spyOn(globalThis, "fetch").mockImplementation(() => response(200, {
-    admin: { id: "d79b24b4-4da4-43bf-829b-940e0f025d33", username: "sam" },
-    csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z",
-  }));
+  vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+    if (String(input).endsWith("/session/me")) return response(200, {
+      admin: { id: "d79b24b4-4da4-43bf-829b-940e0f025d33", username: "sam" },
+      csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z",
+    });
+    if (String(input).endsWith("/readyz")) return response(200, { status: "ready", components: {} });
+    return response(200, { incompatible: true });
+  });
   render(<App />);
   expect(await screen.findByRole("heading", { name: "Hola, sam" })).toBeInTheDocument();
+  expect(await screen.findByText("El resumen no está disponible. Tus rutas siguen funcionando de forma independiente.")).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith("/api/v1/admin/session/me", expect.objectContaining({ credentials: "same-origin" }));
 });
 

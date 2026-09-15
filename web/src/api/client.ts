@@ -48,6 +48,33 @@ function rememberSession(session: SessionContext): SessionContext {
   return session;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isFiniteCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function isOverview(value: unknown): value is Overview {
+  if (!isRecord(value) || !isRecord(value.resourceCounts) || !isRecord(value.requests24h) || !Array.isArray(value.recentRequests)) return false;
+  const resourceCounts = value.resourceCounts;
+  const requests24h = value.requests24h;
+  if (!Object.values(resourceCounts).every(isFiniteCount)) return false;
+  if (!["total", "success", "error"].every((key) => isFiniteCount(requests24h[key]))) return false;
+  if (!isFiniteCount(value.activeCooldowns) || typeof value.generatedAt !== "string") return false;
+  const outcomes = new Set(["success", "error", "partial", "cancelled", "indeterminate"]);
+  return value.recentRequests.every((item) => isRecord(item)
+    && typeof item.id === "string"
+    && typeof item.requestedAlias === "string"
+    && typeof item.startedAt === "string"
+    && (item.completedAt === undefined || item.completedAt === null || typeof item.completedAt === "string")
+    && (item.outcome === undefined || item.outcome === null || (typeof item.outcome === "string" && outcomes.has(item.outcome)))
+    && (item.httpStatus === undefined || item.httpStatus === null || isFiniteCount(item.httpStatus))
+    && (item.durationMs === undefined || item.durationMs === null || isFiniteCount(item.durationMs))
+    && isFiniteCount(item.attempts));
+}
+
 export const api = {
   async readiness(): Promise<Readiness> {
     const response = await fetch("/readyz", { headers: { Accept: "application/json" }, credentials: "same-origin" });
@@ -67,7 +94,11 @@ export const api = {
   async logout() {
     try { await request<void>("/session", { method: "DELETE" }); } finally { csrfToken = ""; }
   },
-  overview() { return request<Overview>("/overview"); },
+  async overview() {
+    const body = await request<unknown>("/overview");
+    if (!isOverview(body)) throw new APIError(502, "invalid_overview");
+    return body;
+  },
   putSecret(name: string, value: string, version?: number) {
     const headers = version === undefined ? undefined : { "If-Match": `"${version}"` };
     return request<components["schemas"]["SecretMetadata"]>(`/secrets/${encodeURIComponent(name)}`, { method: "PUT", headers, body: JSON.stringify({ value }) });

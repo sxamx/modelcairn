@@ -36,7 +36,7 @@ compresión reduce complejidad, picos de RAM y ataques de expansión. Solo admit
 
 - `manifest.json` (máximo 1 MiB);
 - `database.sqlite` (máximo predeterminado 64 GiB y limitado por espacio libre);
-- `secrets.jsonl` (máximo 64 MiB, un registro por línea);
+- `secrets.jsonl` (máximo 64 MiB y 4096 registros, uno por línea);
 - `checksums.json` (máximo 1 MiB).
 
 Máximo cuatro entradas y 65 GiB de plaintext. La lectura es secuencial, con buffers
