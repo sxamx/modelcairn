@@ -5,6 +5,9 @@
 Requirements: AMD64 or ARM64 Linux with `systemd`, a local ModelCairn executable for
 the correct architecture, and `sudo`. The installer downloads no software, opens no
 ports, and does not install Tailscale.
+When asked to start the service, it verifies that the process remains active. An
+occupied port or another startup failure returns an error, stops the restart loop,
+and points to the journal; it never falsely reports a ready installation.
 
 ## First installation
 
@@ -59,4 +62,3 @@ data requires a separate manual action after a verified backup.
 For private networking or Tailscale, see the [access guide](acceso-red-v1.md). For
 backup and restore, see the [MCB1 guide](backup-recovery-v1.md). The operator manages
 firewall, DNS, certificates, the system, and `journald` retention.
-
