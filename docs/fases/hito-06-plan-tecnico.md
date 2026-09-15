@@ -2,7 +2,7 @@
 
 [Español](hito-06-plan-tecnico.es.md)
 
-Status: in progress since September 14, 2026.
+Status: completed on September 15, 2026.
 Prerequisite: Milestone 5 merged and accepted.
 
 ## Outcome
@@ -48,7 +48,7 @@ without exposing passwords or secrets.
 - [x] Localhost, private-network, and Tailscale Serve guide.
 - [x] MCB1 backup and verification without restore.
 - [x] Generational restore and rollback.
-- [ ] Complete operations, VM trial, benchmark, and grouped closeout.
+- [x] Complete operations, VM trial, benchmark, and grouped closeout.
 
 ## Initial decisions
 

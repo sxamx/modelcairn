@@ -2,9 +2,8 @@
 
 [Español](hito-06-instalacion-y-recuperacion.es.md)
 
-Status on September 15, 2026: implementation complete; operational closeout in
-progress. This evidence does not declare the milestone complete while the recovered
-route and test-installation closeout remain pending on the VM.
+Status on September 15, 2026: implementation, operational trial, and conservative
+cleanup complete. Closeout is subject only to final CI and merge.
 
 ## Automated gates
 
@@ -46,8 +45,23 @@ diagnosis. Repetition confirmed that an occupied port is rejected and ModelCairn
 left stopped. The clean installation continued on a free loopback port without
 altering the pre-existing service.
 
-## Remaining closeout
+## Functional recovery
 
-- complete route → backup → restore → route without secret re-entry;
-- exercise wrong passphrase, truncated file, session invalidation, and rollback;
-- decide and perform conservative cleanup of the test artifacts.
+The configured installation passed the complete path:
+
+- MCB1 creation and verification, with no secret canary found in the encrypted file;
+- wrong passphrase and truncated file rejected without changing the generation;
+- a Chat Completions route worked against a local upstream before restore;
+- restore selected a new generation and invalidated the pre-restore admin session;
+- the same route worked again without re-entering the provider secret;
+- rollback selected the exact predecessor and recovered readiness.
+
+Administrator and backup passwords were random, existed only in memory during the
+test, and were not published. The upstream, API key, and prompts were test canaries.
+
+## Conservative cleanup
+
+The uninstaller removed the unit and binary, and only test-created temporary files
+were deleted. Both development data directories remain owned by
+`modelcairn:modelcairn` with mode `0700`; they were neither deleted nor published.
+Final CI and merge are verified outside this VM evidence.

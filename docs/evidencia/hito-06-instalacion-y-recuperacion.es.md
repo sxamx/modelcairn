@@ -2,9 +2,8 @@
 
 [English](hito-06-installation-and-recovery.md)
 
-Estado al 15 de septiembre de 2026: implementación completa; cierre operativo en
-curso. Esta evidencia no declara terminado el hito mientras falte la ruta recuperada
-en la VM y el cierre de la instalación de prueba.
+Estado al 15 de septiembre de 2026: implementación, recorrido operativo y limpieza
+conservadora completos. El cierre queda sujeto únicamente al CI final y la fusión.
 
 ## Compuertas automatizadas
 
@@ -47,8 +46,26 @@ detener el bucle de reinicios y devolver un diagnóstico. La repetición confirm
 el puerto ocupado se rechaza y que ModelCairn queda detenido. La instalación limpia
 continuó en un puerto loopback libre sin alterar el servicio preexistente.
 
-## Pendiente para cerrar
+## Recuperación funcional
 
-- completar ruta → backup → restore → ruta sin reintroducir el secreto;
-- comprobar contraseña incorrecta, archivo truncado, invalidación de sesión y rollback;
-- decidir y ejecutar la limpieza conservadora de los artefactos de prueba.
+Sobre la instalación configurada se comprobó el recorrido completo:
+
+- creación y verificación del backup MCB1, sin hallar la canaria secreta en el
+  archivo cifrado;
+- contraseña incorrecta y archivo truncado rechazados sin cambiar la generación;
+- ruta Chat Completions funcional contra un upstream local antes del restore;
+- restore hacia una generación nueva e invalidación de la sesión administrativa
+  capturada antes de restaurar;
+- la misma ruta volvió a responder sin reintroducir el secreto del proveedor;
+- rollback seleccionó exactamente la generación predecesora y recuperó readiness.
+
+Las contraseñas administrativas y de backup fueron aleatorias, existieron solo en
+memoria durante la prueba y no se publicaron. El upstream, la API key y los prompts
+eran canarias ficticias.
+
+## Limpieza conservadora
+
+El desinstalador retiró la unidad y el binario y se eliminaron únicamente los
+temporales creados por la prueba. Los dos directorios de datos de desarrollo se
+conservaron con propietario `modelcairn:modelcairn` y modo `0700`; no se borraron ni
+se publicaron. CI final y fusión se comprueban fuera de esta evidencia de VM.
