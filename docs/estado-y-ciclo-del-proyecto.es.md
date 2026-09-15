@@ -153,3 +153,4 @@ Incluye incorporar la licencia elegida en la Etapa C, completar la guía de cont
 | 2026-09-13 | Hito 5 iniciado | Plan técnico de consola/PWA, siete bloques y puertas de salida definidos |
 | 2026-09-13 | Hito 5 completado | Consola React/PWA incrustada, onboarding con revisión, administración, diagnóstico, publicación segura, QA agrupado y benchmark VM sin swap |
 | 2026-09-14 | Hito 6 iniciado | Plan de instalación nativa, backup MCB1, restore generacional y verificación en VM definido |
+| 2026-09-15 | Hito 6 completado | Instalación idempotente, reinicio, backup/restore/rollback con ruta recuperada, fallos seguros, benchmark sin swap y limpieza conservadora comprobados en VM |

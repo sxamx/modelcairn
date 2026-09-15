@@ -133,3 +133,4 @@ Includes incorporating the license chosen in Stage C, completing the contributio
 | 2026-09-13 | Milestone 5 started | Console/PWA technical plan, seven delivery blocks, and exit gates defined |
 | 2026-09-13 | Milestone 5 completed | Embedded React/PWA console, reviewed onboarding, administration, diagnostics, safe publication, grouped QA, and swap-free VM benchmark |
 | 2026-09-14 | Milestone 6 started | Native installation, MCB1 backup, generational restore, and clean-VM verification plan defined |
+| 2026-09-15 | Milestone 6 completed | Idempotent install, reboot, backup/restore/rollback with recovered route, safe failures, swap-free benchmark, and conservative cleanup verified on the VM |

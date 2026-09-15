@@ -2,7 +2,7 @@
 
 [English](hito-06-plan-tecnico.md)
 
-Estado: en ejecución desde el 14 de septiembre de 2026.
+Estado: completado el 15 de septiembre de 2026.
 Prerrequisito: Hito 5 fusionado y aceptado.
 
 ## Resultado
@@ -49,7 +49,7 @@ restaurar un backup MCB1 sin exponer contraseñas ni secretos.
 - [x] Guía de localhost, red privada y Tailscale Serve.
 - [x] Backup MCB1 y verificación sin restaurar.
 - [x] Restore generacional y rollback.
-- [ ] Operación completa, prueba en VM, benchmark y cierre agrupado.
+- [x] Operación completa, prueba en VM, benchmark y cierre agrupado.
 
 ## Decisiones iniciales
 
