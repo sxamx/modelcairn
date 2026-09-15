@@ -32,10 +32,11 @@ conservó el estado. Los permisos observados coinciden con el contrato:
 | Unidad systemd | `root:root` | `0644` |
 
 El proceso consumió aproximadamente 5,8 MiB inmediatamente después de instalarse.
-Tras reiniciar la VM, `systemd` lo inició automáticamente, health y readiness
-respondieron y el consumo observado fue aproximadamente 37,2 MiB, dentro del límite
-de 128 MiB. Son observaciones puntuales; el benchmark final debe registrar duración,
-muestras y picos.
+Tras reiniciar la VM, `systemd` lo inició automáticamente y health y readiness
+respondieron. Una ventana posterior de 120 segundos reunió 59 muestras mientras se
+consultaban ambos endpoints: promedio 15,8 MiB, pico 28,7 MiB y 0 KiB de swap. El
+binario midió 13,4 MiB y el estado configurado, aproximadamente 312 KiB. El pico
+queda ampliamente dentro del límite de 128 MiB.
 
 ## Hallazgo durante la instalación real
 
@@ -50,5 +51,4 @@ continuó en un puerto loopback libre sin alterar el servicio preexistente.
 
 - completar ruta → backup → restore → ruta sin reintroducir el secreto;
 - comprobar contraseña incorrecta, archivo truncado, invalidación de sesión y rollback;
-- medir durante una ventana definida y documentar promedio, pico y swap;
 - decidir y ejecutar la limpieza conservadora de los artefactos de prueba.
