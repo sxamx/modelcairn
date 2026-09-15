@@ -46,8 +46,8 @@ without exposing passwords or secrets.
 - [x] Native installer and `systemd` unit.
 - [x] Guided bootstrap without secrets in arguments.
 - [x] Localhost, private-network, and Tailscale Serve guide.
-- [ ] MCB1 backup and verification without restore.
-- [ ] Generational restore and rollback.
+- [x] MCB1 backup and verification without restore.
+- [x] Generational restore and rollback.
 - [ ] Complete operations, VM trial, benchmark, and grouped closeout.
 
 ## Initial decisions

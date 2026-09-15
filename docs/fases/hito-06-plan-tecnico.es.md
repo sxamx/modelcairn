@@ -47,8 +47,8 @@ restaurar un backup MCB1 sin exponer contraseñas ni secretos.
 - [x] Instalador nativo y unidad `systemd`.
 - [x] Bootstrap guiado sin secretos en argumentos.
 - [x] Guía de localhost, red privada y Tailscale Serve.
-- [ ] Backup MCB1 y verificación sin restaurar.
-- [ ] Restore generacional y rollback.
+- [x] Backup MCB1 y verificación sin restaurar.
+- [x] Restore generacional y rollback.
 - [ ] Operación completa, prueba en VM, benchmark y cierre agrupado.
 
 ## Decisiones iniciales
