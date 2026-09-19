@@ -1,6 +1,6 @@
 # ModelCairn
 
-> Estado: implementación incremental de la Fase 1; Hito 2 completado.
+> Estado: validación y cierre de la Fase 1; Hitos 0 a 6 completados.
 > El prototipo recuperado se conserva fuera de este repositorio como referencia.
 
 [English](README.md)
@@ -16,8 +16,8 @@ la señal de la ruta sin fingir que una estimación es una regla oficial.
 
 ## Estado del proyecto
 
-No existe todavía una release. La base documental y los contratos ejecutables de
-la Fase 1 están completos; a continuación comienza el desarrollo incremental en Go.
+No existe todavía una release. La implementación de la Fase 1 está completa y el
+Hito 7 valida el sistema, la seguridad y sus criterios de aceptación.
 Consulta:
 
 - [Estado y ciclo del proyecto](docs/estado-y-ciclo-del-proyecto.es.md)
@@ -44,7 +44,7 @@ ModelCairn se distribuye bajo [Apache License 2.0](LICENSE) e incluye
 
 ## Desarrollo
 
-Los Hitos 1 y 2 están completos; el Hito 3 está en desarrollo. Con Go instalado:
+Los Hitos 0 a 6 están completos; el Hito 7 está en ejecución. Con Go instalado:
 
 ```sh
 go test ./...

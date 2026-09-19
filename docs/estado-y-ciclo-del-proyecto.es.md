@@ -104,7 +104,7 @@ Resultado: siete hitos de implementación más un Hito 0 documental, trazabilida
 RF/RNF, riesgos, puertas de entrada y definición de terminado. El Hito 0 fue
 aprobado por QA independiente sin hallazgos críticos o altos pendientes.
 
-## Etapa E — Implementación incremental (activa)
+## Etapa E — Implementación incremental (completada para la Fase 1)
 
 Cada incremento debe incluir código, pruebas, documentación operativa, medición de recursos y revisión independiente. No se aceptan grandes lotes de funciones sin una puerta de calidad intermedia.
 
@@ -127,9 +127,12 @@ parser, CLI transaccional e integración completa. CI, QA agrupado y una ejecuci
 de 120 segundos en la VM representativa aprobaron; el proceso configurado usó
 11.768 KiB de RSS pico y cero swap.
 
-## Etapa F — Validación de sistema y seguridad (pendiente)
+## Etapa F — Validación de sistema y seguridad (activa)
 
 Incluye carga en una VM equivalente a Oracle Free Tier, fallos de red, reinicios, migraciones, recuperación de backups, pruebas multinodo, privacidad, abuso del panel y revisión del modelo de amenazas.
+
+El Hito 7 ejecuta esta etapa. En la Fase 1, la validación multinodo comprueba los
+límites arquitectónicos; la implementación y carga real de relays continúa diferida.
 
 ## Etapa G — Preparación open source y publicación (pendiente)
 
@@ -154,3 +157,4 @@ Incluye incorporar la licencia elegida en la Etapa C, completar la guía de cont
 | 2026-09-13 | Hito 5 completado | Consola React/PWA incrustada, onboarding con revisión, administración, diagnóstico, publicación segura, QA agrupado y benchmark VM sin swap |
 | 2026-09-14 | Hito 6 iniciado | Plan de instalación nativa, backup MCB1, restore generacional y verificación en VM definido |
 | 2026-09-15 | Hito 6 completado | Instalación idempotente, reinicio, backup/restore/rollback con ruta recuperada, fallos seguros, benchmark sin swap y limpieza conservadora comprobados en VM |
+| 2026-09-16 | Etapa F e Hito 7 iniciados | Plan agrupado de trazabilidad, fallos, carga, retención, seguridad, operación y aceptación definido |

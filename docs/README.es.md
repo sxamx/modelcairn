@@ -18,6 +18,7 @@
 12. [Plan técnico de entrega del Hito 4](fases/hito-04-plan-tecnico.es.md)
 13. [Plan técnico de entrega del Hito 5](fases/hito-05-plan-tecnico.es.md)
 14. [Plan técnico de entrega del Hito 6](fases/hito-06-plan-tecnico.es.md)
+15. [Plan técnico de validación y cierre del Hito 7](fases/hito-07-plan-tecnico.es.md)
 
 ## Contratos ejecutables de la Fase 1
 

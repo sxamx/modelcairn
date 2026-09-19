@@ -18,6 +18,7 @@
 12. [Milestone 4 technical delivery plan](fases/hito-04-plan-tecnico.md)
 13. [Milestone 5 technical delivery plan](fases/hito-05-plan-tecnico.md)
 14. [Milestone 6 technical delivery plan](fases/hito-06-plan-tecnico.md)
+15. [Milestone 7 validation and closeout plan](fases/hito-07-plan-tecnico.md)
 
 ## Phase 1 executable contracts
 
