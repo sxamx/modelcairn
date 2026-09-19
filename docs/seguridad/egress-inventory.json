@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "productionCallsites": [
+    {"path":"internal/app/admin_client.go","purpose":"Operator-selected ModelCairn administrative origin; redirects and remote plaintext HTTP are rejected."},
+    {"path":"internal/openaiadapter/adapter.go","purpose":"Operator-configured AI provider endpoint; redirects are rejected."},
+    {"path":"internal/openaiadapter/direct_transport.go","purpose":"DNS resolution and direct socket for the validated provider endpoint; private/shared addresses require explicit policy."},
+    {"path":"web/src/api/client.ts","purpose":"Same-origin ModelCairn administrative API and readiness only."}
+  ],
+  "externalTelemetry": []
+}

@@ -40,8 +40,20 @@ local carecía de CGO; la ejecución Linux de CI es la evidencia autoritativa.
 | capacidad de disco | `TestRequireFreeSpaceAcceptsSmallWriteAndRejectsImpossibleWrite` |
 | backup corrupto/passphrase/restore | suite `backupmcb1` y evidencia funcional del Hito 6 |
 
-Todos pasaron en CI. El harness representativo también rechazaba contenido canario
-persistido y el secreto de proveedor en logs; no encontró ninguno.
+Todos pasaron en CI. La cobertura canario se reparte deliberadamente por superficie:
+
+- el gate Hito 2 escanea su directorio temporal completo después de parser, errores,
+  plan, apply, export, metadatos, SQLite y logs;
+- el gate Hito 3 prueba API administrativa/export y que contraseña/secreto no
+  aparezcan en logs;
+- el gate Hito 4 rechaza prompt, respuesta o secreto en SQLite y service log;
+- las pruebas web confirman que el secreto solo viaja en su escritura, se limpia
+  del campo y no llega a almacenamiento del navegador;
+- la suite/evidencia Hito 6 verifica backup cifrado y ausencia del canario en texto
+  claro.
+
+Ninguna superficie encontró el canario. Las respuestas HTTP que necesariamente
+devuelven el contenido solicitado no se consideran una filtración.
 
 ## Retención validada
 

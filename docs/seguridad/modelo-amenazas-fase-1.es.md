@@ -54,6 +54,8 @@ implementar RF-101–RF-108.
 ## Privacidad y datos
 
 - No existe telemetría externa incorporada.
+- El [inventario de egresos](egress-inventory.json) enumera cada archivo de
+  producción capaz de iniciar red; CI falla ante un punto nuevo no declarado.
 - Prompts y respuestas no se persisten por defecto.
 - Metadatos operativos permanecen localmente hasta que una política implementada
   los elimine; el mapa de retención declara qué controles siguen diferidos.

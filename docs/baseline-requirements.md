@@ -50,7 +50,14 @@
 - **RNF-007:** the basic console must be usable without understanding the internal architecture, and advanced controls must remain accessible.
 - **RNF-008:** there is no built-in external telemetry.
 
-The numerical thresholds for memory, added latency, concurrency, disk, and recovery time will be set after building a representative benchmark. Choosing them without defined load and hardware would produce fictitious precision.
+The Phase 1 representative benchmark fixed a reproducible local profile, not a
+provider-latency promise: 1 GB/2-vCPU VM, deterministic local upstream, 600 seconds,
+10 concurrent streams, and one overview query per second. Its gates are: at most
+128 MiB peak RSS, zero process swap, at most 50% average of one logical CPU,
+350/2,000 ms average/maximum latency, at most 32 MiB data directory, and at least
+10,000 successful streams plus 300 successful queries. Installation and recovery
+retain their reproducible Milestone 6 functional gates; no universal restore time
+is published because it depends on backup and disk size.
 
 ## Out of initial scope
 

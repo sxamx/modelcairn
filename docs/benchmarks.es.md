@@ -91,3 +91,15 @@ SUSTAINED_SECONDS=600 SUSTAINED_CONCURRENCY=10 \
 
 El valor predeterminado `SUSTAINED_SECONDS=0` evita alargar CI. Solo una ejecución
 de al menos 600 segundos en la VM representativa acredita esta puerta.
+
+Para ese perfil, el harness aplica y falla automáticamente con estas puertas:
+
+- RSS pico ≤ 128 MiB y swap del proceso igual a cero;
+- CPU media ≤ 50% de un CPU lógico;
+- latencia media/máxima ≤ 350/2.000 ms;
+- directorio de datos ≤ 32 MiB;
+- con al menos 600 segundos: concurrencia ≥ 10, ≥ 10.000 streams correctos y
+  ≥ 300 consultas de panel correctas.
+
+Estos límites aíslan regresiones de ModelCairn frente al upstream local de 50 ms.
+No prometen tiempos de respuesta de proveedores o redes públicas.
