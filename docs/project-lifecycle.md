@@ -85,7 +85,7 @@ Objective: transform the approved contracts into small milestones, dependencies,
 
 Result: seven implementation milestones plus a documentation Milestone 0, RF/RNF traceability, risks, entry gates, and definition of done. Milestone 0 was approved by independent QA with no pending critical or high findings.
 
-## Stage E - Incremental implementation (active)
+## Stage E - Incremental implementation (completed for Phase 1)
 
 Each increment must include code, tests, operational documentation, resource measurement, and independent review. Large batches of features without an intermediate quality gate are not accepted.
 
@@ -107,9 +107,12 @@ transactional CLI, and complete integration. CI, grouped QA, and a 120-second ru
 on the representative VM passed; the configured process used 11,768 KiB peak RSS
 and zero swap.
 
-## Stage F - System and security validation (pending)
+## Stage F - System and security validation (active)
 
 Includes load on a VM equivalent to Oracle Free Tier, network failures, restarts, migrations, backup recovery, multinode tests, privacy, panel abuse, and review of the threat model.
+
+Milestone 7 executes this stage. In Phase 1, multinode validation checks the
+architectural boundaries; real relay implementation and load remain deferred.
 
 ## Stage G - Open source preparation and publication (pending)
 
@@ -134,3 +137,4 @@ Includes incorporating the license chosen in Stage C, completing the contributio
 | 2026-09-13 | Milestone 5 completed | Embedded React/PWA console, reviewed onboarding, administration, diagnostics, safe publication, grouped QA, and swap-free VM benchmark |
 | 2026-09-14 | Milestone 6 started | Native installation, MCB1 backup, generational restore, and clean-VM verification plan defined |
 | 2026-09-15 | Milestone 6 completed | Idempotent install, reboot, backup/restore/rollback with recovered route, safe failures, swap-free benchmark, and conservative cleanup verified on the VM |
+| 2026-09-16 | Stage F and Milestone 7 started | Grouped traceability, failure, load, retention, security, operations, and acceptance plan defined |

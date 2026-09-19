@@ -1,6 +1,6 @@
 # ModelCairn
 
-> Status: Phase 1 incremental implementation; Milestone 2 complete.
+> Status: Phase 1 validation and closeout; Milestones 0 through 6 complete.
 > The recovered prototype is kept outside this repository as a reference.
 
 [Español](README.es.md)
@@ -16,8 +16,8 @@ route signal without pretending that an estimate is an official rule.
 
 ## Project status
 
-There is no release yet. The documentation baseline and executable contracts for
-Phase 1 are complete; incremental development in Go follows. See:
+There is no release yet. Phase 1 implementation is complete and Milestone 7 is
+validating the system, security, and acceptance criteria. See:
 
 - [Project status and lifecycle](docs/project-lifecycle.md)
 - [Project Charter](docs/project-charter.md)
@@ -43,7 +43,7 @@ ModelCairn is distributed under the [Apache License 2.0](LICENSE) and includes a
 
 ## Development
 
-Milestones 1 and 2 are complete; Milestone 3 is in progress. With Go installed:
+Milestones 0 through 6 are complete; Milestone 7 is in progress. With Go installed:
 
 ```sh
 go test ./...

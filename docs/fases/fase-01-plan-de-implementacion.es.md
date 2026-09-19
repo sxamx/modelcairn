@@ -2,7 +2,7 @@
 
 [English](fase-01-plan-de-implementacion.md)
 
-- Estado: aceptado; Hitos 0 a 5 completados, Hito 6 es el siguiente
+- Estado: aceptado; Hitos 0 a 6 completados, Hito 7 en ejecución
 - Regla de entrega: cada hito incluye código, pruebas y documentación; no se marca
   completo por una demostración visual
 
