@@ -50,9 +50,11 @@ pertenece a una fase posterior.
   normales, SSE y panel.
 - Medir RSS medio/pico, swap, CPU, binario, crecimiento SQLite y latencias contra
   presupuestos RNF ya definidos.
-- Sembrar eventos de edades sintéticas para probar retención arbitraria —horas,
-  meses, años e ilimitada— sin esperar tiempo real.
-- Comprobar poda por lotes y consultas históricas acotadas.
+- Sembrar estadísticas de login de edades sintéticas para probar su retención
+  arbitraria —horas, meses, años e ilimitada— sin esperar tiempo real.
+- Comprobar su poda por lotes y caracterizar el crecimiento y las consultas del
+  historial operativo. La retención configurable de solicitudes, intentos,
+  observaciones y auditoría es RF-202 y no se implementa dentro de este cierre.
 
 Salida: informe bilingüe reproducible con entorno, comandos y resultados.
 
