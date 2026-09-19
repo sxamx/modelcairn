@@ -36,6 +36,7 @@
 - [Milestone 5 console benchmark](evidencia/benchmark-hito-05-2026-09-13.md)
 - [Milestone 5 grouped QA](evidencia/qa-agrupado-hito-05.md)
 - [Milestone 6 installation and recovery evidence](evidencia/hito-06-installation-and-recovery.md)
+- [Milestone 7 system and security validation evidence](evidencia/hito-07-system-validation.md)
 - [Example configuration](contratos/config/example-v1alpha1.yaml)
 - [Administrative OpenAPI](contratos/api/admin-v1.openapi.yaml)
 - [Data API OpenAPI](contratos/api/data-v1.openapi.yaml)
