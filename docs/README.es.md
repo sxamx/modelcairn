@@ -49,6 +49,7 @@
 - [Instalación y actualización nativa Linux](operacion/instalacion-linux-v1.es.md)
 - [Backup y recuperación MCB1](operacion/backup-recuperacion-v1.es.md)
 - [Trazabilidad de requisitos](fases/fase-01-trazabilidad.es.md)
+- [Manifiesto ejecutable de aceptación](fases/fase-01-aceptacion.json)
 - [Riesgos y puertas de calidad](fases/fase-01-riesgos-y-puertas.es.md)
 
 ## Hito 3 — contratos aceptados
