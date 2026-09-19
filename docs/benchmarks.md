@@ -76,3 +76,16 @@ in logs. CI uses it as a smoke gate; closure still requires its redacted report
 from the representative VM.
 For a longer measurement, `BATCHES_PER_LEVEL` repeats complete batches at every
 level without changing its exact concurrency; CI retains the default value of 1.
+
+Phase 1 closeout also uses the sustained mode of the same harness. It holds the
+requested number of concurrent streams for the minimum duration while querying the
+administrative overview once per second. Credentials remain in temporary `0600`
+files and the report retains only counts and latency:
+
+```sh
+SUSTAINED_SECONDS=600 SUSTAINED_CONCURRENCY=10 \
+  OUTPUT_FILE=benchmark-results/hito-07.md bash scripts/verify-hito4.sh
+```
+
+The default `SUSTAINED_SECONDS=0` keeps CI short. Only a run of at least 600
+seconds on the representative VM satisfies this gate.

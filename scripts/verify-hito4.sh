@@ -11,6 +11,8 @@ max_rss_kib="${MAX_RSS_KIB:-131072}"
 output_file="${OUTPUT_FILE:-}"
 python_command="${PYTHON_COMMAND:-python3}"
 batches_per_level="${BATCHES_PER_LEVEL:-1}"
+sustained_seconds="${SUSTAINED_SECONDS:-0}"
+sustained_concurrency="${SUSTAINED_CONCURRENCY:-10}"
 service_pid=""
 upstream_pid=""
 sampler_pid=""
@@ -39,6 +41,10 @@ fi
   { echo "MAX_RSS_KIB must be a positive integer" >&2; exit 2; }
 [[ "$batches_per_level" =~ ^[1-9][0-9]*$ ]] ||
   { echo "BATCHES_PER_LEVEL must be a positive integer" >&2; exit 2; }
+[[ "$sustained_seconds" =~ ^[0-9]+$ ]] ||
+  { echo "SUSTAINED_SECONDS must be a non-negative integer" >&2; exit 2; }
+[[ "$sustained_concurrency" =~ ^[1-9][0-9]*$ ]] ||
+  { echo "SUSTAINED_CONCURRENCY must be a positive integer" >&2; exit 2; }
 cd "$repository_root"
 
 if [[ -n "${MODELCAIRN_BINARY:-}" ]]; then
@@ -80,7 +86,14 @@ curl --fail --silent "$origin/readyz" >/dev/null
 sampler_pid="$!"
 
 printf '%s\n' 'a secure password' |
-  "$binary" admin login --server "$origin" --session-file "$work/session.json" --username owner >/dev/null
+"$binary" admin login --server "$origin" --session-file "$work/session.json" --username owner >/dev/null
+session_token="$("$python_command" -c 'import json,sys; print(json.load(open(sys.argv[1]))["sessionToken"])' "$work/session.json")"
+csrf_token="$("$python_command" -c 'import json,sys; print(json.load(open(sys.argv[1]))["csrfToken"])' "$work/session.json")"
+printf 'header = "Cookie: mc_session=%s"\n' "$session_token" >"$work/curl-admin"
+printf 'header = "Origin: %s"\n' "$origin" >>"$work/curl-admin"
+printf 'header = "X-CSRF-Token: %s"\n' "$csrf_token" >>"$work/curl-admin"
+chmod 600 "$work/curl-admin"
+unset session_token csrf_token
 printf '%s\n' 'benchmark-provider-secret' |
   "$binary" secret set --server "$origin" --session-file "$work/session.json" example-key-secret >/dev/null
 cp docs/contratos/config/example-v1alpha1.yaml "$work/config.yaml"
@@ -113,6 +126,51 @@ for concurrency in 1 2 5 10 20; do
   maximum="$(awk 'BEGIN {max=0} $1>max {max=$1} END {printf "%.6f", max}' "$work"/time-"$concurrency"-*)"
   printf '%s %s %s %s\n' "$concurrency" "$((concurrency * batches_per_level))" "$average" "$maximum" >>"$work/results"
 done
+
+sustained_successful=0
+sustained_panel_queries=0
+sustained_average="n/a"
+sustained_maximum="n/a"
+if (( sustained_seconds > 0 )); then
+  sustained_deadline=$((SECONDS + sustained_seconds))
+  pids=()
+  for worker in $(seq 1 "$sustained_concurrency"); do
+    (
+      count=0
+      : >"$work/sustained-times-$worker"
+      while (( SECONDS < sustained_deadline )); do
+        curl --fail --silent --show-error --config "$work/curl-auth" -H 'Content-Type: application/json' \
+          --data-binary "@$work/stream.json" -o "$work/sustained-$worker.sse" -w '%{time_total}\n' \
+          "$origin/v1/chat/completions" >>"$work/sustained-times-$worker"
+        grep -Fq 'data: [DONE]' "$work/sustained-$worker.sse"
+        grep -Fq '"model":"example-assistant"' "$work/sustained-$worker.sse"
+        ! grep -Fq 'modelcairn_error' "$work/sustained-$worker.sse"
+        ((count += 1))
+      done
+      printf '%s\n' "$count" >"$work/sustained-count-$worker"
+    ) &
+    pids+=("$!")
+  done
+  (
+    count=0
+    while (( SECONDS < sustained_deadline )); do
+      curl --fail --silent --show-error --config "$work/curl-admin" \
+        "$origin/api/v1/admin/overview" -o "$work/sustained-overview.json"
+      "$python_command" -c 'import json,sys; value=json.load(open(sys.argv[1])); assert isinstance(value.get("recentRequests"),list) and isinstance(value.get("resourceCounts"),dict)' "$work/sustained-overview.json"
+      ((count += 1))
+      sleep 1
+    done
+    printf '%s\n' "$count" >"$work/sustained-panel-count"
+  ) &
+  pids+=("$!")
+  for pid in "${pids[@]}"; do wait "$pid"; done
+  sustained_successful="$(awk '{sum += $1} END {print sum+0}' "$work"/sustained-count-*)"
+  sustained_panel_queries="$(cat "$work/sustained-panel-count")"
+  sustained_average="$(awk '{sum += $1; count += 1} END {if (count) printf "%.6f", sum/count; else print "n/a"}' "$work"/sustained-times-*)"
+  sustained_maximum="$(awk 'BEGIN {max=0} $1>max {max=$1} END {printf "%.6f", max}' "$work"/sustained-times-*)"
+  (( sustained_successful > 0 && sustained_panel_queries > 0 )) ||
+    { echo "sustained mixed load produced no successful work" >&2; exit 1; }
+fi
 
 kill "$sampler_pid" 2>/dev/null || true
 wait "$sampler_pid" 2>/dev/null || true
@@ -150,6 +208,11 @@ if [[ -n "$output_file" ]]; then
     echo "- Enforced peak RSS budget: $max_rss_kib KiB"
     echo "- Peak service swap: $peak_swap KiB"
     echo "- Batches per concurrency level: $batches_per_level"
+    echo "- Sustained mixed-load duration: $sustained_seconds seconds"
+    echo "- Sustained stream concurrency: $sustained_concurrency"
+    echo "- Sustained successful streams: $sustained_successful"
+    echo "- Sustained panel queries: $sustained_panel_queries"
+    echo "- Sustained average/maximum stream latency: $sustained_average/$sustained_maximum seconds"
     echo
     echo "| Concurrent streams | Successful | Average latency (s) | Maximum latency (s) |"
     echo "|---:|---:|---:|---:|"
