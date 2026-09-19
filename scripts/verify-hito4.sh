@@ -84,6 +84,8 @@ curl --fail --silent "$origin/readyz" >/dev/null
   done
 ) &
 sampler_pid="$!"
+cpu_ticks_start="$(awk '{print $14+$15}' "/proc/$service_pid/stat")"
+wall_start_ns="$(date +%s%N)"
 
 printf '%s\n' 'a secure password' |
 "$binary" admin login --server "$origin" --session-file "$work/session.json" --username owner >/dev/null
@@ -172,6 +174,15 @@ if (( sustained_seconds > 0 )); then
     { echo "sustained mixed load produced no successful work" >&2; exit 1; }
 fi
 
+cpu_ticks_end="$(awk '{print $14+$15}' "/proc/$service_pid/stat")"
+wall_end_ns="$(date +%s%N)"
+clock_ticks="$(getconf CLK_TCK)"
+cpu_seconds="$(awk -v ticks="$((cpu_ticks_end - cpu_ticks_start))" -v hz="$clock_ticks" 'BEGIN {printf "%.3f", ticks/hz}')"
+average_cpu_percent="$(awk -v ticks="$((cpu_ticks_end - cpu_ticks_start))" -v hz="$clock_ticks" -v ns="$((wall_end_ns - wall_start_ns))" 'BEGIN {if (ns<=0) print "0.000"; else printf "%.3f", 100*(ticks/hz)/(ns/1000000000)}')"
+data_bytes="$(find "$data" -type f -printf '%s\n' | awk '{sum += $1} END {print sum+0}')"
+database_bytes="$(stat -c %s "$data/modelcairn.db")"
+wal_bytes="$(stat -c %s "$data/modelcairn.db-wal" 2>/dev/null || printf '0')"
+
 kill "$sampler_pid" 2>/dev/null || true
 wait "$sampler_pid" 2>/dev/null || true
 sampler_pid=""
@@ -207,6 +218,10 @@ if [[ -n "$output_file" ]]; then
     echo "- Peak service RSS: $peak_rss KiB"
     echo "- Enforced peak RSS budget: $max_rss_kib KiB"
     echo "- Peak service swap: $peak_swap KiB"
+    echo "- Process CPU time: $cpu_seconds seconds"
+    echo "- Average process CPU: $average_cpu_percent% of one logical CPU"
+    echo "- Final data-directory size: $data_bytes bytes"
+    echo "- Final SQLite database/WAL size: $database_bytes/$wal_bytes bytes"
     echo "- Batches per concurrency level: $batches_per_level"
     echo "- Sustained mixed-load duration: $sustained_seconds seconds"
     echo "- Sustained stream concurrency: $sustained_concurrency"
