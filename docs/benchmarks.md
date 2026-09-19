@@ -89,3 +89,15 @@ SUSTAINED_SECONDS=600 SUSTAINED_CONCURRENCY=10 \
 
 The default `SUSTAINED_SECONDS=0` keeps CI short. Only a run of at least 600
 seconds on the representative VM satisfies this gate.
+
+For that profile, the harness automatically enforces and fails on these gates:
+
+- peak RSS ≤ 128 MiB and zero process swap;
+- average CPU ≤ 50% of one logical CPU;
+- average/maximum latency ≤ 350/2,000 ms;
+- data directory ≤ 32 MiB;
+- at 600 seconds or more: concurrency ≥ 10, ≥ 10,000 successful streams, and
+  ≥ 300 successful console queries.
+
+These bounds isolate ModelCairn regressions against the 50 ms local upstream. They
+are not response-time promises for public providers or networks.

@@ -54,6 +54,8 @@ before implementing RF-101–RF-108.
 ## Privacy and data
 
 - No built-in external telemetry exists.
+- The [egress inventory](egress-inventory.json) lists every production file able
+  to initiate network access; CI fails on an undeclared new callsite.
 - Prompts and responses are not persisted by default.
 - Operational metadata remains local until an implemented policy deletes it; the
   retention map identifies controls that remain deferred.

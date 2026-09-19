@@ -40,6 +40,7 @@ jobs:
       - name: Validate documentation contracts
         run: |
           node scripts/validate-docs.cjs
+          node scripts/verify-egress.cjs
           bash -n scripts/install-linux.sh
           bash -n scripts/bootstrap-linux.sh
           bash -n scripts/uninstall-linux.sh

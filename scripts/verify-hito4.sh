@@ -97,22 +97,38 @@ printf 'header = "X-CSRF-Token: %s"\n' "$csrf_token" >>"$work/curl-admin"
 chmod 600 "$work/curl-admin"
 unset session_token csrf_token
 printf '%s\n' 'benchmark-provider-secret' |
-  "$binary" secret set --server "$origin" --session-file "$work/session.json" example-key-secret >/dev/null
-cp docs/contratos/config/example-v1alpha1.yaml "$work/config.yaml"
-sed -i -e "s#https://api.example.invalid/v1#$upstream_origin/v1#" -e 's/allowPrivateNetwork: false/allowPrivateNetwork: true/' -e 's/attemptTimeoutMs: 60000/attemptTimeoutMs: 5000/' -e 's/totalTimeoutMs: 120000/totalTimeoutMs: 10000/' "$work/config.yaml"
-"$binary" config plan --server "$origin" --session-file "$work/session.json" --out "$work/plan.json" "$work/config.yaml" >/dev/null
-"$binary" config apply --server "$origin" --session-file "$work/session.json" --plan "$work/plan.json" "$work/config.yaml" >/dev/null
-"$binary" agent-token issue --server "$origin" --session-file "$work/session.json" example-agent >"$work/issued.json"
+  "$binary" secret set --server "$origin" --session-file "$work/session.json" onboarding-secret >/dev/null
+cp docs/contratos/config/onboarding-first-route-v1.json "$work/config.json"
+"$python_command" - "$work/config.json" "$upstream_origin/v1" <<'PY'
+import json
+import sys
+
+path, origin = sys.argv[1:]
+with open(path, encoding="utf-8") as source:
+    document = json.load(source)
+for resource in document["resources"]:
+    if resource["kind"] == "ProviderConnection":
+        resource["spec"]["baseUrl"] = origin
+        resource["spec"]["allowPrivateNetwork"] = True
+    if resource["kind"] == "Strategy":
+        resource["spec"]["attemptTimeoutMs"] = 5000
+        resource["spec"]["totalTimeoutMs"] = 10000
+with open(path, "w", encoding="utf-8") as target:
+    json.dump(document, target, separators=(",", ":"))
+PY
+"$binary" config plan --server "$origin" --session-file "$work/session.json" --out "$work/plan.json" "$work/config.json" >/dev/null
+"$binary" config apply --server "$origin" --session-file "$work/session.json" --plan "$work/plan.json" "$work/config.json" >/dev/null
+"$binary" agent-token issue --server "$origin" --session-file "$work/session.json" onboarding-agent >"$work/issued.json"
 agent_token="$("$python_command" -c 'import json,sys; value=json.load(open(sys.argv[1]))["token"]; assert value.startswith("mc_at_v1_"); print(value)' "$work/issued.json")"
 printf 'header = "Authorization: Bearer %s"\n' "$agent_token" >"$work/curl-auth"
 chmod 600 "$work/curl-auth"
 unset agent_token
 
-printf '%s\n' '{"model":"example-assistant","messages":[{"role":"user","content":"nonstream-canary"}]}' >"$work/nonstream.json"
+printf '%s\n' '{"model":"assistant","messages":[{"role":"user","content":"nonstream-canary"}]}' >"$work/nonstream.json"
 curl --fail --silent --show-error --config "$work/curl-auth" -H 'Content-Type: application/json' --data-binary "@$work/nonstream.json" "$origin/v1/chat/completions" >"$work/nonstream-response.json"
-"$python_command" -c 'import json,sys; value=json.load(open(sys.argv[1])); assert value["model"]=="example-assistant"; assert value["choices"][0]["message"]["content"]=="benchmark-ok"' "$work/nonstream-response.json"
+"$python_command" -c 'import json,sys; value=json.load(open(sys.argv[1])); assert value["model"]=="assistant"; assert value["choices"][0]["message"]["content"]=="benchmark-ok"' "$work/nonstream-response.json"
 
-printf '%s\n' '{"model":"example-assistant","messages":[{"role":"user","content":"stream-canary"}],"stream":true}' >"$work/stream.json"
+printf '%s\n' '{"model":"assistant","messages":[{"role":"user","content":"stream-canary"}],"stream":true}' >"$work/stream.json"
 : >"$work/results"
 for concurrency in 1 2 5 10 20; do
   for batch in $(seq 1 "$batches_per_level"); do
@@ -123,7 +139,7 @@ for concurrency in 1 2 5 10 20; do
     done
     for pid in "${pids[@]}"; do wait "$pid"; done
   done
-  "$python_command" -c 'import glob,sys; root,n,b=sys.argv[1],int(sys.argv[2]),int(sys.argv[3]); files=glob.glob(f"{root}/stream-{n}-*.sse"); assert len(files)==n*b; bodies=[open(path).read() for path in files]; assert all(body.endswith("data: [DONE]\n\n") and "\"model\":\"example-assistant\"" in body and "modelcairn_error" not in body for body in bodies)' "$work" "$concurrency" "$batches_per_level"
+  "$python_command" -c 'import glob,sys; root,n,b=sys.argv[1],int(sys.argv[2]),int(sys.argv[3]); files=glob.glob(f"{root}/stream-{n}-*.sse"); assert len(files)==n*b; bodies=[open(path).read() for path in files]; assert all(body.endswith("data: [DONE]\n\n") and "\"model\":\"assistant\"" in body and "modelcairn_error" not in body for body in bodies)' "$work" "$concurrency" "$batches_per_level"
   average="$(awk '{sum += $1} END {printf "%.6f", sum/NR}' "$work"/time-"$concurrency"-*)"
   maximum="$(awk 'BEGIN {max=0} $1>max {max=$1} END {printf "%.6f", max}' "$work"/time-"$concurrency"-*)"
   printf '%s %s %s %s\n' "$concurrency" "$((concurrency * batches_per_level))" "$average" "$maximum" >>"$work/results"
@@ -145,7 +161,7 @@ if (( sustained_seconds > 0 )); then
           --data-binary "@$work/stream.json" -o "$work/sustained-$worker.sse" -w '%{time_total}\n' \
           "$origin/v1/chat/completions" >>"$work/sustained-times-$worker"
         grep -Fq 'data: [DONE]' "$work/sustained-$worker.sse"
-        grep -Fq '"model":"example-assistant"' "$work/sustained-$worker.sse"
+        grep -Fq '"model":"assistant"' "$work/sustained-$worker.sse"
         ! grep -Fq 'modelcairn_error' "$work/sustained-$worker.sse"
         ((count += 1))
       done
@@ -182,6 +198,20 @@ average_cpu_percent="$(awk -v ticks="$((cpu_ticks_end - cpu_ticks_start))" -v hz
 data_bytes="$(find "$data" -type f -printf '%s\n' | awk '{sum += $1} END {print sum+0}')"
 database_bytes="$(stat -c %s "$data/modelcairn.db")"
 wal_bytes="$(stat -c %s "$data/modelcairn.db-wal" 2>/dev/null || printf '0')"
+if (( sustained_seconds > 0 )); then
+  awk -v actual="$average_cpu_percent" 'BEGIN {exit !(actual <= 50)}' ||
+    { echo "average CPU exceeded sustained budget: $average_cpu_percent% > 50%" >&2; exit 1; }
+  awk -v actual="$sustained_average" 'BEGIN {exit !(actual <= 0.350)}' ||
+    { echo "average latency exceeded sustained budget: $sustained_average s > 0.350 s" >&2; exit 1; }
+  awk -v actual="$sustained_maximum" 'BEGIN {exit !(actual <= 2.000)}' ||
+    { echo "maximum latency exceeded sustained budget: $sustained_maximum s > 2.000 s" >&2; exit 1; }
+  (( data_bytes <= 33554432 )) ||
+    { echo "data directory exceeded sustained budget: $data_bytes bytes > 33554432 bytes" >&2; exit 1; }
+  if (( sustained_seconds >= 600 )); then
+    (( sustained_concurrency >= 10 && sustained_successful >= 10000 && sustained_panel_queries >= 300 )) ||
+      { echo "representative throughput floor was not met" >&2; exit 1; }
+  fi
+fi
 
 kill "$sampler_pid" 2>/dev/null || true
 wait "$sampler_pid" 2>/dev/null || true
@@ -194,12 +224,15 @@ peak_swap="$(awk 'BEGIN {max=0} $2>max {max=$2} END {print max}' "$work/rss-samp
 (( peak_rss <= max_rss_kib )) ||
   { echo "service exceeded RSS budget: $peak_rss KiB > $max_rss_kib KiB" >&2; exit 1; }
 if grep -R -a -Fq --exclude='modelcairn.lock' 'nonstream-canary' "$data" ||
-   grep -R -a -Fq --exclude='modelcairn.lock' 'stream-canary' "$data"; then
+   grep -R -a -Fq --exclude='modelcairn.lock' 'stream-canary' "$data" ||
+   grep -R -a -Fq --exclude='modelcairn.lock' 'benchmark-ok' "$data"; then
   echo "request content was persisted" >&2
   exit 1
 fi
-grep -Fq 'benchmark-provider-secret' "$work/service.log" &&
-  { echo "provider secret leaked to service log" >&2; exit 1; }
+for canary in benchmark-provider-secret nonstream-canary stream-canary benchmark-ok; do
+  grep -Fq "$canary" "$work/service.log" &&
+    { echo "secret or content canary leaked to service log" >&2; exit 1; }
+done
 
 if [[ -n "$output_file" ]]; then
   mkdir -p "$(dirname "$output_file")"
@@ -228,6 +261,8 @@ if [[ -n "$output_file" ]]; then
     echo "- Sustained successful streams: $sustained_successful"
     echo "- Sustained panel queries: $sustained_panel_queries"
     echo "- Sustained average/maximum stream latency: $sustained_average/$sustained_maximum seconds"
+    echo "- Sustained acceptance budgets: CPU <= 50% of one logical CPU; average/maximum latency <= 0.350/2.000 seconds; data <= 33554432 bytes"
+    echo "- Representative floors at >=600s: concurrency >= 10; streams >= 10000; panel queries >= 300"
     echo
     echo "| Concurrent streams | Successful | Average latency (s) | Maximum latency (s) |"
     echo "|---:|---:|---:|---:|"

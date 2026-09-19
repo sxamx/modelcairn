@@ -75,9 +75,14 @@
   interna y los controles avanzados deben permanecer accesibles.
 - **RNF-008:** no existe telemetría externa incorporada.
 
-Los umbrales numéricos de memoria, latencia añadida, concurrencia, disco y tiempo de
-recuperación se fijarán después de construir un benchmark representativo. Elegirlos
-sin una carga y hardware definidos produciría precisión ficticia.
+El benchmark representativo de Fase 1 fijó un perfil local reproducible, no una
+promesa sobre la latencia de proveedores: VM de 1 GB y 2 vCPU, upstream local
+determinista, 600 segundos, 10 streams concurrentes y una consulta de overview por
+segundo. Sus puertas son: RSS pico máximo 128 MiB, cero swap del proceso, CPU media
+máxima 50% de un CPU lógico, latencia media/máxima 350/2.000 ms, directorio de datos
+máximo 32 MiB, al menos 10.000 streams y 300 consultas correctas. Instalación y
+recuperación conservan sus puertas funcionales reproducibles del Hito 6; no se
+publica un tiempo universal de restore porque depende del tamaño del backup y disco.
 
 ## Fuera del alcance inicial
 

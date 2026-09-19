@@ -40,8 +40,20 @@ the Linux CI run is authoritative evidence.
 | storage capacity | `TestRequireFreeSpaceAcceptsSmallWriteAndRejectsImpossibleWrite` |
 | corrupt/wrong-passphrase backup and restore | `backupmcb1` suite and Milestone 6 functional evidence |
 
-All passed in CI. The representative harness also rejected persisted content
-canaries and the provider secret in logs; it found neither.
+All passed in CI. Canary coverage is deliberately split by surface:
+
+- the Milestone 2 gate scans its complete temporary directory after parser,
+  errors, plan, apply, export, metadata, SQLite, and logs;
+- the Milestone 3 gate covers the admin API/export and rejects password/secret in
+  logs;
+- the Milestone 4 gate rejects prompt, response, or secret in SQLite and service
+  logs;
+- web tests verify the secret only crosses its write request, is cleared from the
+  field, and never enters browser storage;
+- the Milestone 6 suite/evidence verifies encrypted backup and no plaintext canary.
+
+No surface found the canary. HTTP responses that necessarily return requested
+content are not considered disclosure.
 
 ## Validated retention
 
