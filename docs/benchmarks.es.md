@@ -78,3 +78,16 @@ los cinco niveles, y rechaza contenido persistido o secretos en logs. CI la usa
 como humo; el cierre aún exige su informe redactado en la VM representativa.
 Para una medición prolongada, `BATCHES_PER_LEVEL` repite lotes completos en cada
 nivel sin modificar la concurrencia exacta; CI conserva el valor predeterminado 1.
+
+El cierre de la Fase 1 usa además el modo sostenido del mismo harness. Mantiene el
+número indicado de streams concurrentes durante el tiempo mínimo y, en paralelo,
+consulta el overview administrativo una vez por segundo. Las credenciales quedan
+en archivos temporales `0600` y el informe solo conserva conteos y latencias:
+
+```sh
+SUSTAINED_SECONDS=600 SUSTAINED_CONCURRENCY=10 \
+  OUTPUT_FILE=benchmark-results/hito-07.md bash scripts/verify-hito4.sh
+```
+
+El valor predeterminado `SUSTAINED_SECONDS=0` evita alargar CI. Solo una ejecución
+de al menos 600 segundos en la VM representativa acredita esta puerta.
