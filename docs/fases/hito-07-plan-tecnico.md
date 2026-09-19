@@ -50,9 +50,11 @@ to a later phase.
   console traffic.
 - Measure average/peak RSS, swap, CPU, binary, SQLite growth, and latency against
   previously defined RNF budgets.
-- Seed synthetically aged events to test arbitrary retention—hours, months, years,
-  and unlimited—without waiting in real time.
-- Verify batched pruning and bounded historical queries.
+- Seed synthetically aged login statistics to test their arbitrary retention—hours,
+  months, years, and unlimited—without waiting in real time.
+- Verify their batched pruning and characterize operational-history growth and
+  queries. Configurable retention for requests, attempts, observations, and audit
+  is RF-202 and is not implemented as part of this closeout.
 
 Output: a reproducible bilingual report with environment, commands, and results.
 
