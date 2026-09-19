@@ -49,6 +49,7 @@
 - [Native Linux installation and update](operacion/linux-installation-v1.md)
 - [MCB1 backup and recovery](operacion/backup-recovery-v1.md)
 - [Requirements traceability](fases/fase-01-trazabilidad.md)
+- [Executable acceptance manifest](fases/fase-01-aceptacion.json)
 - [Risks and quality gates](fases/fase-01-riesgos-y-puertas.md)
 
 ## Milestone 3 — accepted contracts

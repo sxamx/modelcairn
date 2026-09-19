@@ -2,6 +2,12 @@
 
 [English](fase-01-trazabilidad.md)
 
+La fuente verificable es el
+[manifiesto de aceptación](fase-01-aceptacion.json): CI comprueba que contiene los
+20 requisitos en alcance, que cada contrato y prueba existe y que el símbolo de
+prueba referenciado sigue presente. `candidate` significa que existe evidencia de
+implementación, no que el requisito ya haya superado el cierre del Hito 7.
+
 | Requisito | Contrato | Hito | Evidencia de cierre |
 |---|---|---:|---|
 | RF-001, RF-008 | compatibilidad y streaming | 4 | suite HTTP/SSE normal, tools, corte y cancelación |
@@ -15,7 +21,7 @@
 | RF-011 | health/readiness | 3, 6 | dependencias sanas y degradadas |
 | RF-012 | MCB1 y migraciones | 2, 6 | fallo interrumpido y restauración funcional |
 | RF-013 | ProviderConnection | 4 | suite SSRF, DNS/redirect y excepción privada |
-| RNF-001–003 | contrato de benchmark/router | 1, 4, 7 | informe reproducible, límites y ausencia de loops |
+| RNF-001, RNF-003 | contrato de benchmark/router | 1, 4, 7 | informe reproducible, límites y ausencia de loops |
 | RNF-004 | audit_events | 2–7 | cobertura de mutaciones críticas |
 | RNF-005 | instalación/backup | 6 | VM limpia, actualización manual y restore |
 | RNF-006 | matriz de compatibilidad | 4 | capacidades declaradas/rechazadas |
@@ -24,3 +30,7 @@
 
 Cada hito actualiza esta tabla con enlaces a pruebas reales. Una fila sin evidencia
 impide cerrar la Fase 1 aunque la interfaz parezca terminada.
+
+RNF-002 se difiere junto con RF-101–RF-108 porque mide el relay, componente
+explícitamente excluido de la Fase 1. RF-201–RF-206 también permanecen fuera del
+cierre. La clasificación está enumerada en el manifiesto para evitar ambigüedad.
