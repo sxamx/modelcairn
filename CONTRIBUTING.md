@@ -1,6 +1,7 @@
 # Contributing to ModelCairn
 
-ModelCairn is documentation-first and currently entering Phase 1 implementation.
+ModelCairn is documentation-first and currently validating Phase 1 before its
+first release.
 Before opening a large change, read the [project status](docs/project-lifecycle.md),
 [charter](docs/project-charter.md), relevant ADRs, and the phase contract.
 
@@ -12,7 +13,9 @@ Before opening a large change, read the [project status](docs/project-lifecycle.
 3. Include tests and documentation with behavior changes.
 4. Never commit provider keys, tokens, prompts, responses, local paths, databases,
    backups, or credentials.
-5. Run the checks documented for the affected milestone.
+5. Run `go test ./...`, `npm --prefix web test`, and
+   `node scripts/validate-docs.cjs`, plus the checks documented for the affected
+   milestone.
 6. Explain compatibility, migrations, resource impact, and rollback when relevant.
 
 ## Decisions

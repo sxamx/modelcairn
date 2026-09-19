@@ -19,6 +19,8 @@
 13. [Milestone 5 technical delivery plan](fases/hito-05-plan-tecnico.md)
 14. [Milestone 6 technical delivery plan](fases/hito-06-plan-tecnico.md)
 15. [Milestone 7 validation and closeout plan](fases/hito-07-plan-tecnico.md)
+16. [Phase 1 threat model](seguridad/phase-1-threat-model.md)
+17. [Phase 1 operations runbook](operacion/phase-1-runbook.md)
 
 ## Phase 1 executable contracts
 
