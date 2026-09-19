@@ -3,9 +3,9 @@
 [English](hito-07-system-validation.md)
 
 - Fecha: 19 de septiembre de 2026
-- Revisión probada: `0cdcf02` (rama del PR #26)
-- Resultado: bloques automatizados y VM representativa aprobados; el cierre de la
-  Fase 1 continúa pendiente del QA independiente agrupado.
+- Revisión probada: `4f6dd61` (rama del PR #26)
+- Resultado: bloques automatizados y VM representativa aprobados; los bloqueos
+  detectados por el primer QA agrupado fueron corregidos y esperan su revisión final.
 
 No se publican hostname, IP, usuario SSH, credenciales, rutas personales ni IDs de
 ejecución. Las claves, contraseñas, sesiones y AgentTokens usados fueron temporales.
@@ -17,12 +17,13 @@ CI aprobó en la revisión probada:
 - Linux AMD64 y ARM64;
 - `go vet`, race detector, cobertura y suite Go completa;
 - escaneo de vulnerabilidades alcanzables;
-- 14 pruebas de consola, build y activos incrustados reproducibles;
+- 17 pruebas de consola, build y activos incrustados reproducibles;
 - contratos documentales, schemas SQLite y scripts de instalación;
 - compuertas integradas de Hitos 2, 3 y 4 y smokes de recursos/concurrencia.
 
-Localmente también aprobaron `go test ./...`, las 14 pruebas web y el manifiesto de
-20 requisitos de Fase 1. El race detector no se ejecutó en Windows porque el Go
+Localmente también aprobaron `go test ./...`, las 17 pruebas web, el verificador
+ejecutable de egreso y el manifiesto de 20 requisitos de Fase 1. El race detector
+no se ejecutó en Windows porque el Go
 local carecía de CGO; la ejecución Linux de CI es la evidencia autoritativa.
 
 ## Fallos inducidos cubiertos
@@ -77,21 +78,27 @@ vez por segundo.
 | Medición | Resultado |
 |---|---:|
 | Memoria total de la VM | 975.064 KiB |
-| Streams sostenidos correctos | 15.284 |
-| Consultas administrativas correctas | 358 |
-| RSS medio/pico | 25.540 / 57.336 KiB |
-| Presupuesto RSS | 131.072 KiB |
-| Swap pico del proceso | 0 KiB |
-| CPU del proceso | 173,580 s; 28,786% de un CPU lógico en promedio |
-| Latencia sostenida media/máxima | 0,198811 / 0,987245 s |
-| Directorio de datos final | 18.931.464 bytes |
-| SQLite/WAL final | 14.733.312 / 4.165.352 bytes |
-| Binario Linux AMD64 | 14.094.496 bytes |
+| Streams sostenidos correctos | 15.276 (mínimo: 10.000) |
+| Consultas administrativas correctas | 356 (mínimo: 300) |
+| RSS medio/pico | 25.874 / 57.320 KiB (máximo: 131.072 KiB) |
+| Swap pico del proceso | 0 KiB (requerido: 0) |
+| CPU del proceso | 173,090 s; 28,702% promedio (máximo: 50% de un CPU lógico) |
+| Latencia sostenida media/máxima | 0,196686 / 0,982333 s (máximos: 0,350 / 2,000 s) |
+| Directorio de datos final | 18.685.824 bytes (máximo: 33.554.432 bytes) |
+| SQLite/WAL final | 14.467.072 / 4.185.952 bytes |
+| Binario Linux AMD64 | 14.098.592 bytes |
 
 La prueba terminó con código 0. El proceso permaneció bajo el presupuesto, no usó
 swap y el reporte solo conserva metadatos. Los datos de pruebas anteriores en
 `/var/lib` conservaron propietario y modo; esta ejecución trabajó en un directorio
 temporal aislado.
+
+El onboarding quedó validado como una cadena única: constructor compartido,
+fixture exacto, aplicación contra el servidor real, emisión de AgentToken y rutas
+normal y SSE. Por defecto anuncia solo texto; streaming y tools requieren selección
+explícita. Las pruebas web también cubren la reconciliación cuando se pierde la
+respuesta de apply y la revocación/reemisión segura si se pierde la respuesta que
+contenía el token de única visualización.
 
 ## Seguridad y privacidad
 

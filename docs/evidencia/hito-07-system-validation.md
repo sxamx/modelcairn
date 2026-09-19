@@ -3,9 +3,9 @@
 [Español](hito-07-validacion-de-sistema.es.md)
 
 - Date: September 19, 2026
-- Tested revision: `0cdcf02` (PR #26 branch)
-- Result: automated and representative-VM blocks passed; Phase 1 closeout remains
-  pending the grouped independent QA review.
+- Tested revision: `4f6dd61` (PR #26 branch)
+- Result: automated and representative-VM blocks passed; blockers found by the
+  first grouped QA review were corrected and await final re-review.
 
 No hostname, IP, SSH user, credential, personal path, or run ID is published. Keys,
 passwords, sessions, and AgentTokens used by the run were temporary.
@@ -17,12 +17,12 @@ CI passed on the tested revision:
 - Linux AMD64 and ARM64;
 - `go vet`, race detector, coverage, and the complete Go suite;
 - reachable-vulnerability scanning;
-- 14 console tests, build, and reproducible embedded assets;
+- 17 console tests, build, and reproducible embedded assets;
 - documentation contracts, SQLite schemas, and installation scripts;
 - Milestone 2, 3, and 4 integration gates and resource/concurrency smokes.
 
-`go test ./...`, all 14 web tests, and the 20-entry Phase 1 manifest also passed
-locally. The race detector could not run on Windows because local Go lacked CGO;
+`go test ./...`, all 17 web tests, the executable egress verifier, and the 20-entry
+Phase 1 manifest also passed locally. The race detector could not run on Windows because local Go lacked CGO;
 the Linux CI run is authoritative evidence.
 
 ## Covered induced failures
@@ -75,20 +75,25 @@ held 10 concurrent streams and queried the overview once per second.
 | Measurement | Result |
 |---|---:|
 | VM total memory | 975,064 KiB |
-| Successful sustained streams | 15,284 |
-| Successful admin queries | 358 |
-| Average/peak RSS | 25,540 / 57,336 KiB |
-| RSS budget | 131,072 KiB |
-| Peak process swap | 0 KiB |
-| Process CPU | 173.580 s; 28.786% of one logical CPU on average |
-| Sustained average/maximum latency | 0.198811 / 0.987245 s |
-| Final data directory | 18,931,464 bytes |
-| Final SQLite/WAL | 14,733,312 / 4,165,352 bytes |
-| Linux AMD64 binary | 14,094,496 bytes |
+| Successful sustained streams | 15,276 (minimum: 10,000) |
+| Successful admin queries | 356 (minimum: 300) |
+| Average/peak RSS | 25,874 / 57,320 KiB (maximum: 131,072 KiB) |
+| Peak process swap | 0 KiB (required: 0) |
+| Process CPU | 173.090 s; 28.702% average (maximum: 50% of one logical CPU) |
+| Sustained average/maximum latency | 0.196686 / 0.982333 s (maximums: 0.350 / 2.000 s) |
+| Final data directory | 18,685,824 bytes (maximum: 33,554,432 bytes) |
+| Final SQLite/WAL | 14,467,072 / 4,185,952 bytes |
+| Linux AMD64 binary | 14,098,592 bytes |
 
 The run exited zero. The process stayed below budget, used no swap, and the report
 contains metadata only. Prior test data under `/var/lib` retained its owner and
 mode; this run used an isolated temporary directory.
+
+Onboarding is validated as one chain: shared builder, exact fixture, application
+against the real server, AgentToken issuance, and normal plus SSE routes. Its
+default advertises text only; streaming and tools require explicit selection. Web
+tests also cover reconciliation after a lost apply response and safe
+revocation/reissuance when the one-time token response is lost.
 
 ## Security and privacy
 
