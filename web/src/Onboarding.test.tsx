@@ -24,6 +24,7 @@ test("creates the complete first route and reveals the agent token once", async 
   expect(await screen.findByRole("heading", { name: "Confirma los cambios" })).toBeInTheDocument();
   expect(screen.getByRole("dialog")).toHaveFocus();
   expect(calls.map((call) => call.url)).toEqual(["/api/v1/admin/config/plan"]);
+  expect(new Headers(calls[0].init?.headers).get("X-ModelCairn-Proposed-Secret")).toBe("openrouter-secret");
   fireEvent.click(screen.getByRole("button", { name: "Confirmar y crear" }));
   expect(await screen.findByText("mc_at_v1_once-only")).toBeInTheDocument();
   expect(calls.map((call) => call.url)).toEqual([
@@ -36,6 +37,26 @@ test("creates the complete first route and reveals the agent token once", async 
   const planned = JSON.parse(configBodies[0]);
   expect(planned.resources.find((item:{kind:string})=>item.kind==="Model").spec.capabilities).toEqual(["text"]);
   expect(localStorage.length).toBe(0); expect(sessionStorage.length).toBe(0);
+});
+
+test("never overwrites an existing secret on an onboarding collision", async () => {
+  const calls: string[] = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+    const url=String(input); calls.push(url);
+    if(url.endsWith("/config/plan")) return json({valid:true,changes:[],planToken:"plan-token-value-long-enough",expiresAt:"2026-09-13T01:00:00Z"});
+    if(url.includes("/secrets/")) return json({error:{code:"precondition_required"}},428);
+    return json({});
+  });
+  render(<Onboarding onClose={()=>undefined} onComplete={()=>undefined}/>);
+  fireEvent.change(screen.getByLabelText("Nombre del proveedor"),{target:{value:"Demo"}});
+  fireEvent.change(screen.getByLabelText(/^Identificador/),{target:{value:"demo"}});
+  fireEvent.change(screen.getByLabelText("Modelo del proveedor"),{target:{value:"demo-model"}});
+  fireEvent.change(screen.getByLabelText(/^API key/),{target:{value:"secret-key-value"}});
+  fireEvent.click(screen.getByRole("button",{name:"Revisar y crear"}));
+  await screen.findByRole("heading",{name:"Confirma los cambios"});
+  fireEvent.click(screen.getByRole("button",{name:"Confirmar y crear"}));
+  expect(await screen.findByText("Ese secreto ya existe y no fue reemplazado. Elige otro identificador.")).toBeInTheDocument();
+  expect(calls).toEqual(["/api/v1/admin/config/plan","/api/v1/admin/secrets/demo-secret"]);
 });
 
 test("shared onboarding fixture requires explicit streaming and tools", () => {

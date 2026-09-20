@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -184,6 +185,11 @@ func (r *GenerationRestore) Seal(ctx context.Context) error {
 	if err == nil {
 		_, err = r.tx.ExecContext(ctx, "DELETE FROM consumed_plan_tokens")
 	}
+	if err == nil {
+		// Snapshots cannot reactivate historical bearers. Resources survive but
+		// credentials return to the unissued state and must be issued again.
+		_, err = r.tx.ExecContext(ctx, "UPDATE agent_tokens SET verifier_sha256=NULL,token_prefix=NULL,issued_at=NULL,revoked_at=NULL")
+	}
 	if err != nil {
 		_ = r.tx.Rollback()
 		r.tx = nil
@@ -280,6 +286,11 @@ func activeGenerationName(root string) (string, error) {
 		return "", err
 	}
 	if filepath.Clean(state) == filepath.Clean(root) {
+		if _, err := os.Stat(filepath.Join(root, "modelcairn.db")); errors.Is(err, os.ErrNotExist) {
+			return "", nil
+		} else if err != nil {
+			return "", fmt.Errorf("inspect legacy generation: %w", err)
+		}
 		return "legacy", nil
 	}
 	name := filepath.Base(state)
@@ -290,6 +301,9 @@ func activeGenerationName(root string) (string, error) {
 }
 
 func writePreviousGeneration(generationDir, previous string) error {
+	if previous == "" {
+		return nil
+	}
 	if previous != "legacy" && !generationNamePattern.MatchString(previous) {
 		return fmt.Errorf("previous generation name is invalid")
 	}
@@ -349,6 +363,9 @@ func RollbackGeneration(dataDir string) (string, string, error) {
 		return "", "", fmt.Errorf("invalid rollback marker")
 	}
 	previous = previous[:len(previous)-1]
+	if err := invalidateHistoricalCredentials(context.Background(), dataDir, previous); err != nil {
+		return "", "", err
+	}
 	if previous == "legacy" {
 		if err := deactivateGeneration(dataDir); err != nil {
 			return "", "", err
@@ -366,4 +383,40 @@ func RollbackGeneration(dataDir string) (string, string, error) {
 		}
 	}
 	return active, previous, nil
+}
+
+func invalidateHistoricalCredentials(ctx context.Context, root, generation string) error {
+	dir := root
+	if generation != "legacy" {
+		dir = filepath.Join(root, "generations", generation)
+	}
+	db, err := OpenSQLite(ctx, filepath.Join(dir, "modelcairn.db"))
+	if err != nil {
+		return fmt.Errorf("open rollback target: %w", err)
+	}
+	defer db.Close()
+	if err := CheckIntegrity(ctx, db); err != nil {
+		return fmt.Errorf("rollback target integrity: %w", err)
+	}
+	if err := CheckSchemaCompatibility(ctx, db); err != nil {
+		return fmt.Errorf("rollback target schema: %w", err)
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin rollback credential invalidation: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, "DELETE FROM admin_sessions"); err == nil {
+		_, err = tx.ExecContext(ctx, "DELETE FROM consumed_plan_tokens")
+	}
+	if err == nil {
+		_, err = tx.ExecContext(ctx, "UPDATE agent_tokens SET verifier_sha256=NULL,token_prefix=NULL,issued_at=NULL,revoked_at=NULL")
+	}
+	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("invalidate rollback credentials: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit rollback credential invalidation: %w", err)
+	}
+	return nil
 }

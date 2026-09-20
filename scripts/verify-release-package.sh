@@ -20,14 +20,25 @@ checksums="$(cd "$(dirname "$checksums")" && pwd)/$(basename "$checksums")"
 )
 
 root="modelcairn_${expected_version}_linux_${expected_arch}"
-allowed="$(printf '%s\n' CHANGELOG.md LICENSE NOTICE README.md TRADEMARKS.md manifest.json modelcairn | sed "s#^#$root/#" | sort)"
+allowed="$(printf '%s\n' CHANGELOG.md LICENSE NOTICE README.md TRADEMARKS.md manifest.json modelcairn \
+  scripts/install-linux.sh scripts/bootstrap-linux.sh scripts/uninstall-linux.sh \
+  packaging/systemd/modelcairn.service \
+  docs/operacion/linux-installation-v1.md docs/operacion/instalacion-linux-v1.es.md \
+  docs/operacion/backup-recovery-v1.md docs/operacion/backup-recuperacion-v1.es.md \
+  docs/operacion/acceso-red-v1.md docs/operacion/acceso-red-v1.es.md | sed "s#^#$root/#" | sort)"
 actual="$(tar -tzf "$archive" | sed '/\/$/d' | sort)"
 [[ "$actual" == "$allowed" ]] || { echo "archive allowlist mismatch" >&2; diff -u <(printf '%s\n' "$allowed") <(printf '%s\n' "$actual") || true; exit 1; }
 tar -tzf "$archive" | grep -Eq '(^|/)\.\.?(/|$)' && { echo "unsafe archive path" >&2; exit 1; } || true
 [[ "$(tar -tvzf "$archive" "$root" | awk 'NR==1 {print $1}')" == "drwxr-xr-x" ]] || { echo "invalid package-directory mode" >&2; exit 1; }
 [[ "$(tar -tvzf "$archive" "$root/modelcairn" | awk 'NR==1 {print $1}')" == "-rwxr-xr-x" ]] || { echo "binary is not mode 0755" >&2; exit 1; }
+for directory in packaging packaging/systemd docs docs/operacion scripts; do
+  [[ "$(tar -tvzf "$archive" "$root/$directory/" | awk 'NR==1 {print $1}')" == "drwxr-xr-x" ]] || { echo "invalid mode for $directory" >&2; exit 1; }
+done
 for file in CHANGELOG.md LICENSE NOTICE README.md TRADEMARKS.md manifest.json; do
   [[ "$(tar -tvzf "$archive" "$root/$file" | awk 'NR==1 {print $1}')" == "-rw-r--r--" ]] || { echo "invalid mode for $file" >&2; exit 1; }
+done
+for file in scripts/install-linux.sh scripts/bootstrap-linux.sh scripts/uninstall-linux.sh; do
+  [[ "$(tar -tvzf "$archive" "$root/$file" | awk 'NR==1 {print $1}')" == "-rwxr-xr-x" ]] || { echo "invalid mode for $file" >&2; exit 1; }
 done
 
 stage="$(mktemp -d)"

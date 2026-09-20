@@ -15,6 +15,10 @@ import (
 
 var secretNamePattern = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
 
+// MaxSecrets is shared with the MCB1 recovery format so every accepted
+// installation remains representable by the supported backup path.
+const MaxSecrets = 4096
+
 type SecretMetadata struct {
 	Name            string    `json:"name"`
 	Fingerprint     string    `json:"fingerprint"`
@@ -203,6 +207,9 @@ func (s *SecretStore) putAuthorized(ctx context.Context, input PutSecret, author
 		return SecretMetadata{}, err
 	}
 	if err := tx.Commit(); err != nil {
+		// A driver can report a commit error after SQLite has durably committed.
+		// Stop all secret operations until restart reconciles DB and redactor.
+		s.unavailable = true
 		return SecretMetadata{}, fmt.Errorf("commit secret mutation: %w", err)
 	}
 	if err := s.replaceRegistration(secretID, input.Value); err != nil {
@@ -272,6 +279,7 @@ func (s *SecretStore) deleteAuthorized(ctx context.Context, name string, expecte
 		return fmt.Errorf("audit secret deletion: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
+		s.unavailable = true
 		return fmt.Errorf("commit secret deletion: %w", err)
 	}
 	s.removeRegistration(id)
@@ -288,12 +296,18 @@ func (s *SecretStore) putTx(ctx context.Context, tx *sql.Tx, input PutSecret) (S
 	resourceVersion := int64(1)
 	created := stamp
 	if input.ExpectedVersion == 0 {
-		var exists int
+		var exists, total int
 		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM secrets WHERE name=?", input.Name).Scan(&exists); err != nil {
 			return SecretMetadata{}, "", err
 		}
 		if exists != 0 {
 			return SecretMetadata{}, "", &RepositoryError{Code: CodeAlreadyExists}
+		}
+		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM secrets").Scan(&total); err != nil {
+			return SecretMetadata{}, "", err
+		}
+		if total >= MaxSecrets {
+			return SecretMetadata{}, "", &RepositoryError{Code: CodeInvalidResource}
 		}
 	} else {
 		var current int64

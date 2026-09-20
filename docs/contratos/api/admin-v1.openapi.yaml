@@ -366,23 +366,6 @@ paths:
         '409': { $ref: '#/components/responses/Error' }
         '412': { $ref: '#/components/responses/Error' }
         '428': { $ref: '#/components/responses/Error' }
-  /connections/{name}/test:
-    post:
-      operationId: testProviderConnection
-      parameters: [ { $ref: '#/components/parameters/Name' } ]
-      responses:
-        '200':
-          description: Redacted diagnostic
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [ok, latencyMs]
-                properties:
-                  ok: { type: boolean }
-                  latencyMs: { type: integer, minimum: 0 }
-                  code: { type: [string, 'null'] }
-        '400': { $ref: '#/components/responses/Error' }
 components:
   securitySchemes:
     adminSession: { type: apiKey, in: cookie, name: mc_session }

@@ -39,7 +39,7 @@ const (
 	maxAgeHeaderBytes   = 64 << 10
 	maxSecretValueBytes = 16 << 10
 	maxPassphraseBytes  = 1024
-	maxSecretRecords    = 4096
+	maxSecretRecords    = storage.MaxSecrets
 	minPassphraseBytes  = 8
 	defaultScryptLogN   = 16
 	minimumScryptLogN   = 15

@@ -6,8 +6,9 @@
 [English](README.md)
 
 ModelCairn es un gateway de proveedores de IA ligero, autohospedado y configurable.
-Ofrece un endpoint estable, routing y fallback explicables, métricas locales y una
-estimación adaptativa de capacidad y recuperación. El operador mantiene control de
+Ofrece un endpoint estable, routing y fallback explicables y métricas operativas
+locales. La estimación adaptativa de capacidad y recuperación está planificada,
+pero no implementada en esta prerelease. El operador mantiene control de
 sus datos, credenciales, proveedores y egresos; ModelCairn no envía telemetría a un
 servicio central.
 

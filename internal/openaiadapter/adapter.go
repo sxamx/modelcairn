@@ -3,6 +3,7 @@ package openaiadapter
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"mime"
 	"net/http"
 	"net/http/httptrace"
+	"net/netip"
 	"net/url"
 	"strings"
 
@@ -106,7 +108,7 @@ func (a *Adapter) Execute(ctx context.Context, destination router.Destination, r
 		result.StatusCode = response.StatusCode
 		result.ContentType = boundedHeader(response.Header.Get("Content-Type"))
 		result.RetryAfter = boundedHeader(response.Header.Get("Retry-After"))
-		result.ProviderRequestID = firstHeader(response.Header, "x-request-id", "request-id")
+		result.ProviderRequestID = providerRequestReference(firstHeader(response.Header, "x-request-id", "request-id"))
 		if response.StatusCode < 200 || response.StatusCode >= 300 {
 			_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 64<<10))
 			return nil
@@ -183,7 +185,7 @@ func (a *Adapter) OpenStream(ctx context.Context, destination router.Destination
 			return &Error{Code: "transport_error", RequestWritten: written, Err: requestErr}
 		}
 		result = router.StreamUpstream{StatusCode: response.StatusCode, ContentType: boundedHeader(response.Header.Get("Content-Type")),
-			RetryAfter: boundedHeader(response.Header.Get("Retry-After")), ProviderRequestID: firstHeader(response.Header, "x-request-id", "request-id")}
+			RetryAfter: boundedHeader(response.Header.Get("Retry-After")), ProviderRequestID: providerRequestReference(firstHeader(response.Header, "x-request-id", "request-id"))}
 		if response.StatusCode < 200 || response.StatusCode >= 300 {
 			defer response.Body.Close()
 			_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 64<<10))
@@ -215,12 +217,23 @@ func completionURL(base string, allowPrivate bool) (*url.URL, error) {
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return nil, errors.New("unsupported URL scheme")
 	}
-	if parsed.Scheme != "https" && !allowPrivate {
-		return nil, errors.New("public upstream requires HTTPS")
+	if parsed.Scheme != "https" {
+		if !allowPrivate || !privateHTTPHost(parsed.Hostname()) {
+			return nil, errors.New("HTTP upstream requires an explicit private literal host")
+		}
 	}
 	parsed.Path = strings.TrimRight(parsed.Path, "/") + "/chat/completions"
 	parsed.RawPath = ""
 	return parsed, nil
+}
+
+func privateHTTPHost(host string) bool {
+	host = strings.ToLower(host)
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return true
+	}
+	address, err := netip.ParseAddr(host)
+	return err == nil && forbiddenAddress(address)
 }
 
 func normalizeResponse(body []byte, requestedAlias string) ([]byte, error) {
@@ -337,4 +350,12 @@ func boundedHeader(value string) string {
 		return value[:256]
 	}
 	return value
+}
+
+func providerRequestReference(value string) string {
+	if value == "" {
+		return ""
+	}
+	digest := sha256.Sum256([]byte(value))
+	return fmt.Sprintf("sha256:%x", digest[:16])
 }

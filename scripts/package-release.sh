@@ -37,9 +37,16 @@ for arch in amd64 arm64; do
   ldflags="-s -w -X github.com/sxamx/modelcairn/internal/buildinfo.Version=$version -X github.com/sxamx/modelcairn/internal/buildinfo.Commit=$commit -X github.com/sxamx/modelcairn/internal/buildinfo.Date=$build_date"
   CGO_ENABLED=0 GOOS=linux GOARCH="$arch" go build -trimpath -ldflags="$ldflags" -o "$stage/$package/modelcairn" ./cmd/modelcairn
   cp LICENSE NOTICE README.md TRADEMARKS.md CHANGELOG.md "$stage/$package/"
+  mkdir -p "$stage/$package/scripts" "$stage/$package/packaging/systemd" "$stage/$package/docs/operacion"
+  cp scripts/install-linux.sh scripts/bootstrap-linux.sh scripts/uninstall-linux.sh "$stage/$package/scripts/"
+  cp packaging/systemd/modelcairn.service "$stage/$package/packaging/systemd/"
+  cp docs/operacion/linux-installation-v1.md docs/operacion/instalacion-linux-v1.es.md \
+    docs/operacion/backup-recovery-v1.md docs/operacion/backup-recuperacion-v1.es.md \
+    docs/operacion/acceso-red-v1.md docs/operacion/acceso-red-v1.es.md "$stage/$package/docs/operacion/"
   printf '{\n  "version": "%s",\n  "commit": "%s",\n  "date": "%s",\n  "os": "linux",\n  "arch": "%s"\n}\n' \
     "$version" "$commit" "$build_date" "$arch" >"$stage/$package/manifest.json"
   chmod 0755 "$stage/$package/modelcairn"
+  chmod 0755 "$stage/$package/scripts/"*.sh
   chmod 0644 "$stage/$package/"*.md "$stage/$package/LICENSE" "$stage/$package/NOTICE" "$stage/$package/manifest.json"
   archive_tar="$stage/$package.tar"
   tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode=0755 \
@@ -48,6 +55,10 @@ for arch in amd64 arm64; do
     -C "$stage" -rf "$archive_tar" \
     "$package/CHANGELOG.md" "$package/LICENSE" "$package/NOTICE" "$package/README.md" \
     "$package/TRADEMARKS.md" "$package/manifest.json"
+  tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode='u+rwX,go+rX,go-w' \
+    -C "$stage" -rf "$archive_tar" "$package/packaging" "$package/docs"
+  tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode=0755 \
+    -C "$stage" -rf "$archive_tar" "$package/scripts"
   tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode=0755 \
     -C "$stage" -rf "$archive_tar" "$package/modelcairn"
   gzip -n -9 <"$archive_tar" >"$output_dir/$package.tar.gz"

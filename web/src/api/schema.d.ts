@@ -351,22 +351,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/connections/{name}/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["testProviderConnection"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1648,33 +1632,6 @@ export interface operations {
             409: components["responses"]["Error"];
             412: components["responses"]["Error"];
             428: components["responses"]["Error"];
-        };
-    };
-    testProviderConnection: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                name: components["parameters"]["Name"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Redacted diagnostic */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                        latencyMs: number;
-                        code?: string | null;
-                    };
-                };
-            };
-            400: components["responses"]["Error"];
         };
     };
 }

@@ -25,13 +25,20 @@ settings="$(mktemp /etc/modelcairn/.bootstrap.XXXXXX)"
 cleanup(){ rm -f -- "$settings"; }
 trap cleanup EXIT
 chown root:modelcairn "$settings"; chmod 0640 "$settings"
+transport="loopback-http"
+proxy_settings=""
+if [[ "$public_origin" == https://* ]]; then
+  transport="proxy-tls"
+  proxy_settings=$'  trustedProxyCidrs:\n    - "127.0.0.1/32"\n    - "::1/128"'
+fi
 cat >"$settings" <<EOF
 apiVersion: modelcairn.io/v1alpha1
 kind: AdminSettings
 spec:
   publicOrigin: "$public_origin"
   listen: "$listen"
-  transport: loopback-http
+  transport: $transport
+$proxy_settings
 EOF
 
 was_active=no

@@ -30,12 +30,23 @@ func NewManager(installation *storage.Installation) *Manager {
 }
 
 func (m *Manager) Plan(ctx context.Context, desired *Document, allowDelete bool) (*PersistedPlan, error) {
+	return m.plan(ctx, desired, allowDelete, nil)
+}
+
+// PlanWithProposedSecrets validates a plan that will create the named secrets
+// before applying it. Values never cross this boundary and Apply still checks
+// the real persisted secret set before consuming the plan token.
+func (m *Manager) PlanWithProposedSecrets(ctx context.Context, desired *Document, allowDelete bool, proposed []string) (*PersistedPlan, error) {
+	return m.plan(ctx, desired, allowDelete, proposed)
+}
+
+func (m *Manager) plan(ctx context.Context, desired *Document, allowDelete bool, proposed []string) (*PersistedPlan, error) {
 	var prepared *Prepared
 	issuedAt := m.clock()
 	token, err := m.secrets.CreatePlanToken(ctx, issuedAt, func(tx *sql.Tx) (storage.PlanBinding, error) {
 		var binding storage.PlanBinding
 		var prepareErr error
-		prepared, binding, _, prepareErr = m.prepareTx(ctx, tx, desired, allowDelete)
+		prepared, binding, _, prepareErr = m.prepareTx(ctx, tx, desired, allowDelete, proposed)
 		return binding, prepareErr
 	})
 	if err != nil {
@@ -76,7 +87,7 @@ func (m *Manager) apply(ctx context.Context, token string, desired *Document, al
 		if err != nil {
 			return storage.PlanBinding{}, err
 		}
-		prepared, binding, preparedMutations, err := m.prepareTx(ctx, tx, desired, allowDelete)
+		prepared, binding, preparedMutations, err := m.prepareTx(ctx, tx, desired, allowDelete, nil)
 		mutations = preparedMutations
 		if err == nil {
 			result.Changes = append([]Change{}, prepared.Changes...)
@@ -111,7 +122,7 @@ func (m *Manager) Export(ctx context.Context) ([]byte, error) {
 	return CanonicalJSON(doc, m.secrets.Redactor())
 }
 
-func (m *Manager) prepareTx(ctx context.Context, tx *sql.Tx, desired *Document, allowDelete bool) (*Prepared, storage.PlanBinding, []storage.ConfigMutation, error) {
+func (m *Manager) prepareTx(ctx context.Context, tx *sql.Tx, desired *Document, allowDelete bool, proposed []string) (*Prepared, storage.PlanBinding, []storage.ConfigMutation, error) {
 	current, err := storage.ListResourcesTx(ctx, tx)
 	if err != nil {
 		return nil, storage.PlanBinding{}, nil, err
@@ -119,6 +130,12 @@ func (m *Manager) prepareTx(ctx context.Context, tx *sql.Tx, desired *Document, 
 	secrets, err := storage.SecretNamesTx(ctx, tx)
 	if err != nil {
 		return nil, storage.PlanBinding{}, nil, err
+	}
+	for _, name := range proposed {
+		if !namePattern.MatchString(name) {
+			return nil, storage.PlanBinding{}, nil, failure(CodeInvalidValue, "$.proposedSecrets")
+		}
+		secrets[name] = true
 	}
 	catalog, err := catalogFromStorage(current, secrets)
 	if err != nil {

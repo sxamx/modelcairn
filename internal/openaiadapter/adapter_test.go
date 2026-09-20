@@ -70,7 +70,7 @@ func TestExecuteRewritesModelInjectsCredentialAndRestoresAlias(t *testing.T) {
 	if err := json.Unmarshal(result.Body, &response); err != nil {
 		t.Fatal(err)
 	}
-	if result.StatusCode != http.StatusOK || result.ProviderRequestID != "upstream-request" || response["model"] != "assistant" ||
+	if result.StatusCode != http.StatusOK || result.ProviderRequestID != providerRequestReference("upstream-request") || response["model"] != "assistant" ||
 		result.InputTokens == nil || *result.InputTokens != 12 || result.OutputTokens == nil || *result.OutputTokens != 4 {
 		t.Fatalf("result=%+v response=%v", result, response)
 	}
@@ -178,6 +178,15 @@ func TestPublicHTTPDestinationIsRejectedBeforeCredentialUse(t *testing.T) {
 	defer server.Close()
 	destination := testDestination(server)
 	destination.AllowPrivateNetwork = false
+	_, err := New(fixtureSecrets{name: "provider-key", value: []byte("x")}).Execute(context.Background(), destination, testRequest(t), "assistant")
+	var adapterErr *Error
+	if !errors.As(err, &adapterErr) || adapterErr.Code != "invalid_destination" {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestAllowPrivateNetworkDoesNotPermitPublicHTTPHost(t *testing.T) {
+	destination := router.Destination{BaseURL: "http://example.com/v1", Adapter: "openai-chat-v1", EgressType: "direct", AllowPrivateNetwork: true, ProviderModelID: "model", SecretName: "provider-key"}
 	_, err := New(fixtureSecrets{name: "provider-key", value: []byte("x")}).Execute(context.Background(), destination, testRequest(t), "assistant")
 	var adapterErr *Error
 	if !errors.As(err, &adapterErr) || adapterErr.Code != "invalid_destination" {
