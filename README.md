@@ -16,13 +16,14 @@ route signal without pretending that an estimate is an official rule.
 
 ## Project status
 
-There is no release yet. Phase 1 is implemented, validated, and accepted. Public
-release preparation remains a separate Stage G. See:
+There is no release yet. Phase 1 is implemented, validated, and accepted. Stage G
+is preparing a verifiable first release candidate. See:
 
 - [Project status and lifecycle](docs/project-lifecycle.md)
 - [Project Charter](docs/project-charter.md)
 - [Documentation index](docs/README.md)
 - [Phase 1 — Operable foundation](docs/fases/fase-01-fundacion.md)
+- [Milestone 8 — First release preparation](docs/fases/hito-08-plan-tecnico.md)
 
 ## Approved technical direction
 
@@ -39,7 +40,11 @@ release preparation remains a separate Stage G. See:
 ## License
 
 ModelCairn is distributed under the [Apache License 2.0](LICENSE) and includes a
-[NOTICE](NOTICE) with its original attribution.
+[NOTICE](NOTICE) with its original attribution. Modified distributions must also
+follow the [name and marks guidance](TRADEMARKS.md) and must not imply official
+status.
+
+Notable changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## Development
 

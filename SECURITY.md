@@ -1,7 +1,15 @@
 # Security Policy
 
-ModelCairn has not published a stable release yet. Security fixes are applied to
-the active development branch until a supported-version table exists.
+ModelCairn has not published a release yet. Until the first prerelease is verified,
+security fixes are applied only to `main`.
+
+| Version | Supported |
+|---|---|
+| `main` | yes, development branch |
+| published versions | none yet |
+
+After publication, this table—not an assumed SemVer range—defines support. The
+project may replace an unsafe prerelease instead of backporting fixes.
 
 ## Reporting a vulnerability
 

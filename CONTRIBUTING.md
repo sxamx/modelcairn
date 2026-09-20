@@ -1,7 +1,7 @@
 # Contributing to ModelCairn
 
-ModelCairn is documentation-first and currently validating Phase 1 before its
-first release.
+ModelCairn is documentation-first. Phase 1 is accepted and the project is preparing
+its first prerelease candidate; no public release exists yet.
 Before opening a large change, read the [project status](docs/project-lifecycle.md),
 [charter](docs/project-charter.md), relevant ADRs, and the phase contract.
 
