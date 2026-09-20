@@ -1,6 +1,7 @@
 # ModelCairn
 
-> Estado: Fase 1 aceptada; Hitos 0 a 7 completados.
+> Estado: Fase 1 aceptada; Hitos 0 a 8 completados; v0.1.0 publicada como
+> prerelease.
 > El prototipo recuperado se conserva fuera de este repositorio como referencia.
 
 [English](README.md)
@@ -17,8 +18,9 @@ la señal de la ruta sin fingir que una estimación es una regla oficial.
 
 ## Estado del proyecto
 
-No existe todavía una release. La Fase 1 está implementada, validada y aceptada.
-La Etapa G prepara una primera candidata verificable.
+La [prerelease v0.1.0](https://github.com/sxamx/modelcairn/releases/tag/v0.1.0)
+está publicada y verificada. La Fase 1 está implementada, validada y aceptada;
+no debe confundirse esta primera versión con una release estable.
 Consulta:
 
 - [Estado y ciclo del proyecto](docs/estado-y-ciclo-del-proyecto.es.md)
@@ -50,7 +52,7 @@ Los cambios destacables se registran en [CHANGELOG.md](CHANGELOG.md).
 
 ## Desarrollo
 
-Los Hitos 0 a 7 están completos. Con Go instalado:
+Los Hitos 0 a 8 están completos. Con Go instalado:
 
 ```sh
 go test ./...

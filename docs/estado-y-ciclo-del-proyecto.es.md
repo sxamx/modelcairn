@@ -138,15 +138,15 @@ La etapa terminó el 19 de septiembre de 2026: los 20 requisitos en alcance, CI,
 fallos inducidos, carga representativa y QA independiente quedaron aprobados. La
 aceptación de Fase 1 no equivale todavía a una release pública.
 
-## Etapa G — Preparación open source y publicación (activa)
+## Etapa G — Preparación open source y publicación (completada para v0.1.0)
 
 Incluye incorporar la licencia elegida en la Etapa C, completar la guía de contribución y la política de seguridad, publicar versiones y notas de release, y verificar instalación, actualización y rollback reproducibles.
 
-El Hito 8 tiene candidata técnica y QA verificados. La cadena produce paquetes
-reproducibles, checksums, SBOM y procedencia; instalación, update, rollback,
-restore y fallos seguros se probaron. La barrera de publicación está preparada,
-pero no puede crear tag ni GitHub Release hasta que el mantenedor apruebe las
-decisiones públicas y configure las protecciones.
+El Hito 8 terminó el 20 de septiembre de 2026. La cadena produjo paquetes
+reproducibles, checksums, SBOM y procedencia; instalación, actualización,
+rollback, restauración y fallos seguros se probaron. Tras la autorización del
+mantenedor y las protecciones requeridas, v0.1.0 se publicó y verificó como
+prerelease.
 
 ## Registro de cambios de etapa
 
@@ -172,3 +172,4 @@ decisiones públicas y configure las protecciones.
 | 2026-09-19 | Etapa G e Hito 8 iniciados | Contrato de release y checklist operativo preparados; publicación sujeta a aprobación del mantenedor |
 | 2026-09-20 | Candidata técnica del Hito 8 verificada | Paquetes, SBOM, procedencia, recuperación, fallos negativos y QA agrupado aprobados; publicación aún no autorizada |
 | 2026-09-20 | Decisiones de primera release aprobadas | v0.1.0 prerelease, assets Linux/SBOM/checksums, identidad sxamx, reporte privado y protecciones GitHub aprobados; autorización final aún pendiente |
+| 2026-09-20 | Etapa G e Hito 8 completados para v0.1.0 | Publicación autorizada; tag, assets públicos, checksums y metadatos de prerelease verificados |

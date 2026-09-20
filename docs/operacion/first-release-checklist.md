@@ -34,9 +34,9 @@ successful command is insufficient.
 
 ## Authorized publication
 
-- [ ] Explicit maintainer approval recorded.
-- [ ] Tag targets the approved commit and activates the protected environment.
-- [ ] GitHub Release contains exactly the candidate hashes.
-- [ ] Clean download, checksum, installation, and `modelcairn version` verified.
-- [ ] Board, lifecycle, and documentation updated after—not before—public assets
+- [x] Explicit maintainer approval recorded.
+- [x] Tag targets the approved commit and activates the protected environment.
+- [x] GitHub Release contains exactly the candidate hashes.
+- [x] Clean download, checksum, installation, and `modelcairn version` verified.
+- [x] Board, lifecycle, and documentation updated after—not before—public assets
       are verified.
