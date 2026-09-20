@@ -93,6 +93,7 @@ jobs:
           # ModelCairn v$VERSION
 
           First public preview of the self-hosted ModelCairn gateway foundation.
+          Created and maintained by sxamx.
 
           Included assets:
           - Linux AMD64 and ARM64 tarballs;

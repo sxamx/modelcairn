@@ -2,7 +2,7 @@
 
 [Español](hito-08-plan-tecnico.es.md)
 
-- Status: **candidate verified; publication not yet authorized**
+- Status: **decisions approved; final publication not yet authorized**
 - Stage: G — open-source preparation and publication
 - Objective: turn accepted Phase 1 into an installable, verifiable, recoverable
   candidate without presenting it as a stable version.
@@ -11,16 +11,21 @@ This milestone prepares and tests the release chain. It does not implement relay
 the adaptive estimator, additional protocols, or the visual editor. It also creates
 no tag or GitHub Release until the maintainer approves the version and channel.
 
-## Decisions requiring maintainer approval
+## Maintainer-approved decisions
 
-1. Initial version and channel. Recommendation: `v0.1.0` marked as a prerelease,
-   because the foundation is operable but does not yet implement the complete
-   functional vision.
-2. Whether the first publication includes only Linux binaries or also GitHub's
-   generated source archives. Recommendation: Linux AMD64/ARM64 binaries plus the
-   automatic source archives, with no container in this milestone.
-3. Public author name and security contact shown in notes and metadata. These are
-   never inferred from historical accounts or local credentials.
+On September 20, 2026, the maintainer approved:
+
+1. `v0.1.0` as a prerelease, with no stability promise.
+2. Linux AMD64/ARM64 archives, `SHA256SUMS`, SPDX SBOM, attestations, and
+   GitHub's automatic source archives; no container.
+3. `sxamx` as the public author/maintainer identity.
+4. GitHub Private Vulnerability Reporting as the security contact, with no
+   personal email published.
+5. Protection for `main`, `v*` tags, and a manually approved `release`
+   environment. These protections were activated before producing the candidate.
+
+Approval of these decisions is not final authorization to create the tag or
+GitHub Release; that authorization is requested separately.
 
 Other implementation decisions are reversible and fixed by this plan.
 

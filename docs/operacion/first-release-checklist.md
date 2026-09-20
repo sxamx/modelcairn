@@ -7,7 +7,7 @@ successful command is insufficient.
 
 ## Candidate
 
-- [ ] Version and channel approved by the maintainer.
+- [x] Version and channel approved by the maintainer.
 - [x] Clean `main` commit with the complete CI green.
 - [x] AMD64/ARM64 binaries identify the correct version, commit, and date.
 - [x] Tarballs contain only allowlisted files with expected modes.

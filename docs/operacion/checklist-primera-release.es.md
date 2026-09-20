@@ -7,7 +7,7 @@ basta con que el comando haya funcionado una vez.
 
 ## Candidata
 
-- [ ] Versión y canal aprobados por el mantenedor.
+- [x] Versión y canal aprobados por el mantenedor.
 - [x] Commit de `main`, árbol limpio y CI completo verde.
 - [x] Binarios AMD64/ARM64 identifican versión, commit y fecha correctos.
 - [x] Tarballs contienen solo archivos allowlisted y modos esperados.

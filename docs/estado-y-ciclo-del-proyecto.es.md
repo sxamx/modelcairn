@@ -171,3 +171,4 @@ decisiones públicas y configure las protecciones.
 | 2026-09-19 | Etapa F, Hito 7 y Fase 1 completados | 20 requisitos aceptados; CI, benchmark de 600 segundos y QA agrupado independiente aprobados |
 | 2026-09-19 | Etapa G e Hito 8 iniciados | Contrato de release y checklist operativo preparados; publicación sujeta a aprobación del mantenedor |
 | 2026-09-20 | Candidata técnica del Hito 8 verificada | Paquetes, SBOM, procedencia, recuperación, fallos negativos y QA agrupado aprobados; publicación aún no autorizada |
+| 2026-09-20 | Decisiones de primera release aprobadas | v0.1.0 prerelease, assets Linux/SBOM/checksums, identidad sxamx, reporte privado y protecciones GitHub aprobados; autorización final aún pendiente |

@@ -151,3 +151,4 @@ approves the public decisions and protections are configured.
 | 2026-09-19 | Stage F, Milestone 7, and Phase 1 completed | 20 requirements accepted; CI, 600-second benchmark, and independent grouped QA passed |
 | 2026-09-19 | Stage G and Milestone 8 started | Release contract and operational checklist prepared; publication remains gated on maintainer approval |
 | 2026-09-20 | Milestone 8 technical candidate verified | Packages, SBOM, provenance, recovery, negative failures, and grouped QA passed; publication remains unauthorized |
+| 2026-09-20 | First-release decisions approved | v0.1.0 prerelease, Linux/SBOM/checksum assets, sxamx identity, private reporting, and GitHub protections approved; final authorization remains pending |
