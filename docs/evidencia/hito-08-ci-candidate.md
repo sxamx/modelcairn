@@ -56,8 +56,8 @@ owners and modes, with no binary, unit, or active service left behind.
    now fixes modes inside the archive and verification requires them.
 2. Windows and Linux emitted different standard `SHA256SUMS` variants. Generation
    now requests binary format and verification accepts either standard form.
-3. `upload-artifact` v4 warned about Node 20 being forced to Node 24; it was updated
-   to the official v5 SHA and awaits confirmation in the next run.
+3. `upload-artifact` v4 and v5 warned about Node 20 being forced to Node 24. The
+   official v7.0.1 SHA is now pinned, whose action declares `node24`.
 
 ## Remaining limits
 
