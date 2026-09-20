@@ -57,8 +57,8 @@ recuperó propietarios y modos, sin binario, unidad ni servicio activo.
    empaquetador ahora fija modos dentro del archivo y el verificador los exige.
 2. Windows y Linux emitían variantes estándar distintas de `SHA256SUMS`. El
    generador ahora fuerza formato binario y el verificador acepta ambas variantes.
-3. `upload-artifact` v4 produjo una advertencia por Node 20 forzado a Node 24; se
-   actualizó al SHA oficial de v5 y queda pendiente confirmar la siguiente corrida.
+3. `upload-artifact` v4 y v5 produjeron una advertencia por Node 20 forzado a
+   Node 24. Se fijó el SHA oficial de v7.0.1, cuya acción declara `node24`.
 
 ## Límites pendientes
 
