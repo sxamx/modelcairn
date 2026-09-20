@@ -92,6 +92,7 @@ jobs:
               "dist/release-ci/modelcairn_${version}_linux_${arch}.tar.gz" \
               dist/release-ci/SHA256SUMS "$version" "$commit" "$arch"
           done
+          bash scripts/verify-release-package-failures.sh dist/release-ci "$version" "$commit"
           cp dist/release-ci/SHA256SUMS /tmp/modelcairn-first-build.SHA256SUMS
           bash scripts/package-release.sh "$version" dist/release-ci
           cmp /tmp/modelcairn-first-build.SHA256SUMS dist/release-ci/SHA256SUMS
