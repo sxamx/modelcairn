@@ -57,6 +57,6 @@ done
 
 (
   cd "$output_dir"
-  sha256sum *.tar.gz >SHA256SUMS
+  sha256sum --binary *.tar.gz >SHA256SUMS
 )
 printf 'release candidate artifacts written to %s\n' "$output_dir"
