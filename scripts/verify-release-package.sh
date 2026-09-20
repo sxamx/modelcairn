@@ -16,7 +16,7 @@ archive="$(cd "$(dirname "$archive")" && pwd)/$(basename "$archive")"
 checksums="$(cd "$(dirname "$checksums")" && pwd)/$(basename "$checksums")"
 (
   cd "$(dirname "$archive")"
-  grep -F " *$(basename "$archive")" "$checksums" | sha256sum --check --strict -
+  awk -v name="$(basename "$archive")" '$2 == name || $2 == "*" name { print }' "$checksums" | sha256sum --check --strict -
 )
 
 root="modelcairn_${expected_version}_linux_${expected_arch}"
