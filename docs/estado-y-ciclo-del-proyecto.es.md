@@ -138,9 +138,14 @@ La etapa terminó el 19 de septiembre de 2026: los 20 requisitos en alcance, CI,
 fallos inducidos, carga representativa y QA independiente quedaron aprobados. La
 aceptación de Fase 1 no equivale todavía a una release pública.
 
-## Etapa G — Preparación open source y publicación (pendiente)
+## Etapa G — Preparación open source y publicación (activa)
 
 Incluye incorporar la licencia elegida en la Etapa C, completar la guía de contribución y la política de seguridad, publicar versiones y notas de release, y verificar instalación, actualización y rollback reproducibles.
+
+El Hito 8 comenzó el 19 de septiembre de 2026. Prepara workflow de candidata,
+contrato de artefactos, checksums, SBOM, procedencia, changelog, guía de marcas y
+evidencia de instalación/actualización/rollback desde paquete. No puede crear tag
+ni GitHub Release hasta que el mantenedor apruebe versión y canal.
 
 ## Registro de cambios de etapa
 
@@ -163,3 +168,4 @@ Incluye incorporar la licencia elegida en la Etapa C, completar la guía de cont
 | 2026-09-15 | Hito 6 completado | Instalación idempotente, reinicio, backup/restore/rollback con ruta recuperada, fallos seguros, benchmark sin swap y limpieza conservadora comprobados en VM |
 | 2026-09-16 | Etapa F e Hito 7 iniciados | Plan agrupado de trazabilidad, fallos, carga, retención, seguridad, operación y aceptación definido |
 | 2026-09-19 | Etapa F, Hito 7 y Fase 1 completados | 20 requisitos aceptados; CI, benchmark de 600 segundos y QA agrupado independiente aprobados |
+| 2026-09-19 | Etapa G e Hito 8 iniciados | Contrato de release y checklist operativo preparados; publicación sujeta a aprobación del mantenedor |

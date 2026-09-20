@@ -17,13 +17,14 @@ la señal de la ruta sin fingir que una estimación es una regla oficial.
 ## Estado del proyecto
 
 No existe todavía una release. La Fase 1 está implementada, validada y aceptada.
-La preparación de la release pública continúa como una Etapa G separada.
+La Etapa G prepara una primera candidata verificable.
 Consulta:
 
 - [Estado y ciclo del proyecto](docs/estado-y-ciclo-del-proyecto.es.md)
 - [Project Charter](docs/project-charter.es.md)
 - [Índice de documentación](docs/README.es.md)
 - [Fase 1 — Fundación operable](docs/fases/fase-01-fundacion.es.md)
+- [Hito 8 — Preparación de la primera release](docs/fases/hito-08-plan-tecnico.es.md)
 
 ## Dirección técnica aprobada
 
@@ -40,7 +41,11 @@ Consulta:
 ## Licencia
 
 ModelCairn se distribuye bajo [Apache License 2.0](LICENSE) e incluye
-[NOTICE](NOTICE) con su atribución de origen.
+[NOTICE](NOTICE) con su atribución de origen. Las distribuciones modificadas deben
+seguir además la [guía del nombre y las marcas](TRADEMARKS.md) y no pueden insinuar
+que son oficiales.
+
+Los cambios destacables se registran en [CHANGELOG.md](CHANGELOG.md).
 
 ## Desarrollo
 

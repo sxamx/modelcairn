@@ -19,6 +19,7 @@
 13. [Plan técnico de entrega del Hito 5](fases/hito-05-plan-tecnico.es.md)
 14. [Plan técnico de entrega del Hito 6](fases/hito-06-plan-tecnico.es.md)
 15. [Plan técnico de validación y cierre del Hito 7](fases/hito-07-plan-tecnico.es.md)
+16. [Plan del Hito 8: preparación de la primera release](fases/hito-08-plan-tecnico.es.md)
 16. [Modelo de amenazas de la Fase 1](seguridad/modelo-amenazas-fase-1.es.md)
 17. [Runbook operativo de la Fase 1](operacion/runbook-fase-1.es.md)
 
@@ -38,6 +39,7 @@
 - [Evidencia del Hito 6: instalación y recuperación](evidencia/hito-06-instalacion-y-recuperacion.es.md)
 - [Evidencia del Hito 7: validación de sistema y seguridad](evidencia/hito-07-validacion-de-sistema.es.md)
 - [QA agrupado del Hito 7](evidencia/qa-agrupado-hito-07.es.md)
+- [Checklist de la primera release](operacion/checklist-primera-release.es.md)
 - [Configuración de ejemplo](contratos/config/example-v1alpha1.yaml)
 - [OpenAPI administrativa](contratos/api/admin-v1.openapi.yaml)
 - [OpenAPI de datos](contratos/api/data-v1.openapi.yaml)

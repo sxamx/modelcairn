@@ -118,9 +118,14 @@ The stage completed on September 19, 2026: all 20 in-scope requirements, CI,
 induced failures, representative load, and independent QA passed. Phase 1
 acceptance does not yet constitute a public release.
 
-## Stage G - Open source preparation and publication (pending)
+## Stage G - Open source preparation and publication (active)
 
 Includes incorporating the license chosen in Stage C, completing the contribution guide and security policy, publishing versions and release notes, and verifying reproducible installation, upgrade, and rollback.
+
+Milestone 8 started on September 19, 2026. It prepares a candidate workflow,
+artifact contract, checksums, SBOM, provenance, changelog, trademark guidance, and
+package-level installation/upgrade/rollback evidence. It cannot create a tag or
+GitHub Release until the maintainer approves the version and release channel.
 
 ## Stage change log
 
@@ -143,3 +148,4 @@ Includes incorporating the license chosen in Stage C, completing the contributio
 | 2026-09-15 | Milestone 6 completed | Idempotent install, reboot, backup/restore/rollback with recovered route, safe failures, swap-free benchmark, and conservative cleanup verified on the VM |
 | 2026-09-16 | Stage F and Milestone 7 started | Grouped traceability, failure, load, retention, security, operations, and acceptance plan defined |
 | 2026-09-19 | Stage F, Milestone 7, and Phase 1 completed | 20 requirements accepted; CI, 600-second benchmark, and independent grouped QA passed |
+| 2026-09-19 | Stage G and Milestone 8 started | Release contract and operational checklist prepared; publication remains gated on maintainer approval |

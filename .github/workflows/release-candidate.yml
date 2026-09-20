@@ -1,0 +1,86 @@
+name: Release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Unstable SemVer without v prefix (for example 0.1.0-rc.1)
+        required: true
+        type: string
+      ref:
+        description: Commit or ref already reachable from main
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - name: Require an unstable version and a main commit
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          [[ "$VERSION" =~ ^0\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor HEAD origin/main
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Rebuild and test
+        run: |
+          npm --prefix web ci
+          npm --prefix web test
+          npm --prefix web run build
+          node scripts/verify-console.cjs
+          git diff --exit-code -- web/src/api/schema.d.ts internal/consoleui/dist
+          test -z "$(gofmt -l .)"
+          go vet ./...
+          go test -race ./...
+          node scripts/validate-docs.cjs
+          node scripts/verify-egress.cjs
+          node scripts/verify-installation.cjs
+      - name: Build deterministic candidate archives
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          bash scripts/package-release.sh "$VERSION" dist/release
+          commit="$(git rev-parse HEAD)"
+          for arch in amd64 arm64; do
+            bash scripts/verify-release-package.sh \
+              "dist/release/modelcairn_${VERSION}_linux_${arch}.tar.gz" \
+              dist/release/SHA256SUMS "$VERSION" "$commit" "$arch"
+          done
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: dist/release/modelcairn_${{ inputs.version }}.spdx.json
+          upload-artifact: false
+      - name: Attest candidate archives
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        with:
+          subject-path: dist/release/*.tar.gz
+      - name: Upload private candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: modelcairn-${{ inputs.version }}-candidate
+          path: dist/release/
+          if-no-files-found: error
+          retention-days: 14
