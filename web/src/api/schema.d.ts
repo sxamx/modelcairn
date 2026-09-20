@@ -287,6 +287,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agent-tokens/{name}/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rotateAgentToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agent-tokens/{name}/revoke": {
         parameters: {
             query?: never;
@@ -1527,6 +1543,34 @@ export interface operations {
                 content: {
                     "application/json": {
                         /** @description One-time intentional delivery to the authenticated issuer; never logged or recoverable later. */
+                        readonly token: string;
+                        tokenStatus: components["schemas"]["AgentTokenStatus"];
+                    };
+                };
+            };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    rotateAgentToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: components["parameters"]["Name"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active token atomically replaced; new value returned exactly once */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description One-time replacement; rotating again invalidates it if this response is lost. */
                         readonly token: string;
                         tokenStatus: components["schemas"]["AgentTokenStatus"];
                     };

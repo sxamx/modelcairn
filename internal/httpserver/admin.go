@@ -85,6 +85,7 @@ func (a *adminAPI) routes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/admin/secrets/{name}", a.deleteSecret)
 	mux.HandleFunc("GET /api/v1/admin/agent-tokens/{name}/status", a.getAgentTokenStatus)
 	mux.HandleFunc("POST /api/v1/admin/agent-tokens/{name}/issue", a.issueAgentToken)
+	mux.HandleFunc("POST /api/v1/admin/agent-tokens/{name}/rotate", a.rotateAgentToken)
 	mux.HandleFunc("POST /api/v1/admin/agent-tokens/{name}/revoke", a.revokeAgentToken)
 }
 

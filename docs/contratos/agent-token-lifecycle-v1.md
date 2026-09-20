@@ -34,10 +34,17 @@ transport/origin boundary, session, and CSRF. Under the `SecretStore` lock and o
 transaction it reauthorizes the session, loads the resource, requires an enabled,
 unexpired, never-issued and never-revoked identity, conditionally stores verifier
 metadata, audits `agent_token.issue`, and commits. Concurrent issuance has one
-winner. The `201` response is `no-store` and returns the bearer exactly once. A lost
-response cannot be recovered; revoke the identity and create another. This endpoint
-does not use `If-Match`: its one-time lifecycle condition is separate from the
-declarative resource version.
+winner. The `201` response is `no-store` and returns the bearer exactly once. This
+endpoint does not use `If-Match`: its one-time lifecycle condition is separate from
+the declarative resource version.
+
+`POST /api/v1/admin/agent-tokens/{name}/rotate` safely recovers from a lost
+one-time response. It requires an active, unexpired identity and atomically
+replaces its verifier, prefix, and issuance instant while auditing
+`agent_token.rotate`. The previous bearer becomes invalid in the same transaction.
+The replacement is also returned once with `no-store`; if that response is lost,
+rotation may be repeated and only the newest bearer remains usable. Rotation never
+revives an unissued, expired, or revoked identity.
 
 `POST /api/v1/admin/agent-tokens/{name}/revoke` uses the same boundary and
 transaction. Missing resources return 404. It sets `revoked_at` even before issue;
@@ -58,8 +65,9 @@ The data API accepts exactly one `Authorization: Bearer <token>` header. It chec
 bounded canonical syntax before SQLite, hashes the token, and returns the same 401
 for unknown, revoked, expired, disabled, or deleted identities. It then checks the
 resolved route against `allowedRouteRefs`; missing permission returns 403. Identity
-and route are captured before contacting a provider. Automatic rotation, multiple
-bearers per identity, and non-route permissions are outside v1.
+and route are captured before contacting a provider. Scheduled automatic rotation,
+multiple simultaneous bearers per identity, and non-route permissions are outside
+v1.
 
 ## Grouped acceptance
 
@@ -67,6 +75,7 @@ bearers per identity, and non-route permissions are outside v1.
 - one concurrent issue winner and audit-failure rollback;
 - no bearer in SQLite, logs, errors, DTOs, or exports;
 - irreversible, idempotent revocation before or after issue;
+- atomic, repeatable manual rotation with exactly one usable bearer;
 - expiry and deletion reject new calls;
 - uniform 401 for invalid lifecycle state and 403 for a disallowed route;
 - complete separation between administrative sessions and agent bearers.

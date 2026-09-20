@@ -210,6 +210,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  modelcairn admin logout --server origin [--session-file path]")
 	fmt.Fprintln(w, "  modelcairn agent-token status --server origin [--session-file path] <name>")
 	fmt.Fprintln(w, "  modelcairn agent-token issue --server origin [--session-file path] <name>")
+	fmt.Fprintln(w, "  modelcairn agent-token rotate --server origin [--session-file path] <name>")
 	fmt.Fprintln(w, "  modelcairn agent-token revoke --server origin [--session-file path] <name>")
 	fmt.Fprintln(w, "  modelcairn backup create --out file.mcb.age [--data-dir path]")
 	fmt.Fprintln(w, "  modelcairn backup verify file.mcb.age")

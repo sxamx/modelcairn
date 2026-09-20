@@ -13,11 +13,11 @@ import (
 
 func runAgentToken(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "agent-token requires status, issue, or revoke")
+		fmt.Fprintln(stderr, "agent-token requires status, issue, rotate, or revoke")
 		return 2
 	}
 	command := args[0]
-	if command != "status" && command != "issue" && command != "revoke" {
+	if command != "status" && command != "issue" && command != "rotate" && command != "revoke" {
 		fmt.Fprintln(stderr, "unknown agent-token command")
 		return 2
 	}
@@ -55,7 +55,7 @@ func runAgentToken(ctx context.Context, args []string, stdout, stderr io.Writer)
 			return writeCLIError(stderr, fmt.Errorf("invalid_admin_response"))
 		}
 		return encodeCLIJSON(stdout, stderr, value)
-	case "issue":
+	case "issue", "rotate":
 		if response.StatusCode != http.StatusCreated {
 			return writeCLIError(stderr, fmt.Errorf("agent_token_http_%d", response.StatusCode))
 		}
