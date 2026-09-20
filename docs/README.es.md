@@ -39,6 +39,7 @@
 - [Evidencia del Hito 6: instalación y recuperación](evidencia/hito-06-instalacion-y-recuperacion.es.md)
 - [Evidencia del Hito 7: validación de sistema y seguridad](evidencia/hito-07-validacion-de-sistema.es.md)
 - [QA agrupado del Hito 7](evidencia/qa-agrupado-hito-07.es.md)
+- [Evidencia inicial de candidata CI del Hito 8](evidencia/hito-08-candidata-ci.es.md)
 - [Checklist de la primera release](operacion/checklist-primera-release.es.md)
 - [Configuración de ejemplo](contratos/config/example-v1alpha1.yaml)
 - [OpenAPI administrativa](contratos/api/admin-v1.openapi.yaml)

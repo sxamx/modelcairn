@@ -6,6 +6,7 @@ const root = path.resolve(__dirname,"..");
 const installer = fs.readFileSync(path.join(root,"scripts","install-linux.sh"),"utf8");
 const bootstrap = fs.readFileSync(path.join(root,"scripts","bootstrap-linux.sh"),"utf8");
 const uninstaller = fs.readFileSync(path.join(root,"scripts","uninstall-linux.sh"),"utf8");
+const packageUpgrade = fs.readFileSync(path.join(root,"scripts","verify-package-upgrade-linux.sh"),"utf8");
 const unit = fs.readFileSync(path.join(root,"packaging","systemd","modelcairn.service"),"utf8");
 
 for (const text of ["--enable", "--no-enable", "--start", "--no-start", "--non-interactive", "/var/lib/modelcairn"]) {
@@ -27,5 +28,8 @@ for (const required of ["disable --now modelcairn.service", "rm -f -- /etc/syste
 if (!installer.includes("systemctl stop modelcairn.service >/dev/null 2>&1 || true")) throw new Error("--no-start must leave the service stopped");
 for (const required of ["verify_service_started", "systemctl is-active --quiet modelcairn.service", "journalctl -u modelcairn.service"]) {
   if (!installer.includes(required)) throw new Error(`verified service-start invariant missing: ${required}`);
+}
+for (const required of ["MODELCAIRN_ALLOW_DESTRUCTIVE_SYSTEM_TEST", "refusing host with an installed binary", "pre-test.tar", "trap cleanup EXIT", "tar --acls --xattrs --numeric-owner", "restore_host", "rm -rf -- /etc/modelcairn /var/lib/modelcairn"]) {
+  if (!packageUpgrade.includes(required)) throw new Error(`isolated upgrade gate missing: ${required}`);
 }
 console.log("Linux installation assets satisfy structural and safety invariants.");
