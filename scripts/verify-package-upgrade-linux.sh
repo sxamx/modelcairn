@@ -31,10 +31,12 @@ systemctl is-active --quiet modelcairn.service && { echo "refusing active servic
 
 work="$(mktemp -d /tmp/modelcairn-package-upgrade.XXXXXX)"
 snapshot="$work/pre-test.tar"
+backup_dir=""
 tar --acls --xattrs --numeric-owner -C / -cpf "$snapshot" etc/modelcairn var/lib/modelcairn
 tar -tf "$snapshot" | awk '!/^(etc\/modelcairn|var\/lib\/modelcairn)(\/|$)/ { bad=1 } END { exit bad }'
 
 restored=0
+current_step="prepare isolated host"
 restore_host() {
   if (( restored )); then return; fi
   systemctl disable --now modelcairn.service >/dev/null 2>&1 || true
@@ -46,38 +48,91 @@ restore_host() {
   restored=1
 }
 cleanup() {
+  status=$?
+  if (( status != 0 )); then
+    printf 'package upgrade gate failed during: %s\n' "$current_step" >&2
+  fi
   restore_host
+  [[ -z "$backup_dir" ]] || rm -rf -- "$backup_dir"
   rm -rf -- "$work"
 }
 trap cleanup EXIT
 
 rm -rf -- /etc/modelcairn /var/lib/modelcairn
 
+current_step="install old package"
 "$installer" --binary "$old_binary" --listen "127.0.0.1:$port" --no-enable --no-start --non-interactive >/dev/null
-printf '{"apiVersion":"modelcairn.io/v1alpha1","kind":"AdminSettings","spec":{"publicOrigin":"http://127.0.0.1:%s","listen":"127.0.0.1:%s","transport":"loopback-http"}}\n' "$port" "$port" >"$work/settings.json"
+settings_file="/etc/modelcairn/.release-test-settings.json"
+printf '{"apiVersion":"modelcairn.io/v1alpha1","kind":"AdminSettings","spec":{"publicOrigin":"http://127.0.0.1:%s","listen":"127.0.0.1:%s","transport":"loopback-http"}}\n' "$port" "$port" >"$settings_file"
+chown root:modelcairn "$settings_file"
+chmod 0640 "$settings_file"
 printf '%s\n' 'temporary release validation password' |
   runuser -u modelcairn -- /usr/local/bin/modelcairn admin bootstrap \
-    --data-dir /var/lib/modelcairn --username release-test --settings "$work/settings.json" >/dev/null
+    --data-dir /var/lib/modelcairn --username release-test --settings "$settings_file" >/dev/null
+rm -f -- "$settings_file"
+admin_identity() {
+  rm -f -- "$work/session.json" "$work/whoami.json"
+  printf '%s\n' 'temporary release validation password' |
+    /usr/local/bin/modelcairn admin login --server "http://127.0.0.1:$port" \
+      --session-file "$work/session.json" --username release-test >/dev/null
+  /usr/local/bin/modelcairn admin whoami --server "http://127.0.0.1:$port" \
+    --session-file "$work/session.json" >"$work/whoami.json"
+  python3 -c 'import json,sys; value=json.load(open(sys.argv[1])); identity=value["id"]; assert identity; print(identity)' "$work/whoami.json"
+}
 systemctl start modelcairn.service
+current_step="verify old package and admin session"
 for _ in {1..100}; do
   curl --fail --silent "http://127.0.0.1:$port/readyz" >/dev/null && break
   sleep 0.05
 done
 curl --fail --silent "http://127.0.0.1:$port/readyz" >/dev/null
 /usr/local/bin/modelcairn version | grep -Fq "modelcairn $old_version "
-installation_id="$(sqlite3 /var/lib/modelcairn/modelcairn.db 'SELECT id FROM installation LIMIT 1;')"
-[[ -n "$installation_id" ]] || { echo "missing installation identity" >&2; exit 1; }
+admin_id="$(admin_identity)"
 
+current_step="create and verify pre-upgrade backup"
+backup_dir="$(mktemp -d /tmp/modelcairn-mcb-backup.XXXXXX)"
+chown modelcairn:modelcairn "$backup_dir"
+chmod 0700 "$backup_dir"
+systemctl stop modelcairn.service
+current_step="create pre-upgrade backup"
+printf '%s\n' 'temporary backup passphrase' |
+  runuser -u modelcairn -- /usr/local/bin/modelcairn backup create \
+    --data-dir /var/lib/modelcairn --out "$backup_dir/pre-upgrade.mcb.age" >/dev/null
+current_step="verify pre-upgrade backup"
+printf '%s\n' 'temporary backup passphrase' |
+  runuser -u modelcairn -- /usr/local/bin/modelcairn backup verify \
+    "$backup_dir/pre-upgrade.mcb.age" >/dev/null
+current_step="verify pre-upgrade backup permissions"
+if ! backup_mode="$(stat -c %a "$backup_dir/pre-upgrade.mcb.age")"; then
+  printf 'backup output is missing after successful verification\n' >&2
+  ls -la -- "$backup_dir" >&2 || true
+  exit 1
+fi
+[[ "$backup_mode" == "600" ]] || {
+  printf 'unexpected backup mode: %s (expected 600)\n' "$backup_mode" >&2
+  exit 1
+}
+current_step="restart old package after backup"
+systemctl start modelcairn.service
+for _ in {1..100}; do
+  curl --fail --silent "http://127.0.0.1:$port/readyz" >/dev/null && break
+  sleep 0.05
+done
+curl --fail --silent "http://127.0.0.1:$port/readyz" >/dev/null
+
+current_step="update to new package"
 "$installer" --binary "$new_binary" --listen "127.0.0.1:$port" --no-enable --start --non-interactive >/dev/null
 /usr/local/bin/modelcairn version | grep -Fq "modelcairn $new_version "
 curl --fail --silent "http://127.0.0.1:$port/readyz" >/dev/null
-[[ "$(sqlite3 /var/lib/modelcairn/modelcairn.db 'SELECT id FROM installation LIMIT 1;')" == "$installation_id" ]]
+[[ "$(admin_identity)" == "$admin_id" ]]
 
+current_step="roll back to old package"
 "$installer" --binary "$old_binary" --listen "127.0.0.1:$port" --no-enable --start --non-interactive >/dev/null
 /usr/local/bin/modelcairn version | grep -Fq "modelcairn $old_version "
 curl --fail --silent "http://127.0.0.1:$port/readyz" >/dev/null
-[[ "$(sqlite3 /var/lib/modelcairn/modelcairn.db 'SELECT id FROM installation LIMIT 1;')" == "$installation_id" ]]
+[[ "$(admin_identity)" == "$admin_id" ]]
 
+current_step="uninstall and restore preserved host state"
 "$uninstaller" --yes >/dev/null
 restore_host
 [[ ! -e /usr/local/bin/modelcairn && ! -e /etc/systemd/system/modelcairn.service ]]

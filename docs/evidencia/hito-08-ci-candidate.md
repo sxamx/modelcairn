@@ -2,7 +2,7 @@
 
 [Español](hito-08-candidata-ci.es.md)
 
-- Date: September 19, 2026
+- Date: September 20, 2026
 - `main` revision: `1e3c0ca`
 - Technical version identifier: `0.0.0-ci`
 - Result: workflow and AMD64 package consumption passed
@@ -41,6 +41,15 @@ AgentToken rotation, rejection of the former bearer, a normal call, and SSE. It
 exited zero with 56,604 KiB peak RSS and did not touch the persistent installation
 or data. The temporary environment was removed afterwards.
 
+A tightly gated destructive check also ran on the representative host. Before
+acting, it rejected any installed binary, unit, or active service, took a local
+snapshot of the inactive state, and armed mandatory trap-based restoration. It
+installed the old package, created and verified an encrypted MCB1 backup with mode
+0600, upgraded to the new package, and checked readiness and admin identity. It
+then rolled back to the old package, repeated those checks, uninstalled the
+temporary copy, and restored the snapshot. The preserved state recovered its
+owners and modes, with no binary, unit, or active service left behind.
+
 ## Corrected findings
 
 1. The first Windows-built local tarball did not retain executable mode. Packaging
@@ -53,6 +62,7 @@ or data. The temporary environment was removed afterwards.
 ## Remaining limits
 
 - ARM64 was built and inspected but not executed on ARM64 hardware.
-- Package-level upgrade and rollback still need an isolated installation test.
 - Final grouped QA and the maintainer's version/channel decision remain pending.
+- The validated upgrade did not include an irreversible schema migration; that
+  policy will be defined before a release that needs one.
 - This evidence does not authorize publication.

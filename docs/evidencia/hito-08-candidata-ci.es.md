@@ -2,7 +2,7 @@
 
 [English](hito-08-ci-candidate.md)
 
-- Fecha: 19 de septiembre de 2026
+- Fecha: 20 de septiembre de 2026
 - Revisión de `main`: `1e3c0ca`
 - Identificador técnico de versión: `0.0.0-ci`
 - Resultado: workflow y consumo del paquete AMD64 aprobados
@@ -42,6 +42,15 @@ configuración, rotación de AgentToken, rechazo del bearer anterior, llamada no
 y SSE. Terminó con código cero, 56.604 KiB de RSS pico y sin tocar la instalación o
 los datos persistentes. El entorno temporal se eliminó al terminar.
 
+También se ejecutó una compuerta destructiva acotada sobre el host representativo.
+Antes de actuar rechazó cualquier binario, unidad o servicio activo, tomó una
+instantánea local del estado inactivo y configuró restauración obligatoria mediante
+un trap. Instaló el paquete anterior, creó y verificó un respaldo MCB1 cifrado con
+modo 0600, actualizó al paquete nuevo y confirmó disponibilidad e identidad
+administrativa. Luego volvió al paquete anterior, repitió esas comprobaciones,
+desinstaló la copia temporal y restauró la instantánea. El estado preservado
+recuperó propietarios y modos, sin binario, unidad ni servicio activo.
+
 ## Hallazgos corregidos
 
 1. El primer tarball local creado desde Windows no conservó el modo ejecutable. El
@@ -54,7 +63,7 @@ los datos persistentes. El entorno temporal se eliminó al terminar.
 ## Límites pendientes
 
 - ARM64 fue construido e inspeccionado, pero no ejecutado en hardware ARM64.
-- Aún falta probar actualización y rollback desde paquete sobre una instalación
-  aislada.
 - Falta el QA agrupado final y la decisión del mantenedor sobre versión/canal.
+- La actualización validada no incluyó una migración de esquema irreversible; esa
+  política se definirá antes de una versión que la necesite.
 - Esta evidencia no autoriza publicación.
