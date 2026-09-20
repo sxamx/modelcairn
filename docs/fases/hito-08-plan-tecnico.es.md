@@ -2,7 +2,7 @@
 
 [English](hito-08-plan-tecnico.md)
 
-- Estado: **decisiones aprobadas; publicación final aún no autorizada**
+- Estado: **completado; v0.1.0 publicada y verificada como prerelease**
 - Etapa: G — preparación open source y publicación
 - Objetivo: convertir la Fase 1 aceptada en una candidata instalable, verificable
   y recuperable sin confundirla con una versión estable.
@@ -24,8 +24,9 @@ El 20 de septiembre de 2026 se aprobaron:
 5. Protección de `main`, tags `v*` y environment `release` con aprobación
    manual. Estas protecciones quedaron activadas antes de generar la candidata.
 
-La aprobación de estas decisiones no equivale a la autorización final para crear
-el tag o la GitHub Release; esa autorización se solicita por separado.
+La autorización final se concedió después de aprobar estas decisiones. El tag y
+la GitHub Release se crearon mediante la barrera protegida y los assets públicos
+se verificaron.
 
 Las demás decisiones de implementación se consideran reversibles y quedan fijadas
 por este plan.

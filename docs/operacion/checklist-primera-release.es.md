@@ -34,9 +34,9 @@ basta con que el comando haya funcionado una vez.
 
 ## Publicación autorizada
 
-- [ ] Aprobación explícita del mantenedor registrada.
-- [ ] Tag apunta al commit aprobado y activa el entorno protegido.
-- [ ] GitHub Release contiene exactamente los hashes candidatos.
-- [ ] Descarga limpia, checksum, instalación y `modelcairn version` verificados.
-- [ ] Tablero, ciclo y documentación actualizados después —no antes— de comprobar
+- [x] Aprobación explícita del mantenedor registrada.
+- [x] Tag apunta al commit aprobado y activa el entorno protegido.
+- [x] GitHub Release contiene exactamente los hashes candidatos.
+- [x] Descarga limpia, checksum, instalación y `modelcairn version` verificados.
+- [x] Tablero, ciclo y documentación actualizados después —no antes— de comprobar
       los assets públicos.

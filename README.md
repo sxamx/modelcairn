@@ -1,6 +1,7 @@
 # ModelCairn
 
-> Status: Phase 1 accepted; Milestones 0 through 7 complete.
+> Status: Phase 1 accepted; Milestones 0 through 8 complete; v0.1.0 published
+> as a prerelease.
 > The recovered prototype is kept outside this repository as a reference.
 
 [Español](README.es.md)
@@ -17,8 +18,9 @@ route signal without pretending that an estimate is an official rule.
 
 ## Project status
 
-There is no release yet. Phase 1 is implemented, validated, and accepted. Stage G
-is preparing a verifiable first release candidate. See:
+The [v0.1.0 prerelease](https://github.com/sxamx/modelcairn/releases/tag/v0.1.0)
+is published and verified. Phase 1 is implemented, validated, and accepted; this
+first version must not be mistaken for a stable release. See:
 
 - [Project status and lifecycle](docs/project-lifecycle.md)
 - [Project Charter](docs/project-charter.md)
@@ -49,7 +51,7 @@ Notable changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## Development
 
-Milestones 0 through 7 are complete. With Go installed:
+Milestones 0 through 8 are complete. With Go installed:
 
 ```sh
 go test ./...

@@ -118,15 +118,14 @@ The stage completed on September 19, 2026: all 20 in-scope requirements, CI,
 induced failures, representative load, and independent QA passed. Phase 1
 acceptance does not yet constitute a public release.
 
-## Stage G - Open source preparation and publication (active)
+## Stage G - Open source preparation and publication (completed for v0.1.0)
 
 Includes incorporating the license chosen in Stage C, completing the contribution guide and security policy, publishing versions and release notes, and verifying reproducible installation, upgrade, and rollback.
 
-Milestone 8 now has a verified technical candidate and QA. The chain produces
-reproducible packages, checksums, SBOM, and provenance; installation, upgrade,
-rollback, restore, and safe failures were exercised. The publication gate is
-prepared, but it cannot create a tag or GitHub Release until the maintainer
-approves the public decisions and protections are configured.
+Milestone 8 completed on September 20, 2026. The chain produced reproducible
+packages, checksums, SBOM, and provenance; installation, upgrade, rollback,
+restore, and safe failures were exercised. After maintainer authorization and
+the required protections, v0.1.0 was published and verified as a prerelease.
 
 ## Stage change log
 
@@ -152,3 +151,4 @@ approves the public decisions and protections are configured.
 | 2026-09-19 | Stage G and Milestone 8 started | Release contract and operational checklist prepared; publication remains gated on maintainer approval |
 | 2026-09-20 | Milestone 8 technical candidate verified | Packages, SBOM, provenance, recovery, negative failures, and grouped QA passed; publication remains unauthorized |
 | 2026-09-20 | First-release decisions approved | v0.1.0 prerelease, Linux/SBOM/checksum assets, sxamx identity, private reporting, and GitHub protections approved; final authorization remains pending |
+| 2026-09-20 | Stage G and Milestone 8 completed for v0.1.0 | Publication authorized; tag, public assets, checksums, and prerelease metadata verified |

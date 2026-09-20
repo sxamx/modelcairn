@@ -1,6 +1,6 @@
 # Triage de auditoría externa — 2026-09-20
 
-Estado: revisión del candidato de prerelease.
+Estado: completada antes de publicar v0.1.0.
 
 ## Alcance y procedencia
 
@@ -68,9 +68,9 @@ schema futuro.
 - Un indicador del navegador sin conectividad no bloquea el login hacia una
   instalación local; solo se presenta como señal informativa.
 
-## Gate de salida
+## Gate de salida completado
 
-Antes de publicar se exige:
+Antes de publicar se comprobó:
 
 1. suite Go completa, tipos y pruebas web;
 2. validadores documentales y de contratos;
@@ -79,3 +79,6 @@ Antes de publicar se exige:
 5. candidato nuevo asociado exactamente al estado revisado;
 6. checksums, SBOM y attestations verificados antes de crear el tag y la
    prerelease.
+
+Todos los puntos se aprobaron. El informe bruto permanece como evidencia local
+excluida de Git; este triage es su registro público revisado.

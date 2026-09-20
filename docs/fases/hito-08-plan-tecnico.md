@@ -2,7 +2,7 @@
 
 [Español](hito-08-plan-tecnico.es.md)
 
-- Status: **decisions approved; final publication not yet authorized**
+- Status: **completed; v0.1.0 published and verified as a prerelease**
 - Stage: G — open-source preparation and publication
 - Objective: turn accepted Phase 1 into an installable, verifiable, recoverable
   candidate without presenting it as a stable version.
@@ -24,8 +24,9 @@ On September 20, 2026, the maintainer approved:
 5. Protection for `main`, `v*` tags, and a manually approved `release`
    environment. These protections were activated before producing the candidate.
 
-Approval of these decisions is not final authorization to create the tag or
-GitHub Release; that authorization is requested separately.
+Final authorization was granted after these decisions were approved. The tag
+and GitHub Release were created through the protected gate and the public assets
+were verified.
 
 Other implementation decisions are reversible and fixed by this plan.
 
