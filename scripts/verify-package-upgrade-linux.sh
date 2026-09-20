@@ -131,9 +131,10 @@ for _ in {1..100}; do
 done
 curl --fail --silent "http://127.0.0.1:$port/readyz" >/dev/null
 
-current_step="update to new package"
-"$installer" --binary "$new_binary" --listen "127.0.0.1:$port" --enable --start --non-interactive >/dev/null
+current_step="update to new package while preserving installed listen"
+"$installer" --binary "$new_binary" --enable --start --non-interactive >/dev/null
 systemctl is-enabled --quiet modelcairn.service
+grep -Fxq "MODELCAIRN_LISTEN=127.0.0.1:$port" /etc/modelcairn/service.env
 /usr/local/bin/modelcairn version | grep -Fq "modelcairn $new_version "
 curl --fail --silent "http://127.0.0.1:$port/readyz" >/dev/null
 [[ "$(admin_identity)" == "$admin_id" ]]

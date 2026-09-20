@@ -30,7 +30,7 @@ func Validate(v Resolved) error {
 	if err != nil {
 		return failure(CodeInvalidValue, "$.spec.publicOrigin")
 	}
-	listenIP, err := canonicalListen(v.Listen)
+	listenIP, listenPort, err := canonicalListen(v.Listen)
 	if err != nil {
 		return failure(CodeInvalidValue, "$.spec.listen")
 	}
@@ -105,6 +105,15 @@ func Validate(v Resolved) error {
 		if !validAbsolutePath(v.TLSPrivateKeyPath) {
 			return failure(CodeInvalidValue, "$.spec.tlsPrivateKeyPath")
 		}
+		if listenPort < 1024 {
+			return failure(CodeInvalidValue, "$.spec.listen")
+		}
+		if hiddenByServiceSandbox(v.TLSCertificatePath) {
+			return failure(CodeInvalidValue, "$.spec.tlsCertificatePath")
+		}
+		if hiddenByServiceSandbox(v.TLSPrivateKeyPath) {
+			return failure(CodeInvalidValue, "$.spec.tlsPrivateKeyPath")
+		}
 	case ProxyTLS:
 		if origin.Scheme != "https" || len(v.TrustedProxyCIDRs) == 0 || v.TLSCertificatePath != "" || v.TLSPrivateKeyPath != "" {
 			return failure(CodeInvalidValue, "$.spec.transport")
@@ -124,23 +133,28 @@ func validOptionalString(value string, maximum int) bool {
 func validAbsolutePath(value string) bool {
 	return value != "" && !strings.ContainsRune(value, '\x00') && filepath.IsAbs(value)
 }
-func canonicalListen(raw string) (netip.Addr, error) {
+func canonicalListen(raw string) (netip.Addr, int, error) {
 	host, portRaw, err := net.SplitHostPort(raw)
 	if err != nil {
-		return netip.Addr{}, err
+		return netip.Addr{}, 0, err
 	}
 	ip, err := netip.ParseAddr(host)
 	if err != nil {
-		return netip.Addr{}, err
+		return netip.Addr{}, 0, err
 	}
 	port, err := strconv.Atoi(portRaw)
 	if err != nil || port < 1 || port > 65535 {
-		return netip.Addr{}, url.InvalidHostError(raw)
+		return netip.Addr{}, 0, url.InvalidHostError(raw)
 	}
 	if net.JoinHostPort(ip.String(), strconv.Itoa(port)) != raw {
-		return netip.Addr{}, url.InvalidHostError(raw)
+		return netip.Addr{}, 0, url.InvalidHostError(raw)
 	}
-	return ip, nil
+	return ip, port, nil
+}
+
+func hiddenByServiceSandbox(value string) bool {
+	clean := filepath.Clean(value)
+	return clean == "/home" || strings.HasPrefix(clean, "/home/") || clean == "/root" || strings.HasPrefix(clean, "/root/")
 }
 func canonicalOrigin(raw string) (*url.URL, error) {
 	u, canonical, err := normalizedOrigin(raw)

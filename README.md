@@ -6,8 +6,9 @@
 [Español](README.es.md)
 
 ModelCairn is a lightweight, self-hosted, configurable AI provider gateway. It
-offers a stable endpoint, explainable routing and fallback, local metrics, and
-adaptive capacity and recovery estimation. The operator retains control over
+offers a stable endpoint, explainable routing and fallback, and local operational
+metrics. Adaptive capacity and recovery estimation is planned, not implemented
+in this prerelease. The operator retains control over
 their data, credentials, providers, and egress paths; ModelCairn sends no
 telemetry to a central service.
 

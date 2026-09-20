@@ -14,7 +14,7 @@ export type SettingsState = { desired: SettingsDocument; effective: SettingsDocu
 export type SettingsPlan = Omit<components["schemas"]["AdminSettingsPlan"], "desired"> & { desired: SettingsDocument };
 export type Readiness = {
   status: "ready" | "not_ready";
-  components: Record<string, { Ready: boolean; Reason: string }>;
+  components: Record<string, { ready: boolean; reason: string }>;
 };
 
 type APIErrorBody = { error?: { code?: string; message?: string; requestId?: string } | string };
@@ -31,7 +31,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
   if (init.body) headers.set("Content-Type", "application/json");
-  if (csrfToken && init.method && init.method !== "GET") headers.set("X-CSRF-Token", csrfToken);
+  // Authenticated reads also advance/validate the server-side session and are
+  // deliberately CSRF-bound. The initial /session/me request has no token yet.
+  if (csrfToken) headers.set("X-CSRF-Token", csrfToken);
   const response = await fetch(`/api/v1/admin${path}`, { ...init, headers, credentials: "same-origin" });
   if (!response.ok) {
     let body: APIErrorBody = {};
@@ -103,6 +105,9 @@ export const api = {
     const headers = version === undefined ? undefined : { "If-Match": `"${version}"` };
     return request<components["schemas"]["SecretMetadata"]>(`/secrets/${encodeURIComponent(name)}`, { method: "PUT", headers, body: JSON.stringify({ value }) });
   },
+  createSecret(name: string, value: string) {
+    return this.putSecret(name, value);
+  },
   getSecret(name: string) { return request<components["schemas"]["SecretMetadata"]>(`/secrets/${encodeURIComponent(name)}`); },
   async saveSecret(name: string, value: string) {
     try { return await this.putSecret(name, value); }
@@ -112,8 +117,9 @@ export const api = {
       return this.putSecret(name, value, metadata.resourceVersion);
     }
   },
-  planConfiguration(configuration: Configuration) {
-    return request<ConfigurationPlan>("/config/plan", { method: "POST", body: JSON.stringify(configuration) });
+  planConfiguration(configuration: Configuration, proposedSecret?: string) {
+    const headers = proposedSecret ? { "X-ModelCairn-Proposed-Secret": proposedSecret } : undefined;
+    return request<ConfigurationPlan>("/config/plan", { method: "POST", headers, body: JSON.stringify(configuration) });
   },
   applyConfiguration(configuration: Configuration, planToken: string) {
     return request<components["schemas"]["ApplyResult"]>("/config/apply", { method: "POST", headers: { "X-ModelCairn-Plan-Token": planToken }, body: JSON.stringify(configuration) });

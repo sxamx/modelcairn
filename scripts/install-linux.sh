@@ -3,6 +3,7 @@ set -euo pipefail
 
 binary=""
 listen="127.0.0.1:8080"
+listen_set=0
 enable="ask"
 start="ask"
 interactive=1
@@ -30,7 +31,7 @@ EOF
 while (($#)); do
   case "$1" in
     --binary) (($# >= 2)) || { usage >&2; exit 2; }; binary="$2"; shift 2 ;;
-    --listen) (($# >= 2)) || { usage >&2; exit 2; }; listen="$2"; shift 2 ;;
+    --listen) (($# >= 2)) || { usage >&2; exit 2; }; listen="$2"; listen_set=1; shift 2 ;;
     --enable) enable=yes; shift ;;
     --no-enable) enable=no; shift ;;
     --start) start=yes; shift ;;
@@ -43,6 +44,10 @@ done
 
 (( EUID == 0 )) || { echo "Run this installer with sudo." >&2; exit 1; }
 [[ -n "$binary" && -f "$binary" && -x "$binary" ]] || { echo "--binary must point to an executable ModelCairn binary." >&2; exit 2; }
+if (( ! listen_set )) && [[ -r /etc/modelcairn/service.env ]]; then
+  installed_listen="$(sed -n 's/^MODELCAIRN_LISTEN=//p' /etc/modelcairn/service.env)"
+  [[ -z "$installed_listen" ]] || listen="$installed_listen"
+fi
 [[ "$listen" =~ ^(127\.0\.0\.1|0\.0\.0\.0|\[::1\]|\[::\]|[A-Za-z0-9._:-]+):([1-9][0-9]{0,4})$ ]] || { echo "Invalid --listen address." >&2; exit 2; }
 port="${BASH_REMATCH[2]}"; (( port <= 65535 )) || { echo "Invalid --listen port." >&2; exit 2; }
 
@@ -78,7 +83,14 @@ unit_source="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/packaging/sy
 [[ -f "$unit_source" ]] || { echo "Missing packaged systemd unit." >&2; exit 1; }
 
 getent group modelcairn >/dev/null || groupadd --system modelcairn
-id -u modelcairn >/dev/null 2>&1 || useradd --system --gid modelcairn --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin modelcairn
+if id -u modelcairn >/dev/null 2>&1; then
+  [[ "$(id -gn modelcairn)" == modelcairn && "$(getent passwd modelcairn | cut -d: -f6-7)" == "/nonexistent:/usr/sbin/nologin" ]] || {
+    echo "Existing modelcairn user does not match the required service identity." >&2
+    exit 1
+  }
+else
+  useradd --system --gid modelcairn --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin modelcairn
+fi
 install -d -o root -g modelcairn -m 0750 /etc/modelcairn
 install -d -o modelcairn -g modelcairn -m 0700 /var/lib/modelcairn
 binary_tmp="$(mktemp /usr/local/bin/.modelcairn.XXXXXX)"
@@ -93,12 +105,18 @@ mv -f "$environment_tmp" /etc/modelcairn/service.env
 environment_tmp=""
 install -o root -g root -m 0644 "$unit_source" /etc/systemd/system/modelcairn.service
 systemctl daemon-reload
-if [[ "$enable" == yes ]]; then systemctl enable modelcairn.service; else systemctl disable modelcairn.service >/dev/null 2>&1 || true; fi
+if [[ "$enable" == yes ]]; then
+  systemctl enable modelcairn.service
+else
+  systemctl disable modelcairn.service
+  systemctl is-enabled --quiet modelcairn.service && { echo "ModelCairn remained enabled." >&2; exit 1; } || true
+fi
 if [[ "$start" == yes ]]; then
   systemctl restart modelcairn.service
   verify_service_started
 else
-  systemctl stop modelcairn.service >/dev/null 2>&1 || true
+  systemctl stop modelcairn.service
+  systemctl is-active --quiet modelcairn.service && { echo "ModelCairn remained active." >&2; exit 1; } || true
 fi
 
 cat <<EOF

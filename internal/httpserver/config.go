@@ -64,7 +64,15 @@ func (a *adminAPI) planConfiguration(w http.ResponseWriter, r *http.Request) {
 		writeConfigError(w, err)
 		return
 	}
-	plan, err := a.configuration.Plan(r.Context(), doc, allowDelete)
+	var proposed []string
+	if value := r.Header.Get("X-ModelCairn-Proposed-Secret"); value != "" {
+		if len(r.Header.Values("X-ModelCairn-Proposed-Secret")) != 1 || len(value) > 63 {
+			writeAdminError(w, http.StatusBadRequest, "invalid_proposed_secret", false)
+			return
+		}
+		proposed = []string{value}
+	}
+	plan, err := a.configuration.PlanWithProposedSecrets(r.Context(), doc, allowDelete, proposed)
 	if err != nil {
 		writeConfigError(w, err)
 		return

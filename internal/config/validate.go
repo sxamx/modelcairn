@@ -76,6 +76,9 @@ func Validate(doc *Document, catalog Catalog) error {
 			effective[key] = desired
 		}
 	}
+	if len(effective) > 10000 {
+		return failure(CodeInvalidValue, "$.resources")
+	}
 	lookup := func(kind Kind, name string) (Resource, bool) {
 		v, ok := effective[string(kind)+"\x00"+name]
 		return v, ok

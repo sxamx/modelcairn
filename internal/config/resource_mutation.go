@@ -91,7 +91,7 @@ func (m *Manager) MutateResourceSession(ctx context.Context, input ResourceMutat
 			}
 		}
 		doc := &Document{APIVersion: APIVersion, Kind: DocumentKind, Resources: []Resource{resource}}
-		prepared, _, mutations, err := m.prepareTx(ctx, tx, doc, input.Operation == DeleteResource)
+		prepared, _, mutations, err := m.prepareTx(ctx, tx, doc, input.Operation == DeleteResource, nil)
 		if err != nil {
 			return err
 		}

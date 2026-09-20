@@ -12,7 +12,9 @@ function response(status: number, body?: unknown) {
 }
 
 test("recovers an existing administrative session", async () => {
-  vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+  const calls: Array<{url:string; init?:RequestInit}> = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+    calls.push({url:String(input),init});
     if (String(input).endsWith("/session/me")) return response(200, {
       admin: { id: "d79b24b4-4da4-43bf-829b-940e0f025d33", username: "sam" },
       csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z",
@@ -24,6 +26,8 @@ test("recovers an existing administrative session", async () => {
   expect(await screen.findByRole("heading", { name: "Hola, sam" })).toBeInTheDocument();
   expect(await screen.findByText("El resumen no está disponible. Tus rutas siguen funcionando de forma independiente.")).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith("/api/v1/admin/session/me", expect.objectContaining({ credentials: "same-origin" }));
+  const protectedRead = calls.find((call) => call.url.endsWith("/overview"));
+  expect(new Headers(protectedRead?.init?.headers).get("X-CSRF-Token")).toBe("csrf");
 });
 
 test("signs in without persisting the password", async () => {
@@ -57,7 +61,7 @@ test("shows a uniform login error", async () => {
 test("renders the content-free operational overview", async () => {
   vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
     if (String(input).endsWith("/session/me")) return response(200, { admin: { id: "id", username: "sam" }, csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z" });
-    if (String(input).endsWith("/readyz")) return response(200, { status: "ready", components: { persistence: { Ready: true, Reason: "" } } });
+    if (String(input).endsWith("/readyz")) return response(200, { status: "ready", components: { persistence: { ready: true, reason: "" } } });
     return response(200, { resourceCounts: { Route: 2, Destination: 3 }, requests24h: { total: 11, success: 10, error: 1 }, activeCooldowns: 1, recentRequests: [], generatedAt: "2026-09-13T12:00:00Z" });
   });
   render(<App />);
@@ -70,7 +74,7 @@ test("renders the content-free operational overview", async () => {
 test("explains which local dependency is not ready", async () => {
   vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
     if (String(input).endsWith("/session/me")) return response(200, { admin: { id: "id", username: "sam" }, csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z" });
-    if (String(input).endsWith("/readyz")) return response(503, { status: "not_ready", components: { persistence: { Ready: false, Reason: "database unavailable" } } });
+    if (String(input).endsWith("/readyz")) return response(503, { status: "not_ready", components: { persistence: { ready: false, reason: "database unavailable" } } });
     return response(200, { resourceCounts: {}, requests24h: { total: 0, success: 0, error: 0 }, activeCooldowns: 0, recentRequests: [], generatedAt: "2026-09-13T12:00:00Z" });
   });
   render(<App />);
