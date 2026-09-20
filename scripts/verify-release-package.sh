@@ -24,6 +24,11 @@ allowed="$(printf '%s\n' CHANGELOG.md LICENSE NOTICE README.md TRADEMARKS.md man
 actual="$(tar -tzf "$archive" | sed '/\/$/d' | sort)"
 [[ "$actual" == "$allowed" ]] || { echo "archive allowlist mismatch" >&2; diff -u <(printf '%s\n' "$allowed") <(printf '%s\n' "$actual") || true; exit 1; }
 tar -tzf "$archive" | grep -Eq '(^|/)\.\.?(/|$)' && { echo "unsafe archive path" >&2; exit 1; } || true
+[[ "$(tar -tvzf "$archive" "$root" | awk 'NR==1 {print $1}')" == "drwxr-xr-x" ]] || { echo "invalid package-directory mode" >&2; exit 1; }
+[[ "$(tar -tvzf "$archive" "$root/modelcairn" | awk 'NR==1 {print $1}')" == "-rwxr-xr-x" ]] || { echo "binary is not mode 0755" >&2; exit 1; }
+for file in CHANGELOG.md LICENSE NOTICE README.md TRADEMARKS.md manifest.json; do
+  [[ "$(tar -tvzf "$archive" "$root/$file" | awk 'NR==1 {print $1}')" == "-rw-r--r--" ]] || { echo "invalid mode for $file" >&2; exit 1; }
+done
 
 stage="$(mktemp -d)"
 trap 'rm -rf -- "$stage"' EXIT
