@@ -2,7 +2,7 @@
 
 [English](hito-08-plan-tecnico.md)
 
-- Estado: **planificado; publicación no autorizada todavía**
+- Estado: **candidata verificada; publicación no autorizada todavía**
 - Etapa: G — preparación open source y publicación
 - Objetivo: convertir la Fase 1 aceptada en una candidata instalable, verificable
   y recuperable sin confundirla con una versión estable.
@@ -26,8 +26,9 @@ por este plan.
 
 ## 1. Contrato de artefactos
 
-Cada candidata se construye desde un tag firmado o protegido que apunta a un commit
-de `main` con CI verde. Los artefactos previstos son:
+Cada candidata se construye desde un commit de `main` con CI verde. La publicación
+crea el tag únicamente después de validar los mismos bytes. Los artefactos previstos
+son:
 
 - `modelcairn_<version>_linux_amd64.tar.gz`;
 - `modelcairn_<version>_linux_arm64.tar.gz`;
@@ -54,9 +55,10 @@ Se añadirá un workflow manual y reutilizable que acepte una versión sin publi
 7. prueba cada archivo en una instalación temporal Linux;
 8. sube artefactos de Actions, nunca una release pública automáticamente.
 
-Un workflow separado, activado por tag aprobado, podrá publicar exactamente esos
-artefactos. La publicación no recompila: promueve bytes ya verificados o reproduce
-y compara sus hashes.
+Un workflow separado y manual publica exactamente los artefactos privados de una
+candidata aprobada. Exige el entorno protegido `release`, confirmación textual,
+run exitoso del mismo commit de `main`, checksums y atestaciones válidas. La
+publicación no recompila ni acepta archivos aportados por el operador.
 
 ## 3. Instalación, actualización y rollback desde paquete
 

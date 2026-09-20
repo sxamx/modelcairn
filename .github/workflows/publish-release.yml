@@ -1,0 +1,127 @@
+name: Publish verified release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: SemVer without v prefix
+        required: true
+        type: string
+      candidate_run_id:
+        description: Successful Release candidate workflow run ID
+        required: true
+        type: string
+      prerelease:
+        description: Publish as a GitHub prerelease
+        required: true
+        default: true
+        type: boolean
+      confirmation:
+        description: Type PUBLISH modelcairn <version>
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  attestations: read
+  contents: write
+
+concurrency:
+  group: modelcairn-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    environment: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Validate authorization and candidate identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          RUN_ID: ${{ inputs.candidate_run_id }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^0\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]
+          [[ "$RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$CONFIRMATION" == "PUBLISH modelcairn $VERSION" ]]
+          commit="$(git rev-parse HEAD)"
+          [[ "$commit" == "$(git rev-parse origin/main)" ]]
+          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}")"
+          [[ "$(jq -r .conclusion <<<"$run")" == success ]]
+          [[ "$(jq -r .event <<<"$run")" == workflow_dispatch ]]
+          [[ "$(jq -r .path <<<"$run")" == ".github/workflows/release-candidate.yml" ]]
+          [[ "$(jq -r .head_sha <<<"$run")" == "$commit" ]]
+          ! git rev-parse "refs/tags/v$VERSION" >/dev/null 2>&1
+          ! gh release view "v$VERSION" >/dev/null 2>&1
+      - name: Download the exact private candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          RUN_ID: ${{ inputs.candidate_run_id }}
+        run: |
+          mkdir -p dist/publish
+          gh run download "$RUN_ID" --name "modelcairn-${VERSION}-candidate" --dir dist/publish
+      - name: Verify bytes, metadata, and provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse HEAD)"
+          (cd dist/publish && sha256sum --check --strict SHA256SUMS)
+          for arch in amd64 arm64; do
+            bash scripts/verify-release-package.sh \
+              "dist/publish/modelcairn_${VERSION}_linux_${arch}.tar.gz" \
+              dist/publish/SHA256SUMS "$VERSION" "$commit" "$arch"
+          done
+          bash scripts/verify-release-package-failures.sh dist/publish "$VERSION" "$commit"
+          for subject in dist/publish/*.tar.gz dist/publish/*.spdx.json; do
+            gh attestation verify "$subject" --repo "$GITHUB_REPOSITORY"
+          done
+          test "$(find dist/publish -maxdepth 1 -type f | wc -l)" -eq 4
+      - name: Prepare truthful release notes
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          cat >dist/release-notes.md <<EOF
+          # ModelCairn v$VERSION
+
+          First public preview of the self-hosted ModelCairn gateway foundation.
+
+          Included assets:
+          - Linux AMD64 and ARM64 tarballs;
+          - SHA-256 checksums;
+          - SPDX JSON SBOM;
+          - GitHub build-provenance attestations.
+
+          Current scope includes the OpenAI Chat Completions vertical, local web
+          console/PWA, persisted configuration, native systemd installation, and
+          encrypted backup/recovery. Relays, adaptive estimation, additional
+          provider protocols, and the visual route editor remain future work.
+
+          Review README.md, CHANGELOG.md, SECURITY.md, and the Linux operation
+          guides before installation. This release does not promise a stable API.
+
+          Verification evidence:
+          https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/docs/evidencia/hito-08-ci-candidate.md
+          EOF
+      - name: Publish verified assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+          args=(--target "$(git rev-parse HEAD)" --title "ModelCairn v$VERSION" --notes-file dist/release-notes.md)
+          [[ "$PRERELEASE" == true ]] && args+=(--prerelease)
+          gh release create "v$VERSION" \
+            dist/publish/modelcairn_${VERSION}_linux_amd64.tar.gz \
+            dist/publish/modelcairn_${VERSION}_linux_arm64.tar.gz \
+            dist/publish/modelcairn_${VERSION}.spdx.json \
+            dist/publish/SHA256SUMS "${args[@]}"

@@ -122,10 +122,11 @@ acceptance does not yet constitute a public release.
 
 Includes incorporating the license chosen in Stage C, completing the contribution guide and security policy, publishing versions and release notes, and verifying reproducible installation, upgrade, and rollback.
 
-Milestone 8 started on September 19, 2026. It prepares a candidate workflow,
-artifact contract, checksums, SBOM, provenance, changelog, trademark guidance, and
-package-level installation/upgrade/rollback evidence. It cannot create a tag or
-GitHub Release until the maintainer approves the version and release channel.
+Milestone 8 now has a verified technical candidate and QA. The chain produces
+reproducible packages, checksums, SBOM, and provenance; installation, upgrade,
+rollback, restore, and safe failures were exercised. The publication gate is
+prepared, but it cannot create a tag or GitHub Release until the maintainer
+approves the public decisions and protections are configured.
 
 ## Stage change log
 
@@ -149,3 +150,4 @@ GitHub Release until the maintainer approves the version and release channel.
 | 2026-09-16 | Stage F and Milestone 7 started | Grouped traceability, failure, load, retention, security, operations, and acceptance plan defined |
 | 2026-09-19 | Stage F, Milestone 7, and Phase 1 completed | 20 requirements accepted; CI, 600-second benchmark, and independent grouped QA passed |
 | 2026-09-19 | Stage G and Milestone 8 started | Release contract and operational checklist prepared; publication remains gated on maintainer approval |
+| 2026-09-20 | Milestone 8 technical candidate verified | Packages, SBOM, provenance, recovery, negative failures, and grouped QA passed; publication remains unauthorized |

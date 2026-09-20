@@ -1,9 +1,9 @@
-# Milestone 8 — Initial CI candidate evidence
+# Milestone 8 — Verified CI candidate evidence
 
 [Español](hito-08-candidata-ci.es.md)
 
 - Date: September 20, 2026
-- `main` revision: `1e3c0ca`
+- `main` revision: `d6565bb`
 - Technical version identifier: `0.0.0-ci`
 - Result: workflow and AMD64 package consumption passed
 
@@ -19,12 +19,13 @@ artifact with 14-day retention. Its permissions did not include `contents: write
 
 | Artifact | Size |
 |---|---:|
-| Linux AMD64 | 5,871,658 bytes |
-| Linux ARM64 | 5,410,495 bytes |
-| SPDX JSON SBOM | 191,969 bytes |
-| `SHA256SUMS` | 210 bytes |
+| Linux AMD64 | 5,871,620 bytes |
+| Linux ARM64 | 5,410,941 bytes |
+| SPDX JSON SBOM | 191,697 bytes |
+| `SHA256SUMS` | 306 bytes |
 
-The SBOM declared 93 packages and eight files. Both archives passed checksum,
+The SBOM is covered by `SHA256SUMS` and has its own attestation. Both archives
+passed checksum,
 allowlist, traversal, `0755`/`0644` mode, manifest, architecture, and Go metadata
 checks against the exact commit.
 
@@ -50,6 +51,11 @@ then rolled back to the old package, repeated those checks, uninstalled the
 temporary copy, and restored the snapshot. The preserved state recovered its
 owners and modes, with no binary, unit, or active service left behind.
 
+The follow-up review added an actual MCB1 restore into an isolated generation,
+boot-enable checks through install/upgrade/rollback, and negative cases for a bad
+checksum, truncated archive, and wrong architecture. All passed. Independent QA
+left no technical blockers.
+
 ## Corrected findings
 
 1. The first Windows-built local tarball did not retain executable mode. Packaging
@@ -62,7 +68,7 @@ owners and modes, with no binary, unit, or active service left behind.
 ## Remaining limits
 
 - ARM64 was built and inspected but not executed on ARM64 hardware.
-- Final grouped QA and the maintainer's version/channel decision remain pending.
+- The maintainer's version, channel, and public-data decisions remain pending.
 - The validated upgrade did not include an irreversible schema migration; that
   policy will be defined before a release that needs one.
 - This evidence does not authorize publication.

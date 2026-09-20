@@ -1,9 +1,9 @@
-# Hito 8 — Evidencia inicial de candidata CI
+# Hito 8 — Evidencia de candidata CI verificada
 
 [English](hito-08-ci-candidate.md)
 
 - Fecha: 20 de septiembre de 2026
-- Revisión de `main`: `1e3c0ca`
+- Revisión de `main`: `d6565bb`
 - Identificador técnico de versión: `0.0.0-ci`
 - Resultado: workflow y consumo del paquete AMD64 aprobados
 
@@ -20,12 +20,13 @@ y subió un artefacto privado con retención de 14 días. Sus permisos no inclu�
 
 | Artefacto | Tamaño |
 |---|---:|
-| Linux AMD64 | 5.871.658 bytes |
-| Linux ARM64 | 5.410.495 bytes |
-| SBOM SPDX JSON | 191.969 bytes |
-| `SHA256SUMS` | 210 bytes |
+| Linux AMD64 | 5.871.620 bytes |
+| Linux ARM64 | 5.410.941 bytes |
+| SBOM SPDX JSON | 191.697 bytes |
+| `SHA256SUMS` | 306 bytes |
 
-La SBOM declaró 93 paquetes y ocho archivos. Ambos tarballs aprobaron checksum,
+La SBOM quedó incluida en `SHA256SUMS` y recibió su propia atestación. Ambos
+tarballs aprobaron checksum,
 allowlist, ausencia de traversal, modos `0755`/`0644`, manifiesto, arquitectura y
 metadata Go contra el commit exacto.
 
@@ -51,6 +52,11 @@ administrativa. Luego volvió al paquete anterior, repitió esas comprobaciones,
 desinstaló la copia temporal y restauró la instantánea. El estado preservado
 recuperó propietarios y modos, sin binario, unidad ni servicio activo.
 
+La revisión posterior añadió restauración real del MCB1 hacia una generación
+aislada, comprobación del autoarranque durante instalación/actualización/rollback
+y casos negativos para checksum incorrecto, archivo truncado y arquitectura
+equivocada. Todos aprobaron. El QA independiente no dejó bloqueos técnicos.
+
 ## Hallazgos corregidos
 
 1. El primer tarball local creado desde Windows no conservó el modo ejecutable. El
@@ -63,7 +69,7 @@ recuperó propietarios y modos, sin binario, unidad ni servicio activo.
 ## Límites pendientes
 
 - ARM64 fue construido e inspeccionado, pero no ejecutado en hardware ARM64.
-- Falta el QA agrupado final y la decisión del mantenedor sobre versión/canal.
+- Falta la decisión del mantenedor sobre versión, canal y datos públicos.
 - La actualización validada no incluyó una migración de esquema irreversible; esa
   política se definirá antes de una versión que la necesite.
 - Esta evidencia no autoriza publicación.
