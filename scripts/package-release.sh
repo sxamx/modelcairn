@@ -41,8 +41,16 @@ for arch in amd64 arm64; do
     "$version" "$commit" "$build_date" "$arch" >"$stage/$package/manifest.json"
   chmod 0755 "$stage/$package/modelcairn"
   chmod 0644 "$stage/$package/"*.md "$stage/$package/LICENSE" "$stage/$package/NOTICE" "$stage/$package/manifest.json"
-  tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner \
-    -C "$stage" -cf - "$package" | gzip -n -9 >"$output_dir/$package.tar.gz"
+  archive_tar="$stage/$package.tar"
+  tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode=0755 \
+    --no-recursion -C "$stage" -cf "$archive_tar" "$package"
+  tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode=0644 \
+    -C "$stage" -rf "$archive_tar" \
+    "$package/CHANGELOG.md" "$package/LICENSE" "$package/NOTICE" "$package/README.md" \
+    "$package/TRADEMARKS.md" "$package/manifest.json"
+  tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode=0755 \
+    -C "$stage" -rf "$archive_tar" "$package/modelcairn"
+  gzip -n -9 <"$archive_tar" >"$output_dir/$package.tar.gz"
   rm -rf -- "$stage"
   trap - EXIT
 done
