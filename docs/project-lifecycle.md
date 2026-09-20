@@ -107,12 +107,16 @@ transactional CLI, and complete integration. CI, grouped QA, and a 120-second ru
 on the representative VM passed; the configured process used 11,768 KiB peak RSS
 and zero swap.
 
-## Stage F - System and security validation (active)
+## Stage F - System and security validation (completed)
 
 Includes load on a VM equivalent to Oracle Free Tier, network failures, restarts, migrations, backup recovery, multinode tests, privacy, panel abuse, and review of the threat model.
 
 Milestone 7 executes this stage. In Phase 1, multinode validation checks the
 architectural boundaries; real relay implementation and load remain deferred.
+
+The stage completed on September 19, 2026: all 20 in-scope requirements, CI,
+induced failures, representative load, and independent QA passed. Phase 1
+acceptance does not yet constitute a public release.
 
 ## Stage G - Open source preparation and publication (pending)
 
@@ -138,3 +142,4 @@ Includes incorporating the license chosen in Stage C, completing the contributio
 | 2026-09-14 | Milestone 6 started | Native installation, MCB1 backup, generational restore, and clean-VM verification plan defined |
 | 2026-09-15 | Milestone 6 completed | Idempotent install, reboot, backup/restore/rollback with recovered route, safe failures, swap-free benchmark, and conservative cleanup verified on the VM |
 | 2026-09-16 | Stage F and Milestone 7 started | Grouped traceability, failure, load, retention, security, operations, and acceptance plan defined |
+| 2026-09-19 | Stage F, Milestone 7, and Phase 1 completed | 20 requirements accepted; CI, 600-second benchmark, and independent grouped QA passed |

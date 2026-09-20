@@ -5,8 +5,9 @@
 La fuente verificable es el
 [manifiesto de aceptación](fase-01-aceptacion.json): CI comprueba que contiene los
 20 requisitos en alcance, que cada contrato y prueba existe y que el símbolo de
-prueba referenciado sigue presente. `candidate` significa que existe evidencia de
-implementación, no que el requisito ya haya superado el cierre del Hito 7.
+prueba referenciado sigue presente. `accepted` significa que la evidencia también
+superó el cierre del Hito 7 y el QA agrupado independiente el 19 de septiembre de
+2026.
 
 | Requisito | Contrato | Hito | Evidencia de cierre |
 |---|---|---:|---|

@@ -4,8 +4,9 @@
 
 - Date: September 19, 2026
 - Tested revision: `4f6dd61` (PR #26 branch)
-- Result: automated and representative-VM blocks passed; blockers found by the
-  first grouped QA review were corrected and await final re-review.
+- Final functional correction: `bbdb472`
+- Result: **approved**; automated gates, representative VM, and
+  [independent grouped QA](qa-agrupado-hito-07.md) passed.
 
 No hostname, IP, SSH user, credential, personal path, or run ID is published. Keys,
 passwords, sessions, and AgentTokens used by the run were temporary.
@@ -111,4 +112,6 @@ and no built-in external telemetry exists.
 - The run does not validate relays or the adaptive estimator, both outside Phase 1.
 - Concurrent console load queried overview; other views are covered by web/HTTP
   tests rather than this 10-minute load.
-- Final acceptance depends on grouped QA and resolution of any blocking findings.
+- Rotation added after the benchmark received a separate Linux functional gate;
+  the 600-second load was not repeated because it does not change the router or
+  its measured resource behavior.

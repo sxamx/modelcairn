@@ -5,8 +5,8 @@
 The verifiable source is the
 [acceptance manifest](fase-01-aceptacion.json): CI checks that it contains all 20
 in-scope requirements, that each contract and test exists, and that each referenced
-test symbol remains present. `candidate` means implementation evidence exists, not
-that the requirement has already passed Milestone 7 closeout.
+test symbol remains present. `accepted` means the evidence also passed Milestone 7
+closeout and independent grouped QA on September 19, 2026.
 
 | Requirement | Contract | Milestone | Completion evidence |
 |---|---|---:|---|

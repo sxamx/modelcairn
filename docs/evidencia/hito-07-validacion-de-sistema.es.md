@@ -4,8 +4,9 @@
 
 - Fecha: 19 de septiembre de 2026
 - Revisión probada: `4f6dd61` (rama del PR #26)
-- Resultado: bloques automatizados y VM representativa aprobados; los bloqueos
-  detectados por el primer QA agrupado fueron corregidos y esperan su revisión final.
+- Corrección funcional final: `bbdb472`
+- Resultado: **aprobado**; bloques automatizados, VM representativa y
+  [QA independiente agrupado](qa-agrupado-hito-07.es.md) superados.
 
 No se publican hostname, IP, usuario SSH, credenciales, rutas personales ni IDs de
 ejecución. Las claves, contraseñas, sesiones y AgentTokens usados fueron temporales.
@@ -116,5 +117,6 @@ no se almacenaron y no existe telemetría externa incorporada.
 - El ensayo no valida relays ni estimador adaptativo, ambos fuera de Fase 1.
 - La consulta concurrente de consola fue overview; las demás vistas están cubiertas
   por pruebas web/HTTP, no por esta carga de 10 minutos.
-- La aceptación definitiva depende del QA agrupado y de resolver sus hallazgos
-  bloqueantes, si existen.
+- La rotación añadida tras el benchmark recibió una compuerta funcional Linux
+  separada; no se repitió la carga de 600 segundos porque no cambia el router ni
+  sus recursos medidos.

@@ -2,7 +2,7 @@
 
 [English](hito-07-plan-tecnico.md)
 
-- Estado: **en ejecución**
+- Estado: **completado y aprobado el 19 de septiembre de 2026**
 - Etapa: F — validación de sistema y seguridad
 - Objetivo: decidir con evidencia reproducible si la Fase 1 puede aceptarse; si
   no puede, registrar bloqueos concretos sin declarar un cierre parcial.
@@ -89,3 +89,10 @@ La Fase 1 solo se acepta si cada RF/RNF en alcance tiene evidencia válida, CI e
 verde, la VM cumple sus presupuestos y no quedan bloqueos de seguridad, privacidad,
 recuperación u operación. En caso contrario se documentan bloqueos verificables;
 nunca se declara “casi completada”.
+
+## Resultado
+
+Los 20 requisitos en alcance fueron aceptados. CI, la carga representativa de 600
+segundos y el [QA agrupado independiente](../evidencia/qa-agrupado-hito-07.es.md)
+aprobaron después de corregir todos los bloqueos. La Fase 1 queda aceptada; esto no
+constituye una release pública.
