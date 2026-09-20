@@ -51,11 +51,11 @@ for arch in amd64 arm64; do
   archive_tar="$stage/$package.tar"
   tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode=0755 \
     --no-recursion -C "$stage" -cf "$archive_tar" "$package"
-  tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode='u+rwX,go+rX,go-w' \
+  tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode=0644 \
     -C "$stage" -rf "$archive_tar" \
     "$package/CHANGELOG.md" "$package/LICENSE" "$package/NOTICE" "$package/README.md" \
     "$package/TRADEMARKS.md" "$package/manifest.json"
-  tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode=0644 \
+  tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode='u+rwX,go+rX,go-w' \
     -C "$stage" -rf "$archive_tar" "$package/packaging" "$package/docs"
   tar --sort=name --mtime="@$source_date_epoch" --owner=0 --group=0 --numeric-owner --mode=0755 \
     -C "$stage" -rf "$archive_tar" "$package/scripts"
