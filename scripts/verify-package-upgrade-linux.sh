@@ -32,6 +32,7 @@ systemctl is-active --quiet modelcairn.service && { echo "refusing active servic
 work="$(mktemp -d /tmp/modelcairn-package-upgrade.XXXXXX)"
 snapshot="$work/pre-test.tar"
 backup_dir=""
+restore_dir=""
 tar --acls --xattrs --numeric-owner -C / -cpf "$snapshot" etc/modelcairn var/lib/modelcairn
 tar -tf "$snapshot" | awk '!/^(etc\/modelcairn|var\/lib\/modelcairn)(\/|$)/ { bad=1 } END { exit bad }'
 
@@ -54,6 +55,7 @@ cleanup() {
   fi
   restore_host
   [[ -z "$backup_dir" ]] || rm -rf -- "$backup_dir"
+  [[ -z "$restore_dir" ]] || rm -rf -- "$restore_dir"
   rm -rf -- "$work"
 }
 trap cleanup EXIT
@@ -61,7 +63,8 @@ trap cleanup EXIT
 rm -rf -- /etc/modelcairn /var/lib/modelcairn
 
 current_step="install old package"
-"$installer" --binary "$old_binary" --listen "127.0.0.1:$port" --no-enable --no-start --non-interactive >/dev/null
+"$installer" --binary "$old_binary" --listen "127.0.0.1:$port" --enable --no-start --non-interactive >/dev/null
+systemctl is-enabled --quiet modelcairn.service
 settings_file="/etc/modelcairn/.release-test-settings.json"
 printf '{"apiVersion":"modelcairn.io/v1alpha1","kind":"AdminSettings","spec":{"publicOrigin":"http://127.0.0.1:%s","listen":"127.0.0.1:%s","transport":"loopback-http"}}\n' "$port" "$port" >"$settings_file"
 chown root:modelcairn "$settings_file"
@@ -112,6 +115,14 @@ fi
   printf 'unexpected backup mode: %s (expected 600)\n' "$backup_mode" >&2
   exit 1
 }
+current_step="restore pre-upgrade backup into isolated data directory"
+restore_dir="$(mktemp -d /tmp/modelcairn-mcb-restore.XXXXXX)"
+chown modelcairn:modelcairn "$restore_dir"
+chmod 0700 "$restore_dir"
+printf '%s\n' 'temporary backup passphrase' |
+  runuser -u modelcairn -- /usr/local/bin/modelcairn backup restore \
+    --data-dir "$restore_dir" "$backup_dir/pre-upgrade.mcb.age" >/dev/null
+[[ -s "$restore_dir/current/modelcairn.db" ]]
 current_step="restart old package after backup"
 systemctl start modelcairn.service
 for _ in {1..100}; do
@@ -121,13 +132,15 @@ done
 curl --fail --silent "http://127.0.0.1:$port/readyz" >/dev/null
 
 current_step="update to new package"
-"$installer" --binary "$new_binary" --listen "127.0.0.1:$port" --no-enable --start --non-interactive >/dev/null
+"$installer" --binary "$new_binary" --listen "127.0.0.1:$port" --enable --start --non-interactive >/dev/null
+systemctl is-enabled --quiet modelcairn.service
 /usr/local/bin/modelcairn version | grep -Fq "modelcairn $new_version "
 curl --fail --silent "http://127.0.0.1:$port/readyz" >/dev/null
 [[ "$(admin_identity)" == "$admin_id" ]]
 
 current_step="roll back to old package"
-"$installer" --binary "$old_binary" --listen "127.0.0.1:$port" --no-enable --start --non-interactive >/dev/null
+"$installer" --binary "$old_binary" --listen "127.0.0.1:$port" --enable --start --non-interactive >/dev/null
+systemctl is-enabled --quiet modelcairn.service
 /usr/local/bin/modelcairn version | grep -Fq "modelcairn $old_version "
 curl --fail --silent "http://127.0.0.1:$port/readyz" >/dev/null
 [[ "$(admin_identity)" == "$admin_id" ]]

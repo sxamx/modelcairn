@@ -7,6 +7,7 @@ const installer = fs.readFileSync(path.join(root,"scripts","install-linux.sh"),"
 const bootstrap = fs.readFileSync(path.join(root,"scripts","bootstrap-linux.sh"),"utf8");
 const uninstaller = fs.readFileSync(path.join(root,"scripts","uninstall-linux.sh"),"utf8");
 const packageUpgrade = fs.readFileSync(path.join(root,"scripts","verify-package-upgrade-linux.sh"),"utf8");
+const releaseFailures = fs.readFileSync(path.join(root,"scripts","verify-release-package-failures.sh"),"utf8");
 const unit = fs.readFileSync(path.join(root,"packaging","systemd","modelcairn.service"),"utf8");
 
 for (const text of ["--enable", "--no-enable", "--start", "--no-start", "--non-interactive", "/var/lib/modelcairn"]) {
@@ -31,5 +32,8 @@ for (const required of ["verify_service_started", "systemctl is-active --quiet m
 }
 for (const required of ["MODELCAIRN_ALLOW_DESTRUCTIVE_SYSTEM_TEST", "refusing host with an installed binary", "pre-test.tar", "trap cleanup EXIT", "tar --acls --xattrs --numeric-owner", "restore_host", "rm -rf -- /etc/modelcairn /var/lib/modelcairn"]) {
   if (!packageUpgrade.includes(required)) throw new Error(`isolated upgrade gate missing: ${required}`);
+}
+for (const required of ["incorrect checksum", "truncated archive", "wrong architecture"]) {
+  if (!releaseFailures.includes(required)) throw new Error(`release negative gate missing: ${required}`);
 }
 console.log("Linux installation assets satisfy structural and safety invariants.");
