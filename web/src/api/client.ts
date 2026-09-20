@@ -121,6 +121,9 @@ export const api = {
   issueAgentToken(name: string) {
     return request<{ token: string; tokenStatus: components["schemas"]["AgentTokenStatus"] }>(`/agent-tokens/${encodeURIComponent(name)}/issue`, { method: "POST" });
   },
+  rotateAgentToken(name: string) {
+    return request<{ token: string; tokenStatus: components["schemas"]["AgentTokenStatus"] }>(`/agent-tokens/${encodeURIComponent(name)}/rotate`, { method: "POST" });
+  },
   agentTokenStatus(name: string) { return request<{ tokenStatus: components["schemas"]["AgentTokenStatus"] }>(`/agent-tokens/${encodeURIComponent(name)}/status`); },
   revokeAgentToken(name: string) { return request<void>(`/agent-tokens/${encodeURIComponent(name)}/revoke`, { method: "POST" }); },
   listResources(kind: string) { return request<components["schemas"]["ResourcePage"]>(`/resources/${encodeURIComponent(kind)}?limit=200`); },

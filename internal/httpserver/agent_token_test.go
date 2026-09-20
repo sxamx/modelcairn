@@ -83,6 +83,20 @@ func TestAdminHTTPAgentTokenOneTimeLifecycle(t *testing.T) {
 	if second.Code != http.StatusConflict || bytes.Contains(second.Body.Bytes(), []byte(issued.Token)) {
 		t.Fatalf("second issue=%d %s", second.Code, second.Body.String())
 	}
+	rotate := httptest.NewRecorder()
+	handler.ServeHTTP(rotate, request(http.MethodPost, "/api/v1/admin/agent-tokens/example-agent/rotate"))
+	var rotated storage.IssuedAgentToken
+	if rotate.Code != http.StatusCreated || rotate.Header().Get("Cache-Control") != "no-store" || json.Unmarshal(rotate.Body.Bytes(), &rotated) != nil || rotated.Token == "" || rotated.Token == issued.Token {
+		t.Fatalf("rotate=%d %s", rotate.Code, rotate.Body.String())
+	}
+	// Rotating again proves recovery remains possible if the prior one-time
+	// response was lost; no revoke/reissue of the identity is involved.
+	recoverRotation := httptest.NewRecorder()
+	handler.ServeHTTP(recoverRotation, request(http.MethodPost, "/api/v1/admin/agent-tokens/example-agent/rotate"))
+	var recovered storage.IssuedAgentToken
+	if recoverRotation.Code != http.StatusCreated || json.Unmarshal(recoverRotation.Body.Bytes(), &recovered) != nil || recovered.Token == "" || recovered.Token == rotated.Token || bytes.Contains(recoverRotation.Body.Bytes(), []byte(issued.Token)) {
+		t.Fatalf("recover rotation=%d %s", recoverRotation.Code, recoverRotation.Body.String())
+	}
 	revoke := httptest.NewRecorder()
 	handler.ServeHTTP(revoke, request(http.MethodPost, "/api/v1/admin/agent-tokens/example-agent/revoke"))
 	if revoke.Code != http.StatusNoContent || revoke.Header().Get("Cache-Control") != "no-store" {

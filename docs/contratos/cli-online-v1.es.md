@@ -15,6 +15,7 @@ modelcairn admin whoami --server origen [--session-file ruta]
 modelcairn admin logout --server origen [--session-file ruta]
 modelcairn agent-token status --server origen [--session-file ruta] <nombre>
 modelcairn agent-token issue --server origen [--session-file ruta] <nombre>
+modelcairn agent-token rotate --server origen [--session-file ruta] <nombre>
 modelcairn agent-token revoke --server origen [--session-file ruta] <nombre>
 modelcairn config plan --server origen [--session-file ruta] [--allow-delete] [--out plan.json] <archivo>
 modelcairn config apply --server origen [--session-file ruta] [--allow-delete] --plan plan.json <archivo>

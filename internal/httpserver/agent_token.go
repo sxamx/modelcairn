@@ -33,6 +33,20 @@ func (a *adminAPI) issueAgentToken(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, issued)
 }
 
+func (a *adminAPI) rotateAgentToken(w http.ResponseWriter, r *http.Request) {
+	session, csrf, status := a.authorize(r, true)
+	if status != 0 {
+		writeAdminError(w, status, boundaryCode(status), false)
+		return
+	}
+	issued, err := a.agentTokens.RotateSession(r.Context(), r.PathValue("name"), session, csrf)
+	if err != nil {
+		writeAgentTokenError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, issued)
+}
+
 func (a *adminAPI) revokeAgentToken(w http.ResponseWriter, r *http.Request) {
 	session, csrf, status := a.authorize(r, true)
 	if status != 0 {

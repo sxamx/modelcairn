@@ -44,10 +44,17 @@ CSRF administrativos. Dentro del bloqueo de `SecretStore` y una única transacci
 5. insertar auditoría `agent_token.issue` y confirmar.
 
 Dos emisiones simultáneas tienen un solo ganador. La respuesta `201` lleva
-`Cache-Control: no-store`, el bearer exactamente una vez y su estado seguro. Si la
-respuesta se pierde, el valor no se puede recuperar: el operador revoca esa
-identidad y crea otra. No se usa `If-Match`: la precondición es el estado de emisión
-de una sola vez, separado de la versión declarativa.
+`Cache-Control: no-store`, el bearer exactamente una vez y su estado seguro. No se
+usa `If-Match`: la precondición es el estado de emisión de una sola vez, separado
+de la versión declarativa.
+
+`POST /api/v1/admin/agent-tokens/{name}/rotate` recupera de forma segura una
+respuesta de única visualización perdida. Exige una identidad activa y no vencida;
+en una transacción reemplaza verificador, prefijo e instante de emisión, invalida
+el bearer anterior y audita `agent_token.rotate`. El reemplazo también se devuelve
+una sola vez con `no-store`. Si se pierde esa respuesta, se puede rotar nuevamente
+y solo el bearer más reciente permanece utilizable. La rotación nunca revive una
+identidad sin emitir, vencida o revocada.
 
 ## Revocación administrativa
 
@@ -81,8 +88,8 @@ deshabilitados/eliminados. Estos casos comparten respuesta y no revelan cuál fa
 
 Después verifica que la ruta resuelta esté en `allowedRouteRefs`; falta de permiso
 devuelve 403. La autorización y la captura de identidad/ruta para la solicitud se
-hacen antes de contactar proveedores. Rotación automática, múltiples bearers por
-identidad y permisos distintos de rutas quedan fuera de v1.
+hacen antes de contactar proveedores. La rotación automática programada, múltiples
+bearers simultáneos por identidad y permisos distintos de rutas quedan fuera de v1.
 
 ## Aceptación agrupada
 
@@ -90,6 +97,7 @@ identidad y permisos distintos de rutas quedan fuera de v1.
 - solo un ganador bajo emisión concurrente y rollback si falla auditoría;
 - bearer ausente de SQLite, logs, errores, DTO y exportación;
 - revocación previa o posterior a emisión irreversible e idempotente;
+- rotación manual atómica y repetible con un solo bearer utilizable;
 - vencimiento y borrado bloquean solicitudes nuevas;
 - 401 uniforme para token inválido/revocado/vencido y 403 para ruta no permitida;
 - separación completa entre sesión administrativa y bearer de agente.

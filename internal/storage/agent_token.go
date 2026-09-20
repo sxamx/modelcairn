@@ -66,15 +66,10 @@ func (s *AgentTokenService) IssueSession(ctx context.Context, name, sessionToken
 		if row.verifier != nil || row.issuedAt != nil || row.revokedAt != nil || (row.expiresAt != nil && !now.Before(*row.expiresAt)) {
 			return &RepositoryError{Code: CodeAlreadyExists}
 		}
-		raw := make([]byte, 32)
-		if _, err := rand.Read(raw); err != nil {
-			return fmt.Errorf("generate agent token: %w", err)
+		bearer, verifier, prefix, err := generateAgentToken()
+		if err != nil {
+			return err
 		}
-		encoded := base64.RawURLEncoding.EncodeToString(raw)
-		clear(raw)
-		bearer := agentTokenPrefix + encoded
-		verifier := sha256.Sum256([]byte(bearer))
-		prefix := agentTokenPrefix + encoded[:8]
 		stamp := now.Format(time.RFC3339Nano)
 		updated, err := tx.ExecContext(ctx, `UPDATE agent_tokens SET verifier_sha256=?,token_prefix=?,issued_at=?
 			WHERE resource_id=? AND verifier_sha256 IS NULL AND issued_at IS NULL AND revoked_at IS NULL`, verifier[:], prefix, stamp, resource.ID)
@@ -94,6 +89,60 @@ func (s *AgentTokenService) IssueSession(ctx context.Context, name, sessionToken
 		return IssuedAgentToken{}, err
 	}
 	return result, nil
+}
+
+// RotateSession atomically replaces an active bearer and returns the replacement
+// exactly once. If its response is lost, another rotation safely invalidates the
+// unseen bearer without reviving a revoked identity.
+func (s *AgentTokenService) RotateSession(ctx context.Context, name, sessionToken, csrfToken string) (IssuedAgentToken, error) {
+	var result IssuedAgentToken
+	err := s.secrets.ExecuteAdminMutation(ctx, sessionToken, csrfToken, func(tx *sql.Tx, actor Actor) error {
+		resource, err := GetResourceTx(ctx, tx, KindAgentToken, name)
+		if err != nil {
+			return err
+		}
+		row, err := readAgentTokenRow(ctx, tx, resource.ID)
+		if err != nil {
+			return err
+		}
+		now := s.now().UTC()
+		if row.verifier == nil || row.issuedAt == nil || row.revokedAt != nil || (row.expiresAt != nil && !now.Before(*row.expiresAt)) {
+			return &RepositoryError{Code: CodeAlreadyExists}
+		}
+		bearer, verifier, prefix, err := generateAgentToken()
+		if err != nil {
+			return err
+		}
+		stamp := now.Format(time.RFC3339Nano)
+		updated, err := tx.ExecContext(ctx, `UPDATE agent_tokens SET verifier_sha256=?,token_prefix=?,issued_at=?
+			WHERE resource_id=? AND verifier_sha256=? AND issued_at IS NOT NULL AND revoked_at IS NULL`, verifier[:], prefix, stamp, resource.ID, row.verifier)
+		if err != nil {
+			return fmt.Errorf("rotate agent token: %w", err)
+		}
+		if count, _ := updated.RowsAffected(); count != 1 {
+			return &RepositoryError{Code: CodeAlreadyExists}
+		}
+		if err := insertAudit(ctx, tx, now, actor, auditRecord{Action: "agent_token.rotate", Kind: KindAgentToken, ResourceID: resource.ID, Result: "success", Version: resource.ResourceVersion}); err != nil {
+			return err
+		}
+		result = IssuedAgentToken{Token: bearer, Status: statusFromAgentRowAt(agentTokenRow{prefix: &prefix, issuedAt: &now, expiresAt: row.expiresAt}, now)}
+		return nil
+	})
+	if err != nil {
+		return IssuedAgentToken{}, err
+	}
+	return result, nil
+}
+
+func generateAgentToken() (string, [sha256.Size]byte, string, error) {
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return "", [sha256.Size]byte{}, "", fmt.Errorf("generate agent token: %w", err)
+	}
+	encoded := base64.RawURLEncoding.EncodeToString(raw)
+	clear(raw)
+	bearer := agentTokenPrefix + encoded
+	return bearer, sha256.Sum256([]byte(bearer)), agentTokenPrefix + encoded[:8], nil
 }
 
 func (s *AgentTokenService) RevokeSession(ctx context.Context, name, sessionToken, csrfToken string) error {

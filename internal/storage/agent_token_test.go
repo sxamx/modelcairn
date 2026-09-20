@@ -66,6 +66,28 @@ func TestAgentTokenIssueAuthenticateAndRevokeLifecycle(t *testing.T) {
 	if _, err := service.IssueSession(ctx, "agent", session.SessionToken, session.CSRFToken); !IsRepositoryCode(err, CodeAlreadyExists) {
 		t.Fatalf("second issue=%v", err)
 	}
+	rotated, err := service.RotateSession(ctx, "agent", session.SessionToken, session.CSRFToken)
+	if err != nil || rotated.Token == issued.Token || rotated.Status.State != "active" {
+		t.Fatalf("rotated=%+v err=%v", rotated, err)
+	}
+	if _, err := service.Authenticate(ctx, issued.Token, items[KindRoute].ID); !errors.Is(err, ErrAgentTokenInvalid) {
+		t.Fatalf("old bearer survived rotation: %v", err)
+	}
+	if _, err := service.Authenticate(ctx, rotated.Token, items[KindRoute].ID); err != nil {
+		t.Fatalf("rotated bearer auth=%v", err)
+	}
+	// A second rotation models a lost first rotation response: it must remain safe
+	// and make only the newest one-time value usable.
+	recovered, err := service.RotateSession(ctx, "agent", session.SessionToken, session.CSRFToken)
+	if err != nil || recovered.Token == rotated.Token {
+		t.Fatalf("recovered=%+v err=%v", recovered, err)
+	}
+	if _, err := service.Authenticate(ctx, rotated.Token, items[KindRoute].ID); !errors.Is(err, ErrAgentTokenInvalid) {
+		t.Fatalf("unseen replacement survived recovery rotation: %v", err)
+	}
+	if _, err := service.Authenticate(ctx, recovered.Token, items[KindRoute].ID); err != nil {
+		t.Fatalf("recovered bearer auth=%v", err)
+	}
 	if err := service.RevokeSession(ctx, "agent", session.SessionToken, session.CSRFToken); err != nil {
 		t.Fatal(err)
 	}
@@ -82,6 +104,28 @@ func TestAgentTokenIssueAuthenticateAndRevokeLifecycle(t *testing.T) {
 	var revocations int
 	if err := i.DB().QueryRow("SELECT count(*) FROM audit_events WHERE action='agent_token.revoke'").Scan(&revocations); err != nil || revocations != 1 {
 		t.Fatalf("revocations=%d err=%v", revocations, err)
+	}
+	var rotations int
+	if err := i.DB().QueryRow("SELECT count(*) FROM audit_events WHERE action='agent_token.rotate'").Scan(&rotations); err != nil || rotations != 2 {
+		t.Fatalf("rotations=%d err=%v", rotations, err)
+	}
+}
+
+func TestAgentTokenRotateRejectsUnissuedAndRevoked(t *testing.T) {
+	ctx := context.Background()
+	i, service, session, _ := agentTokenFixture(t)
+	defer i.Close()
+	if _, err := service.RotateSession(ctx, "agent", session.SessionToken, session.CSRFToken); !IsRepositoryCode(err, CodeAlreadyExists) {
+		t.Fatalf("rotate unissued=%v", err)
+	}
+	if _, err := service.IssueSession(ctx, "agent", session.SessionToken, session.CSRFToken); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.RevokeSession(ctx, "agent", session.SessionToken, session.CSRFToken); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.RotateSession(ctx, "agent", session.SessionToken, session.CSRFToken); !IsRepositoryCode(err, CodeAlreadyExists) {
+		t.Fatalf("rotate revoked=%v", err)
 	}
 }
 

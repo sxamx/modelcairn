@@ -311,6 +311,24 @@ paths:
                   tokenStatus: { $ref: '#/components/schemas/AgentTokenStatus' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /agent-tokens/{name}/rotate:
+    post:
+      operationId: rotateAgentToken
+      parameters: [ { $ref: '#/components/parameters/Name' } ]
+      responses:
+        '201':
+          description: Active token atomically replaced; new value returned exactly once
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, tokenStatus]
+                additionalProperties: false
+                properties:
+                  token: { type: string, readOnly: true, pattern: '^mc_at_v1_[A-Za-z0-9_-]{43}$', description: One-time replacement; rotating again invalidates it if this response is lost. }
+                  tokenStatus: { $ref: '#/components/schemas/AgentTokenStatus' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /agent-tokens/{name}/revoke:
     post:
       operationId: revokeAgentToken

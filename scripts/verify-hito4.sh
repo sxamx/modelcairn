@@ -124,6 +124,16 @@ printf 'header = "Authorization: Bearer %s"\n' "$agent_token" >"$work/curl-auth"
 chmod 600 "$work/curl-auth"
 unset agent_token
 
+cp "$work/curl-auth" "$work/curl-auth-before-rotation"
+"$binary" agent-token rotate --server "$origin" --session-file "$work/session.json" onboarding-agent >"$work/rotated.json"
+agent_token="$("$python_command" -c 'import json,sys; value=json.load(open(sys.argv[1]))["token"]; assert value.startswith("mc_at_v1_"); print(value)' "$work/rotated.json")"
+printf 'header = "Authorization: Bearer %s"\n' "$agent_token" >"$work/curl-auth"
+chmod 600 "$work/curl-auth"
+unset agent_token
+
+old_status="$(curl --silent --output "$work/rotated-old-response.json" --write-out '%{http_code}' --config "$work/curl-auth-before-rotation" -H 'Content-Type: application/json' --data-binary '{"model":"assistant","messages":[{"role":"user","content":"old-token-must-fail"}]}' "$origin/v1/chat/completions")"
+test "$old_status" = "401"
+
 printf '%s\n' '{"model":"assistant","messages":[{"role":"user","content":"nonstream-canary"}]}' >"$work/nonstream.json"
 curl --fail --silent --show-error --config "$work/curl-auth" -H 'Content-Type: application/json' --data-binary "@$work/nonstream.json" "$origin/v1/chat/completions" >"$work/nonstream-response.json"
 "$python_command" -c 'import json,sys; value=json.load(open(sys.argv[1])); assert value["model"]=="assistant"; assert value["choices"][0]["message"]["content"]=="benchmark-ok"' "$work/nonstream-response.json"

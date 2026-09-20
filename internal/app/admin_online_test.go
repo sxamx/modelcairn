@@ -125,6 +125,9 @@ func TestAgentTokenCLIRecoversCSRFOnce(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"token": bearer, "tokenStatus": map[string]string{"state": "active"}})
 		case "/api/v1/admin/agent-tokens/agent/status":
 			_ = json.NewEncoder(w).Encode(map[string]any{"tokenStatus": map[string]string{"state": "active"}})
+		case "/api/v1/admin/agent-tokens/agent/rotate":
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]any{"token": bearer + "r", "tokenStatus": map[string]string{"state": "active"}})
 		case "/api/v1/admin/agent-tokens/agent/revoke":
 			w.WriteHeader(http.StatusNoContent)
 		default:
@@ -145,6 +148,10 @@ func TestAgentTokenCLIRecoversCSRFOnce(t *testing.T) {
 	code, out, errOut = runCLI(t, append([]string{"agent-token", "status"}, base...), "", false)
 	if code != 0 || !strings.Contains(out, `"state": "active"`) || strings.Contains(errOut, bearer) {
 		t.Fatalf("status code=%d out=%q err=%q", code, out, errOut)
+	}
+	code, out, errOut = runCLI(t, append([]string{"agent-token", "rotate"}, base...), "", false)
+	if code != 0 || !strings.Contains(out, bearer+"r") || errOut != "" {
+		t.Fatalf("rotate code=%d out=%q err=%q", code, out, errOut)
 	}
 	code, out, errOut = runCLI(t, append([]string{"agent-token", "revoke"}, base...), "", false)
 	if code != 0 || out != "agent token revoked\n" || strings.Contains(errOut, bearer) {
