@@ -142,10 +142,11 @@ aceptación de Fase 1 no equivale todavía a una release pública.
 
 Incluye incorporar la licencia elegida en la Etapa C, completar la guía de contribución y la política de seguridad, publicar versiones y notas de release, y verificar instalación, actualización y rollback reproducibles.
 
-El Hito 8 comenzó el 19 de septiembre de 2026. Prepara workflow de candidata,
-contrato de artefactos, checksums, SBOM, procedencia, changelog, guía de marcas y
-evidencia de instalación/actualización/rollback desde paquete. No puede crear tag
-ni GitHub Release hasta que el mantenedor apruebe versión y canal.
+El Hito 8 tiene candidata técnica y QA verificados. La cadena produce paquetes
+reproducibles, checksums, SBOM y procedencia; instalación, update, rollback,
+restore y fallos seguros se probaron. La barrera de publicación está preparada,
+pero no puede crear tag ni GitHub Release hasta que el mantenedor apruebe las
+decisiones públicas y configure las protecciones.
 
 ## Registro de cambios de etapa
 
@@ -169,3 +170,4 @@ ni GitHub Release hasta que el mantenedor apruebe versión y canal.
 | 2026-09-16 | Etapa F e Hito 7 iniciados | Plan agrupado de trazabilidad, fallos, carga, retención, seguridad, operación y aceptación definido |
 | 2026-09-19 | Etapa F, Hito 7 y Fase 1 completados | 20 requisitos aceptados; CI, benchmark de 600 segundos y QA agrupado independiente aprobados |
 | 2026-09-19 | Etapa G e Hito 8 iniciados | Contrato de release y checklist operativo preparados; publicación sujeta a aprobación del mantenedor |
+| 2026-09-20 | Candidata técnica del Hito 8 verificada | Paquetes, SBOM, procedencia, recuperación, fallos negativos y QA agrupado aprobados; publicación aún no autorizada |

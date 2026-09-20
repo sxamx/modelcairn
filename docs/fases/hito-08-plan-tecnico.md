@@ -2,7 +2,7 @@
 
 [Español](hito-08-plan-tecnico.es.md)
 
-- Status: **planned; publication not yet authorized**
+- Status: **candidate verified; publication not yet authorized**
 - Stage: G — open-source preparation and publication
 - Objective: turn accepted Phase 1 into an installable, verifiable, recoverable
   candidate without presenting it as a stable version.
@@ -26,8 +26,8 @@ Other implementation decisions are reversible and fixed by this plan.
 
 ## 1. Artifact contract
 
-Each candidate is built from a signed or protected tag pointing to a green `main`
-commit. Planned artifacts are:
+Each candidate is built from a green `main` commit. Publication creates the tag
+only after validating the same bytes. Planned artifacts are:
 
 - `modelcairn_<version>_linux_amd64.tar.gz`;
 - `modelcairn_<version>_linux_arm64.tar.gz`;
@@ -54,9 +54,11 @@ A manual, reusable workflow will accept a version without publishing it:
 7. test every archive in a temporary Linux installation;
 8. upload Actions artifacts, never a public release automatically.
 
-A separate workflow triggered by an approved tag may publish those exact assets.
-Publication does not rebuild: it promotes verified bytes or reproduces and compares
-their hashes.
+A separate manual workflow publishes exactly the private artifacts from an
+approved candidate. It requires the protected `release` environment, textual
+confirmation, a successful run for the same `main` commit, valid checksums, and
+valid attestations. Publication neither rebuilds nor accepts operator-supplied
+files.
 
 ## 3. Package installation, upgrade, and rollback
 
