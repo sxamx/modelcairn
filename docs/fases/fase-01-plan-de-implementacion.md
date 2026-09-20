@@ -2,7 +2,7 @@
 
 [Español](fase-01-plan-de-implementacion.es.md)
 
-- Status: accepted; Milestones 0 through 6 complete, with Milestone 7 in progress
+- Status: accepted; Milestones 0 through 7 completed on September 19, 2026
 - Delivery rule: every milestone includes code, tests, and documentation; a visual
   demonstration alone does not make it complete
 
@@ -93,6 +93,10 @@ Output: primary case completed from the web without editing code.
 Output: empty installation and recovery verified on a clean VM.
 
 ## Milestone 7 — Validation and closeout
+
+Status: **completed and accepted on September 19, 2026**. See the
+[system evidence](../evidencia/hito-07-system-validation.md) and
+[independent grouped QA](../evidencia/qa-agrupado-hito-07.md).
 
 - Complete RF/RNF/test acceptance matrix.
 - Load and retention benchmark.

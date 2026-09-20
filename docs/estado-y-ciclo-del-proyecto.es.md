@@ -127,12 +127,16 @@ parser, CLI transaccional e integración completa. CI, QA agrupado y una ejecuci
 de 120 segundos en la VM representativa aprobaron; el proceso configurado usó
 11.768 KiB de RSS pico y cero swap.
 
-## Etapa F — Validación de sistema y seguridad (activa)
+## Etapa F — Validación de sistema y seguridad (completada)
 
 Incluye carga en una VM equivalente a Oracle Free Tier, fallos de red, reinicios, migraciones, recuperación de backups, pruebas multinodo, privacidad, abuso del panel y revisión del modelo de amenazas.
 
 El Hito 7 ejecuta esta etapa. En la Fase 1, la validación multinodo comprueba los
 límites arquitectónicos; la implementación y carga real de relays continúa diferida.
+
+La etapa terminó el 19 de septiembre de 2026: los 20 requisitos en alcance, CI,
+fallos inducidos, carga representativa y QA independiente quedaron aprobados. La
+aceptación de Fase 1 no equivale todavía a una release pública.
 
 ## Etapa G — Preparación open source y publicación (pendiente)
 
@@ -158,3 +162,4 @@ Incluye incorporar la licencia elegida en la Etapa C, completar la guía de cont
 | 2026-09-14 | Hito 6 iniciado | Plan de instalación nativa, backup MCB1, restore generacional y verificación en VM definido |
 | 2026-09-15 | Hito 6 completado | Instalación idempotente, reinicio, backup/restore/rollback con ruta recuperada, fallos seguros, benchmark sin swap y limpieza conservadora comprobados en VM |
 | 2026-09-16 | Etapa F e Hito 7 iniciados | Plan agrupado de trazabilidad, fallos, carga, retención, seguridad, operación y aceptación definido |
+| 2026-09-19 | Etapa F, Hito 7 y Fase 1 completados | 20 requisitos aceptados; CI, benchmark de 600 segundos y QA agrupado independiente aprobados |

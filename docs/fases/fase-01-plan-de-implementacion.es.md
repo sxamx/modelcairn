@@ -2,7 +2,7 @@
 
 [English](fase-01-plan-de-implementacion.md)
 
-- Estado: aceptado; Hitos 0 a 6 completados, Hito 7 en ejecución
+- Estado: aceptado; Hitos 0 a 7 completados el 19 de septiembre de 2026
 - Regla de entrega: cada hito incluye código, pruebas y documentación; no se marca
   completo por una demostración visual
 
@@ -94,6 +94,10 @@ Salida: el caso principal se completa desde web sin editar código.
 Salida: instalación vacía y recuperación verificadas en una VM limpia.
 
 ## Hito 7 — Validación y cierre
+
+Estado: **completado y aceptado el 19 de septiembre de 2026**. Véanse la
+[evidencia de sistema](../evidencia/hito-07-validacion-de-sistema.es.md) y el
+[QA agrupado independiente](../evidencia/qa-agrupado-hito-07.es.md).
 
 - Matriz completa de aceptación RF/RNF/pruebas.
 - Benchmark con carga y retención.

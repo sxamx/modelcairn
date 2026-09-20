@@ -2,7 +2,7 @@
 
 [Español](hito-07-plan-tecnico.es.md)
 
-- Status: **in progress**
+- Status: **completed and approved on September 19, 2026**
 - Stage: F — system and security validation
 - Objective: decide with reproducible evidence whether Phase 1 can be accepted;
   otherwise record concrete blockers without declaring partial closeout.
@@ -88,3 +88,10 @@ threat model.
 Phase 1 is accepted only when every in-scope RF/RNF has valid evidence, CI is green,
 the VM meets its budgets, and no security, privacy, recovery, or operational blocker
 remains. Otherwise verifiable blockers are documented; it is never “almost done.”
+
+## Result
+
+All 20 in-scope requirements were accepted. CI, the representative 600-second
+load, and [independent grouped QA](../evidencia/qa-agrupado-hito-07.md) passed after
+all blockers were corrected. Phase 1 is accepted; this does not constitute a
+public release.
