@@ -2,7 +2,7 @@
 
 [English](hito-08-plan-tecnico.md)
 
-- Estado: **candidata verificada; publicación no autorizada todavía**
+- Estado: **decisiones aprobadas; publicación final aún no autorizada**
 - Etapa: G — preparación open source y publicación
 - Objetivo: convertir la Fase 1 aceptada en una candidata instalable, verificable
   y recuperable sin confundirla con una versión estable.
@@ -11,15 +11,21 @@ Este hito prepara y prueba la cadena de release. No implementa relays, estimador
 adaptativo, protocolos adicionales ni editor visual. Tampoco crea tags o una
 GitHub Release hasta que el mantenedor apruebe versión y canal.
 
-## Decisiones que requieren aprobación del mantenedor
+## Decisiones aprobadas por el mantenedor
 
-1. Versión inicial y canal. Recomendación: `v0.1.0` marcada como *prerelease*,
-   porque la fundación es operable pero aún no incluye la visión funcional completa.
-2. Si la publicación inicial incluye solo binarios Linux o también un paquete
-   fuente generado por GitHub. Recomendación: binarios Linux AMD64/ARM64 y los
-   archivos fuente automáticos de GitHub, sin contenedor en este hito.
-3. Nombre de autor público y contacto de seguridad que aparecerán en notas y
-   metadatos. Nunca se infieren desde cuentas históricas ni credenciales locales.
+El 20 de septiembre de 2026 se aprobaron:
+
+1. `v0.1.0` como *prerelease*, sin promesa de estabilidad.
+2. Tarballs Linux AMD64/ARM64, `SHA256SUMS`, SBOM SPDX, atestaciones y los
+   archivos fuente automáticos de GitHub; sin contenedor.
+3. `sxamx` como identidad pública del autor/mantenedor.
+4. GitHub Private Vulnerability Reporting como contacto de seguridad, sin correo
+   personal publicado.
+5. Protección de `main`, tags `v*` y environment `release` con aprobación
+   manual. Estas protecciones quedaron activadas antes de generar la candidata.
+
+La aprobación de estas decisiones no equivale a la autorización final para crear
+el tag o la GitHub Release; esa autorización se solicita por separado.
 
 Las demás decisiones de implementación se consideran reversibles y quedan fijadas
 por este plan.
