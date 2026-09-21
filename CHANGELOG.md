@@ -7,6 +7,12 @@ and this project intends to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Guided Linux bootstrap now accepts HTTPS DNS origins such as Tailscale Serve
+  URLs and explains the administrator password policy and failed rollback
+  clearly.
+
 ### Added
 
 - Lightweight self-hosted gateway with OpenAI Chat Completions compatibility.

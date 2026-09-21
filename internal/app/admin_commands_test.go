@@ -111,3 +111,12 @@ func TestAdminCLIRejectsInvalidUsernameBeforeCreatingState(t *testing.T) {
 		t.Fatal("invalid username created state")
 	}
 }
+
+func TestAdminCLIExplainsPasswordPolicy(t *testing.T) {
+	settings := filepath.Join(t.TempDir(), "settings.yaml")
+	writeSettingsFixture(t, settings)
+	code, _, errOut := runCLI(t, []string{"admin", "bootstrap", "--data-dir", filepath.Join(t.TempDir(), "data"), "--username", "owner", "--settings", settings}, "short\n", false)
+	if code != 2 || !strings.Contains(errOut, "12 or more Unicode characters") || !strings.Contains(errOut, "1024 UTF-8 bytes") {
+		t.Fatalf("code=%d err=%q", code, errOut)
+	}
+}

@@ -240,7 +240,7 @@ func readPasswordInput(input io.Reader, stderr io.Writer, interactive, confirm b
 		if !ok || !term.IsTerminal(int(file.Fd())) {
 			return nil, errors.New("interactive_terminal_required")
 		}
-		fmt.Fprint(stderr, "Administrator password: ")
+		fmt.Fprint(stderr, "Administrator password (12 or more characters): ")
 		value, err := term.ReadPassword(int(file.Fd()))
 		fmt.Fprintln(stderr)
 		if err != nil {
