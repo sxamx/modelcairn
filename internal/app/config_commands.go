@@ -408,6 +408,10 @@ func writePrivateFile(path string, data []byte) (result error) {
 
 func writeCLIError(stderr io.Writer, err error) int {
 	code := 1
+	if errors.Is(err, adminauth.ErrInvalidPassword) {
+		fmt.Fprintln(stderr, "invalid_password: use 12 or more Unicode characters (maximum 1024 UTF-8 bytes)")
+		return 2
+	}
 	if errors.Is(err, storage.ErrInvalidPlan) || errors.Is(err, storage.ErrPlanExpired) || errors.Is(err, storage.ErrPlanAlreadyUsed) {
 		code = 4
 	}

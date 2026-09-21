@@ -10,6 +10,13 @@ const packageUpgrade = fs.readFileSync(path.join(root,"scripts","verify-package-
 const releaseFailures = fs.readFileSync(path.join(root,"scripts","verify-release-package-failures.sh"),"utf8");
 const unit = fs.readFileSync(path.join(root,"packaging","systemd","modelcairn.service"),"utf8");
 
+if (!bootstrap.includes("^https://[A-Za-z0-9.-]+(:[1-9][0-9]{0,4})?$")) {
+  throw new Error("guided bootstrap must accept HTTPS DNS origins");
+}
+if (!bootstrap.includes("no se guardaron cambios") || bootstrap.includes("existing state was not replaced")) {
+  throw new Error("guided bootstrap failure must explain rollback without implying prior state");
+}
+
 for (const text of ["--enable", "--no-enable", "--start", "--no-start", "--non-interactive", "/var/lib/modelcairn"]) {
   if (!installer.includes(text)) throw new Error(`installer invariant missing: ${text}`);
 }

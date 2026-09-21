@@ -17,7 +17,7 @@ read -r -p "Usuario administrador: " username </dev/tty
 [[ "$username" =~ ^[A-Za-z0-9_.@-]{1,120}$ ]] || { echo "Invalid administrator username." >&2; exit 2; }
 read -r -p "Origen público de la consola [$default_origin]: " public_origin </dev/tty
 public_origin="${public_origin:-$default_origin}"
-[[ "$public_origin" =~ ^https://[A-Za-z0-9._:\[\]-]+$ || "$public_origin" =~ ^http://(127\.0\.0\.1|\[::1\]):[1-9][0-9]{0,4}$ ]] || {
+[[ "$public_origin" =~ ^https://[A-Za-z0-9.-]+(:[1-9][0-9]{0,4})?$ || "$public_origin" =~ ^http://(127\.0\.0\.1|\[::1\]):[1-9][0-9]{0,4}$ ]] || {
   echo "Use HTTPS, or HTTP only with a loopback origin." >&2; exit 2;
 }
 
@@ -46,7 +46,7 @@ if systemctl is-active --quiet modelcairn.service; then was_active=yes; systemct
 restore_service(){ [[ "$was_active" == yes ]] && systemctl start modelcairn.service || true; }
 trap 'restore_service; cleanup' EXIT
 if ! runuser -u modelcairn -- /usr/local/bin/modelcairn admin bootstrap --data-dir /var/lib/modelcairn --username "$username" --settings "$settings" </dev/tty; then
-  echo "Bootstrap failed; existing state was not replaced." >&2
+  echo "Bootstrap falló; no se guardaron cambios. Revisa el error anterior e inténtalo nuevamente." >&2
   exit 1
 fi
 restore_service
