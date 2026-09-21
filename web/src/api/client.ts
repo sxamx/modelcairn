@@ -132,7 +132,11 @@ export const api = {
   },
   agentTokenStatus(name: string) { return request<{ tokenStatus: components["schemas"]["AgentTokenStatus"] }>(`/agent-tokens/${encodeURIComponent(name)}/status`); },
   revokeAgentToken(name: string) { return request<void>(`/agent-tokens/${encodeURIComponent(name)}/revoke`, { method: "POST" }); },
-  listResources(kind: string) { return request<components["schemas"]["ResourcePage"]>(`/resources/${encodeURIComponent(kind)}?limit=200`); },
+  listResources(kind: string, cursor?: string) {
+    const query = new URLSearchParams({ limit: "200" });
+    if (cursor) query.set("cursor", cursor);
+    return request<components["schemas"]["ResourcePage"]>(`/resources/${encodeURIComponent(kind)}?${query}`);
+  },
   createResource(kind: string, resource: Resource) { return request<Resource>(`/resources/${encodeURIComponent(kind)}`, { method: "POST", body: JSON.stringify(resource) }); },
   updateResource(kind: string, name: string, version: number, resource: Resource) { return request<Resource>(`/resources/${encodeURIComponent(kind)}/${encodeURIComponent(name)}`, { method: "PUT", headers: { "If-Match": `"${version}"` }, body: JSON.stringify(resource) }); },
   publishStrategy(name: string, version: number) { return request<Resource>(`/strategies/${encodeURIComponent(name)}/publish`, { method: "POST", headers: { "If-Match": `"${version}"` } }); },

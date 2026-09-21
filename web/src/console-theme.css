@@ -10,7 +10,8 @@
   --mc-sidebar:236px;
   --line:var(--mc-line); --ink:var(--mc-ink); --moss:var(--mc-accent);
   --paper:var(--mc-bg);
-  display:grid; grid-template-columns:var(--mc-sidebar) minmax(0,1fr);
+  display:grid; grid-template-rows:minmax(100vh,auto);
+  grid-template-columns:var(--mc-sidebar) minmax(0,1fr);
   min-height:100vh; color:var(--mc-ink); background:var(--mc-bg);
   font-family:Manrope,system-ui,sans-serif; font-size:14px;
 }
@@ -88,6 +89,7 @@
   max-width:1120px; min-height:calc(100vh - 60px); width:100%; margin:0 auto;
   padding:28px 24px 60px; background:transparent;
 }
+.console-redesign .console-wrap { min-height:100vh; background:var(--mc-bg); }
 .console-redesign .content h1 { font-size:24px; color:var(--mc-ink); }
 .console-redesign .content h2 { color:var(--mc-ink); }
 .console-redesign .content .lede { margin:4px 0 22px; color:var(--mc-muted); font-size:14px; line-height:1.5; }
@@ -188,9 +190,11 @@
 .console-redesign .danger { color:var(--mc-danger); }
 .console-redesign .notice { background:var(--mc-accent-soft); color:var(--mc-accent); }
 .console-redesign .form-error { background:var(--mc-danger-soft); color:var(--mc-danger); border-color:var(--mc-danger); }
+.console-redesign .resource-list details { grid-column:1/-1; width:100%; }
 .console-redesign .resource-list pre {
+  position:static; width:100%; max-height:320px; margin:10px 0 0;
   background:var(--mc-surface-alt); color:var(--mc-ink); border:1px solid var(--mc-line);
-  box-shadow:0 12px 32px #0003;
+  box-shadow:none; white-space:pre-wrap; overflow-wrap:anywhere;
 }
 .console-redesign .activity-header { background:var(--mc-surface-alt); color:var(--mc-muted); }
 .console-redesign .request-row { background:var(--mc-surface); color:var(--mc-ink); border-color:var(--mc-line); }
@@ -202,6 +206,26 @@
 .console-redesign .settings-grid textarea { background:var(--mc-surface); }
 .console-redesign .settings-review ul { color:var(--mc-muted); }
 .console-redesign .restart-banner { background:var(--mc-warning-soft); color:var(--mc-warning); border-color:var(--mc-warning); }
+.console-redesign .settings-form fieldset { min-width:0; margin:0; }
+.console-redesign .settings-primary { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+.console-redesign .settings-card,.console-redesign .settings-advanced {
+  min-width:0; padding:18px; background:var(--mc-surface); color:var(--mc-ink);
+  border:1px solid var(--mc-line); border-radius:12px;
+}
+.console-redesign .settings-card h2 { font-size:15px; margin:0 0 6px; }
+.console-redesign .settings-card>p,.console-redesign .settings-advanced>p { margin:0 0 16px; color:var(--mc-muted); font-size:12px; }
+.console-redesign .settings-card label { display:grid; gap:6px; font-size:12px; font-weight:600; }
+.console-redesign .settings-card label small { color:var(--mc-muted); font-weight:400; }
+.console-redesign .settings-card .settings-grid { grid-template-columns:1fr; }
+.console-redesign .settings-card input { width:100%; padding:10px 12px; }
+.console-redesign .settings-advanced summary { cursor:pointer; font-weight:700; color:var(--mc-accent); }
+.console-redesign .settings-advanced[open] summary { margin-bottom:14px; }
+.console-redesign .settings-advanced fieldset { margin-top:14px; }
+.console-redesign .settings-form legend {
+  float:left; width:100%; padding:0 0 14px; margin:0 0 14px;
+  border-bottom:1px solid var(--mc-line); color:var(--mc-ink); font-size:15px;
+}
+.console-redesign .settings-grid { clear:both; }
 .console-redesign .dialog-backdrop { background:#0f1418cc; }
 .console-redesign .wizard { background:var(--mc-surface); color:var(--mc-ink); border:1px solid var(--mc-line); }
 .console-redesign .wizard>p,
@@ -237,6 +261,7 @@
   .console-redesign header { padding:0 16px; }
   .console-redesign .console-profile-menu { right:16px; }
   .console-redesign .content { padding:20px 16px 100px; }
+  .console-redesign .settings-primary { grid-template-columns:1fr; }
 }
 @media (prefers-reduced-motion:reduce) {
   .console-redesign *, .console-redesign *::before, .console-redesign *::after { animation:none!important; transition:none!important; }

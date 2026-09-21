@@ -42,7 +42,7 @@ test("stores a secret value only in the write request and clears the field", asy
   render(<Secrets />);
   await screen.findByText("Todavía no hay secretos.");
   fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "provider-key" } });
-  const value = screen.getByLabelText("Nuevo valor") as HTMLInputElement;
+  const value = screen.getByLabelText("API key o secreto") as HTMLInputElement;
   fireEvent.change(value, { target: { value: "private-value" } });
   fireEvent.click(screen.getByRole("button", { name: "Guardar o reemplazar" }));
   expect(await screen.findByText(/Secreto guardado/)).toBeInTheDocument();

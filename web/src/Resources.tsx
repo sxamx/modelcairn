@@ -23,7 +23,8 @@ const areaNames: Record<ResourceArea, { title: string; description: string }> = 
   all: { title: "Recursos", description: "Configuración avanzada de todos los recursos del gateway." },
 };
 function kindFromHash(area: ResourceArea): string {
-  const fromUrl = window.location.hash.slice(2).split("/")[1];
+  const path = window.location.hash.slice(2).split("/");
+  const fromUrl = path[1] === "advanced" ? path[2] : path[1];
   return areaKinds[area].includes(fromUrl) ? fromUrl : areaKinds[area][0];
 }
 
@@ -42,7 +43,8 @@ export default function Resources({ area = "all", onOpenWizard }: { area?: Resou
   }, [area]);
   function selectKind(value: string) {
     if (kind === value) return;
-    window.location.hash = `/${area}/${value}`;
+    const nested = window.location.hash.slice(2).split("/")[1] === "advanced";
+    window.location.hash = `/${area}/${nested ? "advanced/" : ""}${value}`;
     setKind(value);
   }
   function edit(item: Resource) { const metadata = item.metadata as { name:string; displayName?:string; description?:string; resourceVersion:number }; setEditor({ name:metadata.name, displayName:metadata.displayName ?? "", description:metadata.description ?? "", version:metadata.resourceVersion, spec:JSON.stringify("spec" in item ? item.spec : {}, null, 2) }); }

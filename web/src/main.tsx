@@ -10,6 +10,7 @@ import "./tokens.css";
 import "./activity.css";
 import "./settings.css";
 import "./console-theme.css";
+import "./catalog.css";
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
 
