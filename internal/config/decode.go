@@ -96,13 +96,25 @@ func decodeResource(data []byte, path string) (Resource, error) {
 			ProviderModelID string    `json:"providerModelId"`
 			Capabilities    *[]string `json:"capabilities"`
 			Enabled         *bool     `json:"enabled,omitempty"`
+			Pricing         *struct {
+				Currency         string   `json:"currency"`
+				InputPerMillion  *float64 `json:"inputPerMillion"`
+				OutputPerMillion *float64 `json:"outputPerMillion"`
+			} `json:"pricing,omitempty"`
 		}
 		err = decodeStrict(raw.Spec, &v)
 		if err == nil {
 			if v.Capabilities == nil || result.Presence["capabilities"] == FieldNull {
 				return Resource{}, failure(CodeInvalidStructure, path+".spec.capabilities")
 			}
-			result.Spec = ModelSpec{ConnectionRef: v.ConnectionRef, ProviderModelID: v.ProviderModelID, Capabilities: *v.Capabilities, Enabled: valueOr(v.Enabled, true)}
+			var pricing *ModelPricing
+			if v.Pricing != nil {
+				if v.Pricing.InputPerMillion == nil || v.Pricing.OutputPerMillion == nil {
+					return Resource{}, failure(CodeInvalidStructure, path+".spec.pricing")
+				}
+				pricing = &ModelPricing{Currency: v.Pricing.Currency, InputPerMillion: *v.Pricing.InputPerMillion, OutputPerMillion: *v.Pricing.OutputPerMillion}
+			}
+			result.Spec = ModelSpec{ConnectionRef: v.ConnectionRef, ProviderModelID: v.ProviderModelID, Capabilities: *v.Capabilities, Enabled: valueOr(v.Enabled, true), Pricing: pricing}
 		}
 	case DestinationKind:
 		var v struct {

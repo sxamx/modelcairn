@@ -35,8 +35,11 @@ Las capturas de uso real también mostraron:
 
 ## Límites honestos
 
-Esta iteración ordena y visualiza la configuración existente. Aún faltan
-formularios guiados para conexión, modelo, clave vinculada y ruta avanzada.
-El descubrimiento automático de modelos, los relays, la estimación adaptativa,
-costos y Playground tampoco se dan por implementados. No se muestran datos
-simulados en la consola real.
+La iteración posterior añadió alta guiada de modelos, tarifas opcionales,
+métricas agregadas y una vista de demostración explícita en Datos. El recorrido
+de rutas ahora se ve y permite crear, reutilizar o reordenar opciones a partir
+de modelos y claves ya vinculados. Continúan pendientes los
+formularios guiados de conexión y clave vinculada, el descubrimiento automático
+de modelos, relays, estimación adaptativa, uptime por sondeos y Playground. Los
+datos simulados solo aparecen al activar manualmente la vista de ejemplo y no
+se persisten ni se mezclan con el historial real.

@@ -89,10 +89,16 @@ type EgressSpec struct {
 	Enabled bool   `json:"enabled"`
 }
 type ModelSpec struct {
-	ConnectionRef   Ref      `json:"connectionRef"`
-	ProviderModelID string   `json:"providerModelId"`
-	Capabilities    []string `json:"capabilities"`
-	Enabled         bool     `json:"enabled"`
+	ConnectionRef   Ref           `json:"connectionRef"`
+	ProviderModelID string        `json:"providerModelId"`
+	Capabilities    []string      `json:"capabilities"`
+	Enabled         bool          `json:"enabled"`
+	Pricing         *ModelPricing `json:"pricing,omitempty"`
+}
+type ModelPricing struct {
+	Currency         string  `json:"currency"`
+	InputPerMillion  float64 `json:"inputPerMillion"`
+	OutputPerMillion float64 `json:"outputPerMillion"`
 }
 type DestinationSpec struct {
 	ModelRef      Ref  `json:"modelRef"`

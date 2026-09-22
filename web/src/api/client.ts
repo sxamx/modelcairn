@@ -8,6 +8,7 @@ export type Resource = components["schemas"]["Resource"];
 export type SecretMetadata = components["schemas"]["SecretMetadata"];
 export type OperationalRequest = components["schemas"]["OperationalRequest"];
 export type OperationalAttempt = components["schemas"]["OperationalAttempt"];
+export type OperationalMetrics = components["schemas"]["OperationalMetrics"];
 export type SettingsSpec = components["schemas"]["spec"] & { publicOrigin: string };
 export type SettingsDocument = components["schemas"]["document"] & { resourceVersion: number; spec: SettingsSpec };
 export type SettingsState = { desired: SettingsDocument; effective: SettingsDocument; restartRequired: boolean };
@@ -101,6 +102,7 @@ export const api = {
     if (!isOverview(body)) throw new APIError(502, "invalid_overview");
     return body;
   },
+  metrics() { return request<OperationalMetrics>("/metrics"); },
   putSecret(name: string, value: string, version?: number) {
     const headers = version === undefined ? undefined : { "If-Match": `"${version}"` };
     return request<components["schemas"]["SecretMetadata"]>(`/secrets/${encodeURIComponent(name)}`, { method: "PUT", headers, body: JSON.stringify({ value }) });

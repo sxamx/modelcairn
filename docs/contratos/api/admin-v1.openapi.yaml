@@ -68,6 +68,14 @@ paths:
           content: { application/json: { schema: { $ref: '#/components/schemas/Overview' } } }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
+  /metrics:
+    get:
+      operationId: getOperationalMetrics
+      description: Aggregate operational rows still retained locally. Daily points are bounded to the latest 90 UTC days; no prompts or responses are returned.
+      responses:
+        '200': { description: Retained token and request totals with daily and model breakdowns, content: { application/json: { schema: { $ref: '#/components/schemas/OperationalMetrics' } } } }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
   /requests:
     get:
       operationId: listOperationalRequests
@@ -522,6 +530,42 @@ components:
               httpStatus: { type: [integer, 'null'], minimum: 100, maximum: 599 }
               durationMs: { type: [integer, 'null'], minimum: 0 }
               attempts: { type: integer, minimum: 0 }
+        generatedAt: { type: string, format: date-time }
+    OperationalMetrics:
+      type: object
+      additionalProperties: false
+      required: [requests, inputTokens, outputTokens, usageKnownRequests, daily, models, generatedAt]
+      properties:
+        requests: { type: integer, minimum: 0 }
+        inputTokens: { type: integer, minimum: 0 }
+        outputTokens: { type: integer, minimum: 0 }
+        usageKnownRequests: { type: integer, minimum: 0 }
+        daily:
+          type: array
+          maxItems: 90
+          items:
+            type: object
+            additionalProperties: false
+            required: [date, requests, success, inputTokens, outputTokens]
+            properties:
+              date: { type: string, format: date }
+              requests: { type: integer, minimum: 0 }
+              success: { type: integer, minimum: 0 }
+              inputTokens: { type: integer, minimum: 0 }
+              outputTokens: { type: integer, minimum: 0 }
+        models:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, requests, inputTokens, outputTokens, avgLatencyMillis, outputTokensPerSecond]
+            properties:
+              name: { type: string }
+              requests: { type: integer, minimum: 0 }
+              inputTokens: { type: integer, minimum: 0 }
+              outputTokens: { type: integer, minimum: 0 }
+              avgLatencyMillis: { type: [number, 'null'], minimum: 0 }
+              outputTokensPerSecond: { type: [number, 'null'], minimum: 0 }
         generatedAt: { type: string, format: date-time }
     OperationalRequestPage:
       type: object

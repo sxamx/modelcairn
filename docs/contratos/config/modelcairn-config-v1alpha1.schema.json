@@ -148,6 +148,14 @@
                 "capabilities": { "type": "array", "uniqueItems": true,
                   "items": { "enum": ["text", "stream", "tools", "parallel-tools", "developer-role", "json-schema", "logprobs"] }
                 },
+                "pricing": { "type": "object", "additionalProperties": false,
+                  "required": ["currency", "inputPerMillion", "outputPerMillion"],
+                  "properties": {
+                    "currency": { "const": "USD" },
+                    "inputPerMillion": { "type": "number", "minimum": 0, "maximum": 1000000 },
+                    "outputPerMillion": { "type": "number", "minimum": 0, "maximum": 1000000 }
+                  }
+                },
                 "enabled": { "type": "boolean", "default": true }
               }
             }

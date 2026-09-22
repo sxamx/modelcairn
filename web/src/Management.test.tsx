@@ -53,6 +53,14 @@ test("stores a secret value only in the write request and clears the field", asy
   expect(localStorage.length).toBe(0); expect(sessionStorage.length).toBe(0);
 });
 
+test("secret vault returns to the exact provider API keys tab", async () => {
+  window.location.hash = `#/secrets?from=${encodeURIComponent("#/providers/google/claves")}`;
+  vi.spyOn(globalThis, "fetch").mockImplementation(() => json({ items: [], nextCursor: null }));
+  render(<Secrets/>);
+  expect((await screen.findByRole("link", { name: /Volver a API keys/ })).getAttribute("href")).toBe("#/providers/google/claves");
+  window.location.hash = "";
+});
+
 test("issues an agent token through one-time delivery without browser persistence", async () => {
   vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
     const url = String(input);
