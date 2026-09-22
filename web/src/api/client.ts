@@ -8,6 +8,7 @@ export type Resource = components["schemas"]["Resource"];
 export type SecretMetadata = components["schemas"]["SecretMetadata"];
 export type OperationalRequest = components["schemas"]["OperationalRequest"];
 export type OperationalAttempt = components["schemas"]["OperationalAttempt"];
+export type OperationalMetrics = components["schemas"]["OperationalMetrics"];
 export type SettingsSpec = components["schemas"]["spec"] & { publicOrigin: string };
 export type SettingsDocument = components["schemas"]["document"] & { resourceVersion: number; spec: SettingsSpec };
 export type SettingsState = { desired: SettingsDocument; effective: SettingsDocument; restartRequired: boolean };
@@ -101,6 +102,7 @@ export const api = {
     if (!isOverview(body)) throw new APIError(502, "invalid_overview");
     return body;
   },
+  metrics() { return request<OperationalMetrics>("/metrics"); },
   putSecret(name: string, value: string, version?: number) {
     const headers = version === undefined ? undefined : { "If-Match": `"${version}"` };
     return request<components["schemas"]["SecretMetadata"]>(`/secrets/${encodeURIComponent(name)}`, { method: "PUT", headers, body: JSON.stringify({ value }) });
@@ -132,7 +134,11 @@ export const api = {
   },
   agentTokenStatus(name: string) { return request<{ tokenStatus: components["schemas"]["AgentTokenStatus"] }>(`/agent-tokens/${encodeURIComponent(name)}/status`); },
   revokeAgentToken(name: string) { return request<void>(`/agent-tokens/${encodeURIComponent(name)}/revoke`, { method: "POST" }); },
-  listResources(kind: string) { return request<components["schemas"]["ResourcePage"]>(`/resources/${encodeURIComponent(kind)}?limit=200`); },
+  listResources(kind: string, cursor?: string) {
+    const query = new URLSearchParams({ limit: "200" });
+    if (cursor) query.set("cursor", cursor);
+    return request<components["schemas"]["ResourcePage"]>(`/resources/${encodeURIComponent(kind)}?${query}`);
+  },
   createResource(kind: string, resource: Resource) { return request<Resource>(`/resources/${encodeURIComponent(kind)}`, { method: "POST", body: JSON.stringify(resource) }); },
   updateResource(kind: string, name: string, version: number, resource: Resource) { return request<Resource>(`/resources/${encodeURIComponent(kind)}/${encodeURIComponent(name)}`, { method: "PUT", headers: { "If-Match": `"${version}"` }, body: JSON.stringify(resource) }); },
   publishStrategy(name: string, version: number) { return request<Resource>(`/strategies/${encodeURIComponent(name)}/publish`, { method: "POST", headers: { "If-Match": `"${version}"` } }); },

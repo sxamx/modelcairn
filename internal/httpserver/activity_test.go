@@ -28,6 +28,37 @@ func TestActivityRejectsMalformedQueryBeforeStorage(t *testing.T) {
 	}
 }
 
+func TestMetricsRequiresSessionAndReturnsEmptyAggregate(t *testing.T) {
+	handler := adminHandler(t)
+	unauthorized := httptest.NewRecorder()
+	handler.ServeHTTP(unauthorized, adminRequest(http.MethodGet, "/api/v1/admin/metrics", nil))
+	if unauthorized.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthorized metrics status=%d", unauthorized.Code)
+	}
+	login := adminRequest(http.MethodPost, "/api/v1/admin/session", []byte(`{"username":"owner","password":"a secure password"}`))
+	login.Header.Set("Content-Type", "application/json")
+	lr := httptest.NewRecorder()
+	handler.ServeHTTP(lr, login)
+	var session sessionView
+	decodeJSONBody(t, lr, &session)
+	request := adminRequest(http.MethodGet, "/api/v1/admin/metrics", nil)
+	request.AddCookie(lr.Result().Cookies()[0])
+	request.Header.Set("X-CSRF-Token", session.CSRFToken)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("metrics status=%d body=%s", response.Code, response.Body.String())
+	}
+	var metrics struct {
+		Requests, InputTokens, OutputTokens int64
+		Daily, Models                       []any
+	}
+	decodeJSONBody(t, response, &metrics)
+	if metrics.Requests != 0 || metrics.InputTokens != 0 || metrics.OutputTokens != 0 || metrics.Daily == nil || metrics.Models == nil {
+		t.Fatalf("unexpected empty metrics: %+v", metrics)
+	}
+}
+
 func decodeJSONBody(t *testing.T, w *httptest.ResponseRecorder, target any) {
 	t.Helper()
 	if err := json.Unmarshal(w.Body.Bytes(), target); err != nil {

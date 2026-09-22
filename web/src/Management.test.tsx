@@ -42,7 +42,7 @@ test("stores a secret value only in the write request and clears the field", asy
   render(<Secrets />);
   await screen.findByText("Todavía no hay secretos.");
   fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "provider-key" } });
-  const value = screen.getByLabelText("Nuevo valor") as HTMLInputElement;
+  const value = screen.getByLabelText("API key o secreto") as HTMLInputElement;
   fireEvent.change(value, { target: { value: "private-value" } });
   fireEvent.click(screen.getByRole("button", { name: "Guardar o reemplazar" }));
   expect(await screen.findByText(/Secreto guardado/)).toBeInTheDocument();
@@ -51,6 +51,14 @@ test("stores a secret value only in the write request and clears the field", asy
   expect(write?.init?.body).toBe(JSON.stringify({ value: "private-value" }));
   expect(document.body.textContent).not.toContain("private-value");
   expect(localStorage.length).toBe(0); expect(sessionStorage.length).toBe(0);
+});
+
+test("secret vault returns to the exact provider API keys tab", async () => {
+  window.location.hash = `#/secrets?from=${encodeURIComponent("#/providers/google/claves")}`;
+  vi.spyOn(globalThis, "fetch").mockImplementation(() => json({ items: [], nextCursor: null }));
+  render(<Secrets/>);
+  expect((await screen.findByRole("link", { name: /Volver a API keys/ })).getAttribute("href")).toBe("#/providers/google/claves");
+  window.location.hash = "";
 });
 
 test("issues an agent token through one-time delivery without browser persistence", async () => {

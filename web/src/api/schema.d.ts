@@ -54,6 +54,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Aggregate operational rows still retained locally. Daily points are bounded to the latest 90 UTC days; no prompts or responses are returned. */
+        get: operations["getOperationalMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/requests": {
         parameters: {
             query?: never;
@@ -418,6 +435,30 @@ export interface components {
             /** Format: date-time */
             generatedAt: string;
         };
+        OperationalMetrics: {
+            requests: number;
+            inputTokens: number;
+            outputTokens: number;
+            usageKnownRequests: number;
+            daily: {
+                /** Format: date */
+                date: string;
+                requests: number;
+                success: number;
+                inputTokens: number;
+                outputTokens: number;
+            }[];
+            models: {
+                name: string;
+                requests: number;
+                inputTokens: number;
+                outputTokens: number;
+                avgLatencyMillis: number | null;
+                outputTokensPerSecond: number | null;
+            }[];
+            /** Format: date-time */
+            generatedAt: string;
+        };
         OperationalRequestPage: {
             items: components["schemas"]["OperationalRequest"][];
             nextCursor?: string | null;
@@ -676,6 +717,12 @@ export interface components {
                 connectionRef: components["schemas"]["ref"];
                 providerModelId: string;
                 capabilities: ("text" | "stream" | "tools" | "parallel-tools" | "developer-role" | "json-schema" | "logprobs")[];
+                pricing?: {
+                    /** @constant */
+                    currency: "USD";
+                    inputPerMillion: number;
+                    outputPerMillion: number;
+                };
                 /** @default true */
                 enabled: boolean;
             };
@@ -836,6 +883,12 @@ export interface components {
                         connectionRef: components["schemas"]["ref"];
                         providerModelId: string;
                         capabilities: ("text" | "stream" | "tools" | "parallel-tools" | "developer-role" | "json-schema" | "logprobs")[];
+                        pricing?: {
+                            /** @constant */
+                            currency: "USD";
+                            inputPerMillion: number;
+                            outputPerMillion: number;
+                        };
                         /** @default true */
                         enabled: boolean;
                     };
@@ -1093,6 +1146,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Overview"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    getOperationalMetrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retained token and request totals with daily and model breakdowns */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationalMetrics"];
                 };
             };
             401: components["responses"]["Error"];

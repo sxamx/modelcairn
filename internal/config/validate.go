@@ -1,6 +1,7 @@
 package config
 
 import (
+	"math"
 	"net"
 	"net/url"
 	"regexp"
@@ -153,6 +154,9 @@ func validateSpec(r Resource, p string) error {
 				return failure(CodeInvalidValue, p+".capabilities["+itoa(i)+"]")
 			}
 			seen[c] = true
+		}
+		if v.Pricing != nil && (v.Pricing.Currency != "USD" || math.IsNaN(v.Pricing.InputPerMillion) || math.IsInf(v.Pricing.InputPerMillion, 0) || v.Pricing.InputPerMillion < 0 || v.Pricing.InputPerMillion > 1000000 || math.IsNaN(v.Pricing.OutputPerMillion) || math.IsInf(v.Pricing.OutputPerMillion, 0) || v.Pricing.OutputPerMillion < 0 || v.Pricing.OutputPerMillion > 1000000) {
+			return failure(CodeInvalidValue, p+".pricing")
 		}
 	case DestinationSpec:
 		if err := validRef(v.ModelRef, p+".modelRef"); err != nil {

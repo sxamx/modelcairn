@@ -20,6 +20,18 @@ type activityCursor struct {
 	Filter    string `json:"filter"`
 }
 
+func (a *adminAPI) getOperationalMetrics(w http.ResponseWriter, r *http.Request) {
+	if !a.authorizeRead(w, r) {
+		return
+	}
+	metrics, err := storage.ReadOperationalMetrics(r.Context(), a.installation.DB(), time.Now())
+	if err != nil {
+		writeAdminError(w, http.StatusServiceUnavailable, "unavailable", true)
+		return
+	}
+	writeJSON(w, http.StatusOK, metrics)
+}
+
 func (a *adminAPI) listOperationalRequests(w http.ResponseWriter, r *http.Request) {
 	if !a.authorizeRead(w, r) {
 		return

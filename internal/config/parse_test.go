@@ -96,6 +96,42 @@ func TestRequiredCollectionsRejectMissingAndNull(t *testing.T) {
 	}
 }
 
+func TestOptionalModelPricingIsValidatedAndRoundTrips(t *testing.T) {
+	valid := basePrefix + `resources:
+- kind: Model
+  metadata: {name: priced}
+  spec: {connectionRef: {name: api}, providerModelId: paid, capabilities: [text], pricing: {currency: USD, inputPerMillion: 0.15, outputPerMillion: 0.6}}`
+	doc := mustParse(t, valid)
+	pricing := doc.Resources[0].Spec.(ModelSpec).Pricing
+	if pricing == nil || pricing.InputPerMillion != 0.15 || pricing.OutputPerMillion != 0.6 {
+		t.Fatalf("pricing=%+v", pricing)
+	}
+	encoded, err := CanonicalJSON(doc, nil)
+	if err != nil {
+		t.Fatalf("pricing lost during export: %s %v", encoded, err)
+	}
+	again, err := Parse(encoded)
+	if err != nil || again.Resources[0].Spec.(ModelSpec).Pricing.InputPerMillion != 0.15 {
+		t.Fatalf("pricing lost during round trip: %s %v", encoded, err)
+	}
+	for _, body := range []string{
+		`{currency: EUR, inputPerMillion: 1, outputPerMillion: 2}`,
+		`{currency: USD, inputPerMillion: -1, outputPerMillion: 2}`,
+		`{currency: USD, inputPerMillion: 1, outputPerMillion: 1000001}`,
+	} {
+		_, err := Parse([]byte(basePrefix + `resources:
+- kind: Model
+  metadata: {name: bad}
+  spec: {connectionRef: {name: api}, providerModelId: paid, capabilities: [text], pricing: ` + body + `}`))
+		assertDiagnostic(t, err, CodeInvalidValue, "$.resources[0].spec.pricing")
+	}
+	_, err = Parse([]byte(basePrefix + `resources:
+- kind: Model
+  metadata: {name: bad}
+  spec: {connectionRef: {name: api}, providerModelId: paid, capabilities: [text], pricing: {currency: USD, inputPerMillion: 0.15}}`))
+	assertDiagnostic(t, err, CodeInvalidStructure, "$.resources[0].spec.pricing")
+}
+
 func TestExplicitNullSurvivesForNullableOptionalField(t *testing.T) {
 	doc := mustParse(t, basePrefix+`resources:
 - kind: AgentToken
