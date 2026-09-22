@@ -112,13 +112,15 @@ test("renders the content-free operational overview", async () => {
   vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
     if (String(input).endsWith("/session/me")) return response(200, { admin: { id: "id", username: "sam" }, csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z" });
     if (String(input).endsWith("/readyz")) return response(200, { status: "ready", components: { persistence: { ready: true, reason: "" } } });
-    return response(200, { resourceCounts: { Route: 2, Destination: 3 }, requests24h: { total: 11, success: 10, error: 1 }, activeCooldowns: 1, recentRequests: [], generatedAt: "2026-09-13T12:00:00Z" });
+    return response(200, { resourceCounts: { Route: 2, Destination: 3 }, requests24h: { total: 11, success: 10, error: 1 }, activeCooldowns: 1, recentRequests: [{ id: "req-1", requestedAlias: "assistant", outcome: "success", startedAt: "2026-09-13T11:00:00Z", durationMs: 120, attempts: 1 }], generatedAt: "2026-09-13T12:00:00Z" });
   });
   render(<App />);
   expect(await screen.findByText("11")).toBeInTheDocument();
-  expect(screen.getByText("Cooldowns activos").closest("article")).toHaveTextContent("1");
+  expect(screen.getByText("Opciones en pausa").closest("article")).toHaveTextContent("1");
+  expect(screen.getByText("Opciones de ruta").closest("article")).toHaveTextContent("3");
   expect(screen.getByLabelText("Estado de la instalación").querySelectorAll(".metric")[1]).toHaveTextContent("Rutas2");
   expect(screen.getByText("Gateway").closest("article")).toHaveTextContent("Listo");
+  expect(screen.getByText("Correcta")).toBeInTheDocument();
 });
 
 test("explains which local dependency is not ready", async () => {

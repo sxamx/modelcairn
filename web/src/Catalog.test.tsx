@@ -68,7 +68,7 @@ test("model detail returns to the exact provider and tab that opened it", async 
   window.location.hash = link.getAttribute("href") ?? "";
   // The app switches catalog areas on navigation; mount that area as it does.
   render(<Catalog area="models" onOpenWizard={() => undefined} onOpenSecrets={() => undefined}/>);
-  expect((await screen.findByRole("link", { name: /Volver a modelos/ })).getAttribute("href")).toBe("#/providers/google/modelos");
+  expect((await screen.findByRole("link", { name: /Volver al proveedor/ })).getAttribute("href")).toBe("#/providers/google/modelos");
 });
 
 test("adds a model from within its provider without writing a key", async () => {
