@@ -126,6 +126,10 @@
 .catalog-dialog fieldset label { display:flex; align-items:center; gap:7px; margin:0; }
 .catalog-dialog fieldset input { min-height:auto; }
 .catalog-dialog small,.catalog-hint { color:var(--mc-muted); }
+.catalog-dialog form>p { color:var(--mc-muted); line-height:1.5; }
+.catalog-text-button { border:0; padding:0; background:none; color:var(--mc-accent); font-weight:600; text-decoration:underline; cursor:pointer; }
+.catalog-plan-list { display:grid; gap:8px; margin:16px 0; padding-left:20px; }
+.catalog-plan-list li { overflow-wrap:anywhere; }
 .catalog-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .catalog-pricing { margin-top:16px; padding:20px; background:var(--mc-surface); border:1px solid var(--mc-line); border-radius:12px; }
 .catalog-pricing h3 { font-size:16px; margin:0 0 6px; }

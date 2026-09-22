@@ -91,6 +91,49 @@ test("adds a model from within its provider without writing a key", async () => 
   expect(JSON.parse(String(saved?.init?.body)).spec).toMatchObject({ connectionRef: { name: "google-api" }, providerModelId: "gemini-second", capabilities: ["text"] });
 });
 
+test("adds an API connection from its provider", async () => {
+  window.location.hash = "#/providers/google/configuracion";
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    calls.push({ url: String(input), init });
+    if (init?.method === "POST") return new Response(JSON.stringify({ kind: "ProviderConnection", metadata: { name: "google-second" }, spec: {} }), { status: 201, headers: { "Content-Type": "application/json" } });
+    const kind = /\/resources\/([^?]+)/.exec(String(input))?.[1] ?? "";
+    return new Response(JSON.stringify({ items: resources[kind] ?? [], nextCursor: null }), { status: 200, headers: { "Content-Type": "application/json" } });
+  });
+  render(<Catalog area="providers" onOpenWizard={() => undefined} onOpenSecrets={() => undefined}/>);
+  fireEvent.click(await screen.findByRole("button", { name: /Añadir conexión/ }));
+  fireEvent.change(screen.getByLabelText("Identificador interno"), { target: { value: "google-second" } });
+  fireEvent.change(screen.getByLabelText("URL base de la API"), { target: { value: "https://example.invalid/v1" } });
+  fireEvent.click(screen.getByRole("button", { name: "Guardar conexión" }));
+  await waitFor(() => expect(calls.some(call => call.url.endsWith("/resources/provider-connections") && call.init?.method === "POST")).toBe(true));
+  const saved = calls.find(call => call.url.endsWith("/resources/provider-connections") && call.init?.method === "POST");
+  expect(JSON.parse(String(saved?.init?.body)).spec).toMatchObject({ providerRef: { name: "google" }, adapter: "openai-chat-v1", allowPrivateNetwork: false });
+});
+
+test("reviews a stored key link before applying", async () => {
+  window.location.hash = "#/providers/google/claves";
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const url = String(input); calls.push({ url, init });
+    if (url.includes("/config/plan")) return new Response(JSON.stringify({ planToken: "review-token", changes: [{ kind: "Credential", name: "google-second-key", operation: "create" }] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (url.includes("/config/apply")) return new Response(JSON.stringify({ applied: true }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (url.includes("/secrets?")) return new Response(JSON.stringify({ items: [{ name: "secret" }], nextCursor: null }), { status: 200, headers: { "Content-Type": "application/json" } });
+    const kind = /\/resources\/([^?]+)/.exec(url)?.[1] ?? "";
+    return new Response(JSON.stringify({ items: resources[kind] ?? [], nextCursor: null }), { status: 200, headers: { "Content-Type": "application/json" } });
+  });
+  render(<Catalog area="providers" onOpenWizard={() => undefined} onOpenSecrets={() => undefined}/>);
+  fireEvent.click(await screen.findByRole("button", { name: /Vincular API key/ }));
+  fireEvent.change(await screen.findByLabelText("Clave guardada"), { target: { value: "secret" } });
+  fireEvent.change(screen.getByLabelText("Identificador del vínculo"), { target: { value: "google-second-key" } });
+  fireEvent.click(screen.getByRole("button", { name: "Revisar vínculo" }));
+  expect(await screen.findByText(/API key vinculada · google-second-key/)).toBeInTheDocument();
+  expect(calls.some(call => call.url.includes("/config/apply"))).toBe(false);
+  const planned = calls.find(call => call.url.includes("/config/plan"));
+  expect(JSON.parse(String(planned?.init?.body)).resources).toEqual([expect.objectContaining({ kind: "Credential", spec: expect.objectContaining({ providerAccountRef: { name: "google-account" }, secretRef: { name: "secret" }, egressRef: { name: "direct" } }) })]);
+  fireEvent.click(screen.getByRole("button", { name: "Confirmar vínculo" }));
+  await waitFor(() => expect(calls.some(call => call.url.includes("/config/apply"))).toBe(true));
+});
+
 test("saving a visual route remains a draft until explicitly published", async () => {
   window.location.hash = "#/routes/assistant";
   const calls: Array<{ url: string; init?: RequestInit }> = [];
