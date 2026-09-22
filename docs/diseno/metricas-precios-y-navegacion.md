@@ -52,7 +52,12 @@ atómica que abarque creación y publicación está pendiente.
 
 ## Próximos controles
 
-- Alta guiada de conexión API y vinculación de una clave guardada al proveedor.
+- La conexión API ya se puede añadir desde Proveedor > Configuración; el
+  formulario inicial usa Chat Completions y HTTPS. Proveedor > API keys permite
+  vincular una clave previamente guardada. El vínculo se revisa antes de
+  aplicarse; si faltan cuenta o salida directa, se crean en la misma operación.
+  Guardar el secreto continúa siendo un paso separado. Falta un asistente único
+  que reúna ambos pasos y la asignación de modelos.
 - Constructor visual completo de rutas nuevas a partir de recursos existentes,
   con revisión previa y transacción atómica de opción + recorrido.
 - Uptime por sondeos, TTFT y ventanas/muestras configurables por modelo;
