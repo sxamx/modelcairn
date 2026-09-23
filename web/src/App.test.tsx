@@ -116,7 +116,7 @@ test("mobile navigation exposes the primary sections and the More menu", async (
   expect(screen.queryByRole("menu", { name: "Más secciones" })).not.toBeInTheDocument();
 });
 
-test("keeps the current routes intact while the visual editor is coming soon", async () => {
+test("opens the route editor and preserves access to advanced configuration", async () => {
   window.location.hash = "#/routes";
   vi.spyOn(globalThis, "fetch").mockImplementation(input => {
     if (String(input).endsWith("/session/me")) return response(200, { admin: { id: "id", username: "sam" }, csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z" });
@@ -126,10 +126,8 @@ test("keeps the current routes intact while the visual editor is coming soon", a
   });
   render(<App />);
   expect(await screen.findByRole("heading", { name: "Rutas" })).toBeInTheDocument();
-  expect(screen.getByText("Próximamente")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Crear con asistente" })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByText("Necesito editar una ruta existente"));
-  fireEvent.click(screen.getByRole("link", { name: "Abrir configuración técnica" }));
+  expect(await screen.findByRole("button", { name: "Nueva ruta" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("link", { name: "Opciones avanzadas" }));
   expect(await screen.findByText("Modo avanzado")).toBeInTheDocument();
 });
 

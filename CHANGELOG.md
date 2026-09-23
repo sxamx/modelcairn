@@ -15,6 +15,9 @@ and this project intends to follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Visual route editor in the web console: ordered primary/fallback destinations,
+  provider-compatible API keys, review before an atomic create, and draft
+  editing with explicit publication for existing routes.
 - Lightweight self-hosted gateway with OpenAI Chat Completions compatibility.
 - Bounded sequential fallback for normal and SSE requests.
 - Encrypted provider credentials and revocable/rotatable agent tokens.
@@ -33,6 +36,7 @@ and this project intends to follow [Semantic Versioning](https://semver.org/).
 - No egress relays or multinode proxy protocol yet.
 - No adaptive capacity/recovery estimator yet.
 - No Anthropic or Google-compatible protocol translation yet.
-- No visual routing/fallback editor yet.
+- The visual editor does not yet expose every advanced routing field; those
+  remain available through the configuration API and advanced console.
 
 [Unreleased]: https://github.com/sxamx/modelcairn/commits/main
