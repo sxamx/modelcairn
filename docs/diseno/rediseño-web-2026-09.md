@@ -1,8 +1,8 @@
 # Rediseño de la interfaz web: estructura aprobada
 
-Estado: arquitectura de información aprobada por el mantenedor el 22 de septiembre de 2026; wireframes y estilo visual pendientes de validación. Este documento no modifica el contrato del backend ni sustituye los ADR existentes.
+Estado: arquitectura de información, dirección visual y sistema de tokens aprobados por el mantenedor el 22 de septiembre de 2026. Implementación en curso por bloques. Este documento no modifica el contrato del backend ni sustituye los ADR existentes.
 
-La propuesta visual 01 recibió aprobación provisional de dirección el 22 de septiembre, con una petición expresa de mejorar la experiencia móvil y preservar la PWA. No equivale todavía a aprobación de todas las pantallas ni a autorización para sustituir la web real.
+La [propuesta visual 01](../prototipos/direccion-visual-web-01.html) y la [galería de tokens](../prototipos/sistema-visual-web-v1.html) son las referencias aprobadas. La implementación mantiene la PWA y mejora el móvil; los datos de ejemplo de los prototipos no se trasladan a producción.
 
 ## Objetivo
 
@@ -44,11 +44,16 @@ Configuración
 - Rutas distingue claramente borrador guardado de versión publicada. El backend ya soporta parte del recorrido, pero creación visual completa y operaciones atómicas requieren trabajo adicional.
 - Toda cifra se identifica como observada, estimada o no disponible. Los wireframes pueden usar ejemplos, pero la web real no mezclará ejemplos con datos del usuario.
 
-## Alcance del wireframe
+## Etapas de implementación
 
-El wireframe independiente muestra navegación, jerarquía, acciones y estados, no la identidad visual final ni respuestas de backend. Los controles no implementados se marcarán como propuesta. Primero se valida este mapa y el recorrido; después se define el sistema visual (temas, tipografía, color, iconos, componentes y movimiento) y por último se implementa por bloques con pruebas de accesibilidad y rendimiento en la VM de 1 GB.
+1. Referencias visuales y mapa aprobados; conservarlos como checkpoint.
+2. Base compartida de la web real: tokens de claro/oscuro, tipografía, superficies, navegación móvil y PWA. Esta etapa no equivale a una pantalla completamente rediseñada.
+3. Migrar pantallas y recorridos reales por bloques: Inicio, Proveedores/Modelos, Aplicaciones, Actividad/Datos, Rutas y Configuración. Conservar el backend y no fingir métricas.
+4. Verificar accesibilidad, teclado, móvil/PWA, contraste, pruebas automatizadas y rendimiento en la VM de 1 GB antes del despliegue.
 
-## Pendientes que deben diseñarse antes de implementar
+El wireframe independiente muestra navegación, jerarquía, acciones y estados, no respuestas de backend. Los controles aún no implementados siguen siendo propuestas hasta completar su bloque.
+
+## Pendientes de implementación por bloques
 
 - Flujo único y recuperable de proveedor → conexión → clave → modelo → prueba.
 - Edición y eliminación de conexiones y vínculos sin exponer secretos.

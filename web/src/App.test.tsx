@@ -66,7 +66,7 @@ test("changes theme and keeps navigation in browser history", async () => {
   expect(localStorage.getItem("modelcairn-theme")).toBe("dark");
   fireEvent.click(screen.getByRole("button", { name: "Contraer menú" }));
   expect(localStorage.getItem("modelcairn-sidebar-collapsed")).toBe("true");
-  fireEvent.click(screen.getByRole("button", { name: "Actividad" }));
+  fireEvent.click(within(screen.getByRole("navigation", { name: "Secciones de escritorio" })).getByRole("button", { name: "Actividad" }));
   expect(window.location.hash).toBe("#/activity");
 });
 
@@ -92,9 +92,28 @@ test("clicking the active menu returns from a detail to its list", async () => {
     return response(200, { resourceCounts: {}, requests24h: { total: 0, success: 0, error: 0 }, activeCooldowns: 0, recentRequests: [], generatedAt: "2026-09-13T12:00:00Z" });
   });
   render(<App/>);
-  const navigation = await screen.findByRole("navigation");
+  const navigation = await screen.findByRole("navigation", { name: "Secciones de escritorio" });
   fireEvent.click(within(navigation).getByRole("button", { name: "Modelos" }));
   expect(window.location.hash).toBe("#/models");
+});
+
+test("mobile navigation exposes the primary sections and the More menu", async () => {
+  vi.spyOn(globalThis, "fetch").mockImplementation(input => {
+    if (String(input).endsWith("/session/me")) return response(200, { admin: { id: "id", username: "sam" }, csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z" });
+    if (String(input).endsWith("/readyz")) return response(200, { status: "ready", components: {} });
+    if (String(input).includes("/resources/")) return response(200, { items: [], nextCursor: null });
+    return response(200, { resourceCounts: {}, requests24h: { total: 0, success: 0, error: 0 }, activeCooldowns: 0, recentRequests: [], generatedAt: "2026-09-13T12:00:00Z" });
+  });
+  render(<App />);
+  expect(await screen.findByRole("heading", { name: "Hola, sam" })).toBeInTheDocument();
+  const mobile = screen.getByRole("navigation", { name: "Navegación móvil" });
+  expect(within(mobile).getAllByRole("button")).toHaveLength(5);
+  fireEvent.click(within(mobile).getByRole("button", { name: "Más" }));
+  const more = screen.getByRole("menu", { name: "Más secciones" });
+  expect(within(more).getByRole("menuitem", { name: "Aplicaciones" })).toBeInTheDocument();
+  fireEvent.click(within(more).getByRole("menuitem", { name: "Modelos" }));
+  expect(window.location.hash).toBe("#/models");
+  expect(screen.queryByRole("menu", { name: "Más secciones" })).not.toBeInTheDocument();
 });
 
 test("shows a uniform login error", async () => {

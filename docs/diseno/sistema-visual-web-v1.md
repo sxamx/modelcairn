@@ -1,6 +1,6 @@
 # Sistema visual de la web · propuesta v1
 
-Estado: propuesta para revisión del mantenedor. La [galería interactiva](../prototipos/sistema-visual-web-v1.html) es la referencia visual; este documento define las reglas que deberán trasladarse a la web real cuando se aprueben. No modifica los contratos de API ni la versión instalada.
+Estado: aprobado por el mantenedor el 22 de septiembre de 2026. La [galería interactiva](../prototipos/sistema-visual-web-v1.html) es la referencia visual; este documento define las reglas para trasladar a la web real. La aprobación no modifica contratos de API ni constituye un despliegue.
 
 ## Principio
 
