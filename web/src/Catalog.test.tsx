@@ -37,7 +37,22 @@ test("groups provider models and keys without exposing internal resources as pri
   expect(screen.queryByRole("tab", { name: "Egresos" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("link", { name: /Google AI Studio/ }));
   expect(await screen.findByRole("tab", { name: "API keys" })).toBeInTheDocument();
-  expect(screen.getByText("Disponibilidad").closest("article")).toHaveTextContent("Sin datos");
+  expect(screen.getByText("Uptime").closest("article")).toHaveTextContent("Sin sondeos");
+});
+
+test("charts only observed model requests and never calls them uptime", async () => {
+  window.location.hash = "#/providers/google/resumen";
+  vi.spyOn(globalThis, "fetch").mockImplementation(async input => {
+    const url = String(input);
+    const body = url.endsWith("/metrics")
+      ? { models: [{ name: "google-model", requests: 7, inputTokens: 1400, outputTokens: 300 }] }
+      : { items: resources[/\/resources\/([^?]+)/.exec(url)?.[1] ?? ""] ?? [], nextCursor: null };
+    return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+  });
+  render(<Catalog area="providers" onOpenWizard={() => undefined} onOpenSecrets={() => undefined}/>);
+  expect(await screen.findByRole("heading", { name: "Solicitudes por modelo" })).toBeInTheDocument();
+  expect(await screen.findByText("7 solicitudes")).toBeInTheDocument();
+  expect(screen.getByText("Uptime").closest("article")).toHaveTextContent("Sin sondeos");
 });
 
 test("keeps provider creation errors inside the visible dialog", async () => {

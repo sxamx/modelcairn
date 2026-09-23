@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Vista previa local · ModelCairn</title>
+    <style>
+      #preview-label { position:fixed; right:16px; bottom:16px; z-index:100; max-width:min(340px,calc(100vw - 32px)); padding:9px 13px; border:1px solid #83520f; border-radius:10px; background:#fff0d7; color:#493009; box-shadow:0 6px 22px #0002; font:600 13px/1.35 system-ui,sans-serif; pointer-events:none; }
+      #preview-label strong { display:block; font-size:14px; }
+      @media(max-width:760px) { #preview-label { bottom:calc(80px + env(safe-area-inset-bottom,0px)); } }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="preview-label" role="note"><strong>Vista previa local · solo lectura</strong>Datos ficticios. No se conecta a tu VM ni guarda cambios.</div>
+    <script src="/preview-mock.js"></script>
+    <script type="module">
+      if (window.__MODELCAIRN_PREVIEW_READY__) await import('/src/main.tsx');
+      else document.getElementById('root').textContent = 'La vista previa no pudo activar sus datos simulados.';
+    </script>
+  </body>
+</html>

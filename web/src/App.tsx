@@ -15,11 +15,13 @@ const pages: { id: ConsolePage; label: string; icon: string }[] = [
   { id: "providers", label: "Proveedores", icon: "providers" },
   { id: "models", label: "Modelos", icon: "models" },
   { id: "routes", label: "Rutas", icon: "routes" },
-  { id: "tokens", label: "Acceso API", icon: "access" },
+  { id: "tokens", label: "Aplicaciones", icon: "access" },
   { id: "activity", label: "Actividad", icon: "activity" },
   { id: "data", label: "Datos", icon: "data" },
   { id: "settings", label: "Configuración", icon: "settings" },
 ];
+const mobilePrimary: ConsolePage[] = ["overview", "providers", "routes", "data"];
+const mobileSecondary: ConsolePage[] = ["models", "tokens", "activity", "settings"];
 function pageFromHash(): ConsolePage {
   const name = window.location.hash.slice(2).split("?")[0].split("/")[0];
   if (name === "secrets") return "secrets";
@@ -39,6 +41,7 @@ function Icon({ name }: { name: string }) {
     panel: <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></>,
     sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></>,
     moon: <path d="M21 13A9 9 0 0 1 11 3a9 9 0 1 0 10 10Z"/>,
+    more: <><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></>,
   };
   return <svg className="console-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -87,8 +90,9 @@ function Console({ session, online, onLogout }: { session: SessionContext; onlin
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("modelcairn-sidebar-collapsed") === "true");
   const [theme, setTheme] = useState<"light" | "dark">(() => localStorage.getItem("modelcairn-theme") === "dark" ? "dark" : "light");
   const [profileOpen, setProfileOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   useEffect(() => {
-    const sync = () => { setPage(pageFromHash()); setProfileOpen(false); };
+    const sync = () => { setPage(pageFromHash()); setProfileOpen(false); setMobileMoreOpen(false); };
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
   }, []);
@@ -96,6 +100,7 @@ function Console({ session, online, onLogout }: { session: SessionContext; onlin
   useEffect(() => { localStorage.setItem("modelcairn-sidebar-collapsed", String(collapsed)); }, [collapsed]);
   function navigate(next: ConsolePage) {
     setProfileOpen(false);
+    setMobileMoreOpen(false);
     if (window.location.hash === `#/${next}`) return;
     window.location.hash = `/${next}`;
     setPage(next);
@@ -108,16 +113,42 @@ function Console({ session, online, onLogout }: { session: SessionContext; onlin
   useEffect(load, [load]);
   const routes = overview?.resourceCounts.Route ?? 0;
   return <div className={`app-shell console-redesign ${collapsed ? "is-collapsed" : ""}`} data-theme={theme}>
-    <aside aria-label="Navegación principal"><Brand href="#/overview"/><nav>{pages.map((item) => <button key={item.id} className={page === item.id ? "active" : ""} onClick={() => navigate(item.id)} aria-current={page === item.id ? "page" : undefined} title={collapsed ? item.label : undefined}><Icon name={item.icon}/><span className="nav-label">{item.label}</span></button>)}</nav><a className="repo-link" href="https://github.com/sxamx/modelcairn" rel="noreferrer"><span className="nav-label">ModelCairn · Código abierto</span></a></aside>
+    <aside aria-label="Navegación principal"><Brand href="#/overview"/><nav aria-label="Secciones de escritorio">{pages.map((item) => { const active = page === item.id || (page === "secrets" && item.id === "providers"); return <button key={item.id} className={active ? "active" : ""} onClick={() => navigate(item.id)} aria-current={active ? "page" : undefined} title={collapsed ? item.label : undefined}><Icon name={item.icon}/><span className="nav-label">{item.label}</span></button>; })}</nav><a className="repo-link" href="https://github.com/sxamx/modelcairn" rel="noreferrer"><span className="nav-label">ModelCairn · Código abierto</span></a></aside>
     <div className="console-wrap"><header><button className="console-icon-button collapse-button" type="button" aria-label={collapsed ? "Expandir menú" : "Contraer menú"} onClick={() => setCollapsed((value) => !value)}><Icon name="panel"/></button><strong className="console-crumb">{page === "secrets" ? "Claves guardadas" : pages.find((item) => item.id === page)?.label}</strong><div className="header-actions"><span className="signal"><span className={online ? "dot online" : "dot"}/>{online ? "En línea" : "Sin conexión"}</span><button className="console-icon-button" type="button" aria-label={theme === "light" ? "Activar modo oscuro" : "Activar modo claro"} onClick={() => setTheme(theme === "light" ? "dark" : "light")}><Icon name={theme === "light" ? "moon" : "sun"}/></button><button className="console-avatar" type="button" aria-label="Menú de usuario" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>{session.admin.username.slice(0, 1).toLocaleUpperCase()}</button></div>{profileOpen && <div className="console-profile-menu"><div><strong>{session.admin.username}</strong><small>Administrador</small></div><button onClick={() => navigate("settings")}>Configuración</button><button onClick={onLogout}>Cerrar sesión</button></div>}</header>
-    <main className="content" id={page}>{page === "providers" ? <Catalog key="providers" area="providers" onOpenWizard={() => setOnboarding(true)} onOpenSecrets={() => { window.location.hash = `#/secrets?from=${encodeURIComponent(window.location.hash)}`; }}/> : page === "models" ? <Catalog key="models" area="models" onOpenWizard={() => setOnboarding(true)} onOpenSecrets={() => { window.location.hash = `#/secrets?from=${encodeURIComponent(window.location.hash)}`; }}/> : page === "routes" ? <Catalog key="routes" area="routes" onOpenWizard={() => setOnboarding(true)} onOpenSecrets={() => { window.location.hash = `#/secrets?from=${encodeURIComponent(window.location.hash)}`; }}/> : page === "secrets" ? <Secrets/> : page === "tokens" ? <AgentTokens/> : page === "activity" ? <Activity/> : page === "data" ? <Data overview={overview} unavailable={unavailable}/> : page === "settings" ? <Settings/> : <><h1>Hola, {session.admin.username}</h1><p className="lede">Una vista privada del estado y la actividad de esta instalación.</p>{unavailable && <div className="form-error" role="status">El resumen no está disponible. Tus rutas siguen funcionando de forma independiente.</div>}
+<main className="content" id={page}>{page === "providers" ? <Catalog key="providers" area="providers" onOpenWizard={() => setOnboarding(true)} onOpenSecrets={() => { window.location.hash = `#/secrets?from=${encodeURIComponent(window.location.hash)}`; }}/> : page === "models" ? <Catalog key="models" area="models" onOpenWizard={() => setOnboarding(true)} onOpenSecrets={() => { window.location.hash = `#/secrets?from=${encodeURIComponent(window.location.hash)}`; }}/> : page === "routes" ? <RoutesPage onOpenWizard={() => setOnboarding(true)}/> : page === "secrets" ? <Secrets/> : page === "tokens" ? <AgentTokens/> : page === "activity" ? <Activity/> : page === "data" ? <Data overview={overview} unavailable={unavailable}/> : page === "settings" ? <Settings/> : <><h1>Hola, {session.admin.username}</h1><p className="lede">Una vista privada del estado y la actividad de esta instalación.</p>{unavailable && <div className="form-error" role="status">El resumen no está disponible. Tus rutas siguen funcionando de forma independiente.</div>}
       <section className="metric-grid" aria-label="Estado de la instalación"><Metric label="Gateway" value={readiness ? (readiness.status === "ready" ? "Listo" : "Requiere atención") : "Sin verificar"} tone={readiness?.status}/><Metric label="Rutas" value={overview ? routes : "—"}/><Metric label="Opciones de ruta" value={overview ? overview.resourceCounts.Destination ?? 0 : "—"}/><Metric label="Solicitudes · 24 h" value={overview ? overview.requests24h.total : "—"}/><Metric label="Opciones en pausa" value={overview ? overview.activeCooldowns : "—"}/></section>
       {readiness?.status === "not_ready" && <ReadinessNotice readiness={readiness}/>} 
-      {overview && overview.recentRequests.length > 0 ? <Recent overview={overview}/> : <section className="empty-state"><span className="brand-mark large" aria-hidden="true"><i/><i/><i/></span><div><h2>{routes ? "Aún no hay solicitudes" : "Configura tu primer proveedor"}</h2><p>{routes ? "La actividad aparecerá aquí cuando un agente use el gateway." : "Puedes añadir recursos individualmente o usar el asistente para preparar una ruta completa."}</p></div>{routes === 0 && <button onClick={() => setOnboarding(true)}>Abrir asistente</button>}</section>}
-    </>}</main></div>{onboarding && <Onboarding onClose={() => setOnboarding(false)} onComplete={load}/>}</div>;
+      {overview && overview.recentRequests.length > 0 ? <Recent overview={overview}/> : <section className="empty-state"><span className="brand-mark large" aria-hidden="true"><i/><i/><i/></span><div><h2>{routes ? "Aún no hay solicitudes" : "Prepara tus proveedores"}</h2><p>{routes ? "La actividad aparecerá aquí cuando un agente use el gateway." : "Añade conexiones, claves y modelos desde Proveedores. El editor visual de rutas llegará después."}</p></div>{routes === 0 && <button onClick={() => navigate("providers")}>Ver proveedores</button>}</section>}
+    </>}</main></div>
+    {mobileMoreOpen && <div className="console-mobile-more" role="menu" aria-label="Más secciones">{mobileSecondary.map((id) => { const item = pages.find((entry) => entry.id === id)!; return <button key={id} type="button" role="menuitem" onClick={() => navigate(id)} aria-current={page === id ? "page" : undefined}><Icon name={item.icon}/><span>{item.label}</span></button>; })}</div>}
+    <nav className="console-mobile-nav" aria-label="Navegación móvil">{mobilePrimary.map((id) => { const item = pages.find((entry) => entry.id === id)!; const active = page === id || (page === "secrets" && id === "providers"); return <button key={id} type="button" className={active ? "active" : ""} onClick={() => navigate(id)} aria-current={active ? "page" : undefined}><Icon name={item.icon}/><span>{item.label}</span></button>; })}<button type="button" className={mobileMoreOpen || mobileSecondary.includes(page) ? "active" : ""} aria-expanded={mobileMoreOpen} aria-haspopup="menu" onClick={() => setMobileMoreOpen((open) => !open)}><Icon name="more"/><span>Más</span></button></nav>
+    {onboarding && <Onboarding onClose={() => setOnboarding(false)} onComplete={load}/>}</div>;
 }
 
 const outcomeLabels: Record<string, string> = { success: "Correcta", error: "Error", partial: "Parcial", cancelled: "Cancelada", indeterminate: "Indeterminada" };
+function RoutesPage({ onOpenWizard }: { onOpenWizard: () => void }) {
+  const isAdvanced = () => window.location.hash.split("?")[0] === "#/routes/advanced";
+  const [advanced, setAdvanced] = useState(isAdvanced);
+  useEffect(() => {
+    const sync = () => setAdvanced(isAdvanced());
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+  return advanced ? <Catalog key="routes-advanced" area="routes" onOpenWizard={onOpenWizard} onOpenSecrets={() => undefined}/> : <RoutesComingSoon/>;
+}
+function RoutesComingSoon() {
+  return <section className="routes-coming" aria-labelledby="routes-coming-title">
+    <p className="eyebrow">EDITOR VISUAL EN DISEÑO</p>
+    <h1 id="routes-coming-title">Rutas</h1>
+    <p className="lede">Estamos preparando un editor de flujos para crear y revisar fallbacks de forma visual.</p>
+    <div className="routes-coming-card"><div className="routes-coming-icon"><Icon name="routes"/></div><div>
+      <span className="routes-coming-tag">Próximamente</span>
+      <h2>Construye recorridos con claridad</h2>
+      <p>El futuro editor mostrará cada modelo, clave y paso de respaldo antes de publicar. Las rutas que ya existen siguen funcionando; esta pantalla no modifica su configuración.</p>
+    </div></div>
+    <details className="routes-legacy"><summary>Necesito editar una ruta existente</summary><p>Mientras terminamos el editor visual, la configuración técnica anterior sigue disponible para administradores que ya la conocen.</p><a href="#/routes/advanced">Abrir configuración técnica</a></details>
+  </section>;
+}
 function Recent({ overview }: { overview: Overview }) { return <section className="recent"><div><p className="step">ACTIVIDAD RECIENTE</p><h2>Últimas solicitudes</h2></div><ul>{overview.recentRequests.map((item) => <li key={item.id}><span><strong>{item.requestedAlias}</strong><small>{new Date(item.startedAt).toLocaleString()}</small></span><span className={`outcome ${item.outcome ?? "pending"}`}>{item.outcome ? (outcomeLabels[item.outcome] ?? "Otro resultado") : "En curso"}</span><span>{item.durationMs == null ? "—" : `${item.durationMs} ms`}</span></li>)}</ul></section>; }
 function Metric({ label, value, tone }: { label: string; value: string | number; tone?: Readiness["status"] }) { return <article className={`metric ${tone ?? ""}`}><span>{label}</span><strong>{value}</strong></article>; }
 function ReadinessNotice({ readiness }: { readiness: Readiness }) {
