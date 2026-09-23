@@ -53,6 +53,12 @@ Configuración
 
 El wireframe independiente muestra navegación, jerarquía, acciones y estados, no respuestas de backend. Los controles aún no implementados siguen siendo propuestas hasta completar su bloque.
 
+## Vista previa del bloque implementado
+
+Desde `web/`, ejecutar `npm run dev -- --host 127.0.0.1 --port 4173 --strictPort` y abrir `http://127.0.0.1:4173/preview.html`. Esta página carga el mismo componente y CSS de la web real, pero sustituye solo las respuestas administrativas por datos ficticios. Todas las escrituras simuladas responden con error; no se conecta a la VM ni contiene claves. El aviso visible identifica la simulación. `preview.html` y `preview-mock.js` son exclusivos del servidor de desarrollo y no entran en el paquete de producción de Vite.
+
+La preview permite revisar la base visual ya implementada, no equivale a que todas las pantallas estén terminadas ni reemplaza una prueba final en móvil/PWA real.
+
 ## Pendientes de implementación por bloques
 
 - Flujo único y recuperable de proveedor → conexión → clave → modelo → prueba.
