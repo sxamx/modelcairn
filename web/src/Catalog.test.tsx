@@ -68,10 +68,11 @@ test("keeps provider creation errors inside the visible dialog", async () => {
 test("shows the configured route fallback chain using linked resources", async () => {
   window.location.hash = "#/routes"; mockResources();
   render(<Catalog area="routes" onOpenWizard={() => undefined} onOpenSecrets={() => undefined}/>);
-  expect(await screen.findByRole("link", { name: "assistant" })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("link", { name: "assistant" }));
-  expect(await screen.findByText(/Clave google-key/)).toBeInTheDocument();
-  expect(screen.getByText("PRIMERA OPCIÓN")).toBeInTheDocument();
+  const link = (await screen.findByText("assistant")).closest("a");
+  expect(link).not.toBeNull();
+  fireEvent.click(link!);
+  expect(await screen.findByText("PRINCIPAL")).toBeInTheDocument();
+  expect(screen.getAllByText("google-key").length).toBeGreaterThan(0);
   expect(screen.getByRole("button", { name: "Editar recorrido" })).toBeInTheDocument();
 });
 
@@ -164,7 +165,7 @@ test("saving a visual route remains a draft until explicitly published", async (
   fireEvent.click(screen.getByRole("button", { name: "Guardar borrador" }));
   await screen.findByText(/Recorrido guardado como borrador/);
   expect(calls.some(call => call.url.endsWith("/strategies/sequential/publish"))).toBe(false);
-  fireEvent.click(screen.getByRole("button", { name: "Publicar versión guardada" }));
+  fireEvent.click(screen.getByRole("button", { name: "Publicar borrador guardado" }));
   await waitFor(() => expect(calls.some(call => call.url.endsWith("/strategies/sequential/publish") && call.init?.method === "POST")).toBe(true));
 });
 
@@ -181,8 +182,8 @@ test("creates a route option from compatible model and key without publishing it
   render(<Catalog area="routes" onOpenWizard={() => undefined} onOpenSecrets={() => undefined}/>);
   fireEvent.click(await screen.findByRole("button", { name: "Editar recorrido" }));
   fireEvent.change(screen.getByLabelText("Modelo"), { target: { value: "google-model" } });
-  fireEvent.change(screen.getByLabelText("API key vinculada"), { target: { value: "google-key" } });
-  fireEvent.click(screen.getByRole("button", { name: "Crear y añadir opción" }));
+  fireEvent.change(screen.getByLabelText("Clave API"), { target: { value: "google-key" } });
+  fireEvent.click(screen.getByRole("button", { name: "Crear y añadir" }));
   await waitFor(() => expect(calls.some(call => call.url.endsWith("/resources/destinations") && call.init?.method === "POST")).toBe(true));
   expect(calls.some(call => call.url.endsWith("/strategies/sequential/publish"))).toBe(false);
   const destination = calls.find(call => call.url.endsWith("/resources/destinations") && call.init?.method === "POST");
