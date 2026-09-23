@@ -71,9 +71,11 @@ test("shows the configured route fallback chain using linked resources", async (
   const link = (await screen.findByText("assistant")).closest("a");
   expect(link).not.toBeNull();
   fireEvent.click(link!);
-  expect(await screen.findByText("PRINCIPAL")).toBeInTheDocument();
-  expect(screen.getAllByText("google-key").length).toBeGreaterThan(0);
-  expect(screen.getByRole("button", { name: "Editar recorrido" })).toBeInTheDocument();
+  expect(await screen.findByText("DESTINO PRINCIPAL")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Editar en el lienzo" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Configurar google-model" }));
+  expect(await screen.findByRole("dialog")).toHaveTextContent("Salida de red");
+  expect(screen.getByRole("dialog")).toHaveTextContent("google-key");
 });
 
 test("model detail returns to the exact provider and tab that opened it", async () => {
@@ -156,36 +158,74 @@ test("saving a visual route remains a draft until explicitly published", async (
   vi.spyOn(globalThis, "confirm").mockReturnValue(true);
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     calls.push({ url: String(input), init });
-    if (init?.method) return new Response(JSON.stringify({ kind: "Strategy", metadata: { name: "sequential", resourceVersion: 2 }, spec: {} }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (String(input).endsWith("/config/plan")) return new Response(JSON.stringify({ planToken: "plan-token", changes: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (String(input).endsWith("/config/apply")) return new Response(JSON.stringify({ applied: true }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (String(input).endsWith("/strategies/sequential/publish")) return new Response(JSON.stringify({ kind: "Strategy", metadata: { name: "sequential", resourceVersion: 2 }, spec: {} }), { status: 200, headers: { "Content-Type": "application/json" } });
     const kind = /\/resources\/([^?]+)/.exec(String(input))?.[1] ?? "";
     return new Response(JSON.stringify({ items: resources[kind] ?? [], nextCursor: null }), { status: 200, headers: { "Content-Type": "application/json" } });
   });
   render(<Catalog area="routes" onOpenWizard={() => undefined} onOpenSecrets={() => undefined}/>);
-  fireEvent.click(await screen.findByRole("button", { name: "Editar recorrido" }));
-  fireEvent.click(screen.getByRole("button", { name: "Guardar borrador" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Editar en el lienzo" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Guardar borrador" })[0]);
   await screen.findByText(/Recorrido guardado como borrador/);
   expect(calls.some(call => call.url.endsWith("/strategies/sequential/publish"))).toBe(false);
   fireEvent.click(screen.getByRole("button", { name: "Publicar borrador guardado" }));
   await waitFor(() => expect(calls.some(call => call.url.endsWith("/strategies/sequential/publish") && call.init?.method === "POST")).toBe(true));
 });
 
-test("creates a route option from compatible model and key without publishing it", async () => {
+test("adds a compatible node locally, then saves it atomically as a draft", async () => {
   window.location.hash = "#/routes/assistant";
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   vi.stubGlobal("crypto", { randomUUID: () => "12345678-aaaa-4aaa-8aaa-aaaaaaaaaaaa" });
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     calls.push({ url: String(input), init });
-    if (init?.method === "POST") return new Response(JSON.stringify({ kind: "Destination", metadata: { name: "option-12345678" }, spec: {} }), { status: 201, headers: { "Content-Type": "application/json" } });
+    if (String(input).endsWith("/config/plan")) return new Response(JSON.stringify({ planToken: "draft-plan", changes: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (String(input).endsWith("/config/apply")) return new Response(JSON.stringify({ applied: true }), { status: 200, headers: { "Content-Type": "application/json" } });
     const kind = /\/resources\/([^?]+)/.exec(String(input))?.[1] ?? "";
     return new Response(JSON.stringify({ items: resources[kind] ?? [], nextCursor: null }), { status: 200, headers: { "Content-Type": "application/json" } });
   });
   render(<Catalog area="routes" onOpenWizard={() => undefined} onOpenSecrets={() => undefined}/>);
-  fireEvent.click(await screen.findByRole("button", { name: "Editar recorrido" }));
-  fireEvent.change(screen.getByLabelText("Modelo"), { target: { value: "google-model" } });
-  fireEvent.change(screen.getByLabelText("Clave API"), { target: { value: "google-key" } });
-  fireEvent.click(screen.getByRole("button", { name: "Crear y añadir" }));
-  await waitFor(() => expect(calls.some(call => call.url.endsWith("/resources/destinations") && call.init?.method === "POST")).toBe(true));
+  fireEvent.click(await screen.findByRole("button", { name: "Editar en el lienzo" }));
+  fireEvent.click(screen.getByRole("button", { name: "Añadir modelo google-model" }));
+  expect(screen.getByLabelText("Clave API")).toHaveValue("google-key");
+  expect(calls.some(call => call.url.endsWith("/config/apply"))).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: "Listo" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Guardar borrador" })[0]);
+  await waitFor(() => expect(calls.some(call => call.url.endsWith("/config/apply"))).toBe(true));
   expect(calls.some(call => call.url.endsWith("/strategies/sequential/publish"))).toBe(false);
-  const destination = calls.find(call => call.url.endsWith("/resources/destinations") && call.init?.method === "POST");
-  expect(JSON.parse(String(destination?.init?.body)).spec).toMatchObject({ modelRef: { name: "google-model" }, credentialRef: { name: "google-key" } });
+  const planned = calls.find(call => call.url.endsWith("/config/plan"));
+  expect(JSON.parse(String(planned?.init?.body)).resources).toEqual([
+    expect.objectContaining({ kind: "Destination", spec: expect.objectContaining({ modelRef: { name: "google-model" }, credentialRef: { name: "google-key" } }) }),
+    expect.objectContaining({ kind: "Strategy", spec: expect.objectContaining({ maxAttempts: 2 }) }),
+  ]);
+});
+
+test("uses the visual node order as the saved fallback order", async () => {
+  window.location.hash = "#/routes/assistant";
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const configured = {
+    ...resources,
+    destinations: [
+      ...resources.destinations,
+      { kind: "Destination", metadata: { name: "backup" }, spec: { modelRef: { name: "google-model" }, credentialRef: { name: "google-key" } } },
+    ],
+    strategies: [{ kind: "Strategy", metadata: { name: "sequential", resourceVersion: 1 }, spec: { destinations: [{ name: "primary" }, { name: "backup" }], maxAttempts: 2 } }],
+  };
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const url = String(input); calls.push({ url, init });
+    if (url.endsWith("/config/plan")) return new Response(JSON.stringify({ planToken: "reorder-plan", changes: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (url.endsWith("/config/apply")) return new Response(JSON.stringify({ applied: true }), { status: 200, headers: { "Content-Type": "application/json" } });
+    const kind = /\/resources\/([^?]+)/.exec(url)?.[1] ?? "";
+    return new Response(JSON.stringify({ items: (configured as Record<string, unknown[]>)[kind] ?? [], nextCursor: null }), { status: 200, headers: { "Content-Type": "application/json" } });
+  });
+  render(<Catalog area="routes" onOpenWizard={() => undefined} onOpenSecrets={() => undefined}/>);
+  fireEvent.click(await screen.findByRole("button", { name: "Editar en el lienzo" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Configurar google-model" })[1]);
+  fireEvent.click(screen.getByRole("button", { name: "↑ Subir" }));
+  fireEvent.click(screen.getByRole("button", { name: "Listo" }));
+  fireEvent.click(screen.getByRole("button", { name: "Guardar borrador" }));
+  await waitFor(() => expect(calls.some(call => call.url.endsWith("/config/plan"))).toBe(true));
+  const plan = calls.find(call => call.url.endsWith("/config/plan"));
+  expect(JSON.parse(String(plan?.init?.body)).resources[0].spec.destinations).toEqual([{ name: "backup" }, { name: "primary" }]);
+  expect(calls.some(call => call.url.endsWith("/strategies/sequential/publish"))).toBe(false);
 });

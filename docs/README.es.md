@@ -25,6 +25,9 @@
 
 ## Contratos ejecutables de la Fase 1
 
+El [editor interactivo de rutas](diseno/editor-rutas-interactivo-v1.es.md)
+vincula las acciones del lienzo al contrato actual de fallback secuencial.
+
 - [JSON Schema de configuración](contratos/config/modelcairn-config-v1alpha1.schema.json)
 - [Semántica de apply](contratos/config/semantica-apply-v1alpha1.es.md)
 - [Contrato de CLI offline](contratos/cli-v1.es.md)

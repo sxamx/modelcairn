@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api, APIError, Configuration, ConfigurationPlan, Resource } from "./api/client";
-import RouteFlow, { FlowStep } from "./RouteFlow";
+import RouteFlow, { FlowModel, FlowStep } from "./RouteFlow";
 
 type DraftStep = { id: string; model: string; credential: string };
 type Pending = { configuration: Configuration; plan: ConfigurationPlan };
@@ -25,17 +25,23 @@ const enabled = (item: Resource): boolean => spec(item).enabled !== false;
 export default function RouteComposer({ models, credentials, connections, accounts, providers, onCancel, onCreated }: Props) {
   const [suffix] = useState(() => crypto.randomUUID().slice(0, 12));
   const [alias, setAlias] = useState("");
-  const [steps, setSteps] = useState<DraftStep[]>([{ id: "first", model: "", credential: "" }]);
-  const [selected, setSelected] = useState("first");
+  const [steps, setSteps] = useState<DraftStep[]>([]);
+  const [selected, setSelected] = useState("");
+  const [modalId, setModalId] = useState<string | null>(null);
+  const [aliasOpen, setAliasOpen] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const modelProvider = (model: Resource): string => reference(spec(connections.find(row => name(row) === reference(spec(model).connectionRef)) ?? model).providerRef);
   const keyProvider = (key: Resource): string => reference(spec(accounts.find(row => name(row) === reference(spec(key).providerAccountRef)) ?? key).providerRef);
   const availableModels = models.filter(enabled);
-  const currentIndex = steps.findIndex(step => step.id === selected);
-  const current = steps[currentIndex] ?? steps[0];
-  const currentModel = models.find(row => name(row) === current.model);
+  const palette: FlowModel[] = availableModels.map(model => {
+    const provider = providers.find(row => name(row) === modelProvider(model));
+    return { id: name(model), label: label(model), provider: provider ? label(provider) : "Proveedor" };
+  });
+  const currentIndex = steps.findIndex(step => step.id === modalId);
+  const current = steps[currentIndex];
+  const currentModel = current && models.find(row => name(row) === current.model);
   const compatibleKeys = credentials.filter(key => enabled(key) && currentModel && keyProvider(key) === modelProvider(currentModel));
   const flow: FlowStep[] = steps.map(step => {
     const model = models.find(row => name(row) === step.model);
@@ -47,28 +53,37 @@ export default function RouteComposer({ models, credentials, connections, accoun
     setPending(null);
     setSteps(rows => rows.map(row => row.id === id ? { ...row, ...patch } : row));
   }
-  function move(direction: number) {
-    const next = currentIndex + direction;
-    if (currentIndex < 0 || next < 0 || next >= steps.length) return;
+  function addModel(modelName: string, index: number) {
+    if (steps.length >= 32) return;
+    const model = models.find(row => name(row) === modelName);
+    if (!model) return;
+    const keys = credentials.filter(key => enabled(key) && keyProvider(key) === modelProvider(model));
+    const next = { id: crypto.randomUUID(), model: modelName, credential: keys.length === 1 ? name(keys[0]) : "" };
+    setSteps(rows => { const copy = [...rows]; copy.splice(index, 0, next); return copy; });
+    setSelected(next.id);
+    setModalId(next.id);
     setPending(null);
+  }
+  function moveStep(id: string, index: number) {
     setSteps(rows => {
+      const from = rows.findIndex(row => row.id === id);
+      if (from < 0 || index === from || index === from + 1) return rows;
       const copy = [...rows];
-      [copy[currentIndex], copy[next]] = [copy[next], copy[currentIndex]];
+      const [item] = copy.splice(from, 1);
+      copy.splice(index > from ? index - 1 : index, 0, item);
       return copy;
     });
-  }
-  function addStep() {
-    if (steps.length >= 32) return;
-    const id = crypto.randomUUID();
-    setSteps(rows => [...rows, { id, model: "", credential: "" }]);
-    setSelected(id);
     setPending(null);
   }
-  function removeStep() {
-    if (steps.length < 2) return;
-    const next = steps.filter(row => row.id !== current.id);
-    setSteps(next);
-    setSelected(next[Math.max(0, currentIndex - 1)].id);
+  function moveCurrent(direction: number) {
+    if (!current || currentIndex + direction < 0 || currentIndex + direction >= steps.length) return;
+    moveStep(current.id, currentIndex + (direction > 0 ? 2 : -1));
+  }
+  function removeCurrent() {
+    if (!current) return;
+    setSteps(rows => rows.filter(row => row.id !== current.id));
+    setModalId(null);
+    setSelected("");
     setPending(null);
   }
   function configuration(): Configuration {
@@ -91,8 +106,9 @@ export default function RouteComposer({ models, credentials, connections, accoun
   }
   async function review() {
     setError("");
-    if (!/^[A-Za-z0-9._:/-]{1,128}$/.test(alias.trim())) { setError("El alias debe tener entre 1 y 128 caracteres: letras, números, punto, guion, barra, dos puntos o guion bajo."); return; }
-    if (steps.some(row => !row.model || !row.credential)) { setError("Completa el modelo y la clave de cada opción."); return; }
+    if (!/^[A-Za-z0-9._:/-]{1,128}$/.test(alias.trim())) { setError("Abre el nodo Entrada y define un alias válido antes de continuar."); setAliasOpen(true); return; }
+    if (!steps.length) { setError("Arrastra un modelo al recorrido o tócalo para añadir el destino principal."); return; }
+    if (steps.some(row => !row.model || !row.credential)) { setError("Abre cada destino y selecciona una clave API compatible."); return; }
     if (new Set(steps.map(row => row.model + ":" + row.credential)).size !== steps.length) { setError("No repitas la misma combinación de modelo y clave en esta ruta."); return; }
     const desired = configuration();
     setBusy(true);
@@ -118,20 +134,14 @@ export default function RouteComposer({ models, credentials, connections, accoun
   }
   return <div className="route-composer">
     <button type="button" className="route-back-button" onClick={onCancel}>← Volver a rutas</button>
-    <div className="route-page-head"><div><p className="eyebrow">NUEVA RUTA</p><h2 id="catalog-title">Crea un recorrido</h2><p>Tu aplicación usará un alias. ModelCairn probará cada destino en el orden que elijas.</p></div><span className="catalog-badge">Sin publicar</span></div>
-    <label className="route-alias-label">Alias para tus aplicaciones<input value={alias} onChange={event => { setAlias(event.target.value); setPending(null); }} placeholder="assistant" maxLength={128}/></label>
+    <div className="route-page-head"><div><p className="eyebrow">NUEVA RUTA</p><h2 id="catalog-title">Diseña el recorrido</h2><p>Arrastra modelos al lienzo. Toca un nodo para configurar su clave o prioridad.</p></div><span className="catalog-badge">Sin publicar</span></div>
     {!availableModels.length && <div className="notice">Añade primero un modelo y una API key en <a href="#/providers">Proveedores</a>.</div>}
-    <div className="route-workspace">
-      <section aria-label="Recorrido propuesto"><RouteFlow alias={alias} steps={flow} selected={selected} onSelect={setSelected}/><div className="route-canvas-actions"><button type="button" className="secondary" onClick={addStep} disabled={steps.length >= 32}>+ Añadir respaldo</button><span>{steps.length} {steps.length === 1 ? "destino" : "destinos"} en secuencia</span></div></section>
-      <section className="route-inspector" aria-label="Configurar destino"><h3>{currentIndex === 0 ? "Destino principal" : "Respaldo " + currentIndex}</h3><p>Elige un modelo y una clave del mismo proveedor. La salida de red ya está vinculada a esa clave.</p>
-        <label>Modelo<select value={current.model} onChange={event => changeStep(current.id, { model: event.target.value, credential: "" })}><option value="">Selecciona un modelo</option>{availableModels.map(item => <option key={name(item)} value={name(item)}>{label(item)}</option>)}</select></label>
-        <label>Clave API<select value={current.credential} disabled={!current.model} onChange={event => changeStep(current.id, { credential: event.target.value })}><option value="">Selecciona una clave</option>{compatibleKeys.map(item => <option key={name(item)} value={name(item)}>{label(item)}</option>)}</select></label>
-        {current.model && !compatibleKeys.length && <p>Este proveedor todavía no tiene una clave compatible vinculada.</p>}
-        <div className="route-inspector-actions"><button type="button" disabled={currentIndex === 0} onClick={() => move(-1)}>↑ Subir</button><button type="button" disabled={currentIndex === steps.length - 1} onClick={() => move(1)}>↓ Bajar</button><button type="button" disabled={steps.length === 1} onClick={removeStep}>Quitar</button></div>
-      </section>
-    </div>
+    <RouteFlow alias={alias} steps={flow} selected={selected} models={palette} onAddModel={addModel} onMoveStep={moveStep} sourceActionLabel="Editar alias ↗"
+      onSourceClick={() => setAliasOpen(true)} onSelect={id => { setSelected(id); setModalId(id); }}/>
     {error && <div className="form-error" role="alert">{error}</div>}
     {pending && <section className="route-review" aria-label="Revisión de la ruta"><h3>Lista para crear</h3><p>{alias} tendrá {steps.length} {steps.length === 1 ? "destino" : "destinos"}; se activará al confirmar. Se crearán {pending.plan.changes.length} recursos en una sola operación.</p><div className="route-review-actions"><button type="button" className="secondary" disabled={busy} onClick={() => setPending(null)}>Seguir editando</button><button type="button" disabled={busy} onClick={create}>{busy ? "Creando…" : "Crear y activar ruta"}</button></div></section>}
     {!pending && <div className="route-review-actions"><button type="button" className="secondary" onClick={onCancel}>Cancelar</button><button type="button" disabled={busy || !availableModels.length} onClick={review}>{busy ? "Validando…" : "Revisar ruta"}</button></div>}
+    {aliasOpen && <div className="route-node-dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setAliasOpen(false); }}><div className="route-node-dialog" role="dialog" aria-modal="true" aria-labelledby="route-alias-title"><div className="route-node-dialog-head"><div><small>ENTRADA</small><h2 id="route-alias-title">Alias de la ruta</h2></div><button type="button" aria-label="Cerrar" onClick={() => setAliasOpen(false)}>×</button></div><p>Es el nombre de modelo que usará tu aplicación al llamar al gateway.</p><label>Alias<input autoFocus value={alias} onChange={event => { setAlias(event.target.value); setPending(null); }} placeholder="assistant" maxLength={128}/></label><div className="route-node-dialog-actions"><button type="button" onClick={() => setAliasOpen(false)}>Listo</button></div></div></div>}
+    {current && <div className="route-node-dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setModalId(null); }}><div className="route-node-dialog" role="dialog" aria-modal="true" aria-labelledby="route-node-title"><div className="route-node-dialog-head"><div><small>{currentIndex === 0 ? "DESTINO PRINCIPAL" : "RESPALDO " + currentIndex}</small><h2 id="route-node-title">Configurar destino</h2></div><button type="button" aria-label="Cerrar" onClick={() => setModalId(null)}>×</button></div><p>El modelo y la clave deben pertenecer al mismo proveedor. El orden del lienzo define la prioridad.</p><label>Modelo<select value={current.model} onChange={event => changeStep(current.id, { model: event.target.value, credential: "" })}><option value="">Selecciona un modelo</option>{availableModels.map(item => <option key={name(item)} value={name(item)}>{label(item)}</option>)}</select></label><label>Clave API<select value={current.credential} disabled={!current.model} onChange={event => changeStep(current.id, { credential: event.target.value })}><option value="">Selecciona una clave</option>{compatibleKeys.map(item => <option key={name(item)} value={name(item)}>{label(item)}</option>)}</select></label>{current.model && !compatibleKeys.length && <p>Este proveedor todavía no tiene una clave compatible vinculada.</p>}<div className="route-node-dialog-actions"><button type="button" disabled={currentIndex === 0} onClick={() => moveCurrent(-1)}>↑ Subir</button><button type="button" disabled={currentIndex === steps.length - 1} onClick={() => moveCurrent(1)}>↓ Bajar</button><button type="button" className="danger" onClick={removeCurrent}>Quitar</button><button type="button" onClick={() => setModalId(null)}>Listo</button></div></div></div>}
   </div>;
 }

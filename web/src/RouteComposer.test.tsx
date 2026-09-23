@@ -26,7 +26,12 @@ const credentials = [
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 test("plans a compatible fallback route before creating it atomically", async () => {
-  vi.stubGlobal("crypto", { randomUUID: () => "12345678-aaaa-4aaa-8aaa-aaaaaaaaaaaa" });
+  let uuid = 0;
+  vi.stubGlobal("crypto", { randomUUID: () => [
+    "12345678-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "11111111-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "22222222-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  ][uuid++] });
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     calls.push({ url: String(input), init });
@@ -37,14 +42,17 @@ test("plans a compatible fallback route before creating it atomically", async ()
   });
   const created = vi.fn();
   render(<RouteComposer models={models} credentials={credentials} connections={connections} accounts={accounts} providers={providers} onCancel={() => undefined} onCreated={created}/>);
-  fireEvent.change(screen.getByLabelText("Alias para tus aplicaciones"), { target: { value: "assistant" } });
-  fireEvent.change(screen.getByLabelText("Modelo"), { target: { value: "gemini" } });
+  fireEvent.click(screen.getByRole("button", { name: /Define un alias/ }));
+  fireEvent.change(screen.getByLabelText("Alias"), { target: { value: "assistant" } });
+  fireEvent.click(screen.getByRole("button", { name: "Listo" }));
+  fireEvent.click(screen.getByRole("button", { name: "Añadir modelo gemini" }));
   expect(within(screen.getByLabelText("Clave API")).queryByRole("option", { name: "openrouter-key" })).toBeNull();
-  fireEvent.change(screen.getByLabelText("Clave API"), { target: { value: "google-key" } });
-  fireEvent.click(screen.getByRole("button", { name: "+ Añadir respaldo" }));
-  fireEvent.change(screen.getByLabelText("Modelo"), { target: { value: "oss" } });
+  expect(screen.getByLabelText("Clave API")).toHaveValue("google-key");
+  fireEvent.click(screen.getByRole("button", { name: "Listo" }));
+  fireEvent.click(screen.getByRole("button", { name: "Añadir modelo oss" }));
   expect(within(screen.getByLabelText("Clave API")).queryByRole("option", { name: "google-key" })).toBeNull();
-  fireEvent.change(screen.getByLabelText("Clave API"), { target: { value: "openrouter-key" } });
+  expect(screen.getByLabelText("Clave API")).toHaveValue("openrouter-key");
+  fireEvent.click(screen.getByRole("button", { name: "Listo" }));
   fireEvent.click(screen.getByRole("button", { name: "Revisar ruta" }));
   await screen.findByRole("region", { name: "Revisión de la ruta" });
   expect(calls).toHaveLength(1);

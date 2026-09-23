@@ -25,6 +25,9 @@
 
 ## Phase 1 executable contracts
 
+The current [interactive route editor](diseno/editor-rutas-interactivo-v1.md)
+maps canvas actions to the existing sequential fallback contract.
+
 - [Configuration JSON Schema](contratos/config/modelcairn-config-v1alpha1.schema.json)
 - [Apply semantics](contratos/config/semantica-apply-v1alpha1.md)
 - [Offline CLI contract](contratos/cli-v1.md)
