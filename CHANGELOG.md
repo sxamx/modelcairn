@@ -15,9 +15,9 @@ and this project intends to follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Visual route editor in the web console: ordered primary/fallback destinations,
-  provider-compatible API keys, review before an atomic create, and draft
-  editing with explicit publication for existing routes.
+- Interactive route canvas in the web console: drag/tap models to add destinations,
+  drag to reorder fallback priority, edit nodes in dialogs, review before atomic
+  creation, and explicitly publish saved drafts for existing routes.
 - Lightweight self-hosted gateway with OpenAI Chat Completions compatibility.
 - Bounded sequential fallback for normal and SSE requests.
 - Encrypted provider credentials and revocable/rotatable agent tokens.

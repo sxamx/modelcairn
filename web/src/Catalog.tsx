@@ -1,10 +1,10 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { api, APIError, OperationalMetrics, Resource } from "./api/client";
+import { api, APIError, Configuration, OperationalMetrics, Resource } from "./api/client";
 import Resources, { ResourceArea } from "./Resources";
 import ProviderConnectionForm from "./ProviderConnectionForm";
 import ProviderKeyLink from "./ProviderKeyLink";
 import RouteComposer from "./RouteComposer";
-import RouteFlow, { FlowStep } from "./RouteFlow";
+import RouteFlow, { FlowModel, FlowStep } from "./RouteFlow";
 
 type Area = Exclude<ResourceArea, "all">;
 type Kind = "providers" | "provider-accounts" | "provider-connections" | "credentials" | "egresses" | "models" | "destinations" | "strategies" | "routes";
@@ -225,51 +225,132 @@ function ModelDetail({ id, data, providerForModel, destinationsFor, from, onSave
 }
 
 function RouteDetail({ id, data, stepsFor, onSaved }: { id: string; data: CatalogData; stepsFor: (route: Resource) => Resource[]; onSaved: () => Promise<void> }) {
+  type DraftDestination = { model: string; credential: string };
   const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
-  const [activeStep, setActiveStep] = useState("");
-  const [candidate, setCandidate] = useState("");
-  const [newModel, setNewModel] = useState("");
-  const [newKey, setNewKey] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, DraftDestination>>({});
+  const [dialogId, setDialogId] = useState<string | null>(null);
+  const [sourceOpen, setSourceOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [metrics, setMetrics] = useState<OperationalMetrics | null>(null);
+  useEffect(() => {
+    let active = true;
+    api.metrics().then(value => { if (!Array.isArray(value.models)) throw new Error("invalid_metrics"); if (active) setMetrics(value); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [id]);
   const route = find(data.routes, id);
   if (!route) return <><a className="catalog-back" href={url("routes")}>← Rutas</a><Empty title="Ruta no encontrada" message="Puede haber sido eliminada desde otra sesión."/></>;
   const strategy = find(data.strategies, ref(spec(route).strategyRef));
-  const steps = stepsFor(route);
-  const description = (destination: Resource) => {
-    const model = find(data.models, ref(spec(destination).modelRef));
-    const key = find(data.credentials, ref(spec(destination).credentialRef));
-    const connection = find(data["provider-connections"], ref(spec(model ?? destination).connectionRef));
-    const provider = find(data.providers, ref(spec(connection ?? destination).providerRef));
-    const egress = find(data.egresses, ref(spec(key ?? destination).egressRef));
-    return { model: model ? display(model) : ref(spec(destination).modelRef) || name(destination), key: key ? display(key) : ref(spec(destination).credentialRef) || "sin clave", provider: provider ? display(provider) : "Proveedor sin identificar", egress: egress ? display(egress) : "Sin identificar" };
-  };
-  const available = data.destinations.filter(item => !selected.includes(name(item)));
+  const original = stepsFor(route);
+  const ids = editing ? selected : original.map(name);
+  const alias = text(spec(route).modelAlias) || display(route);
   const providerOfModel = (model: Resource) => ref(spec(find(data["provider-connections"], ref(spec(model).connectionRef)) ?? model).providerRef);
   const providerOfKey = (key: Resource) => ref(spec(find(data["provider-accounts"], ref(spec(key).providerAccountRef)) ?? key).providerRef);
-  const compatibleKeys = data.credentials.filter(key => newModel && providerOfKey(key) === providerOfModel(find(data.models, newModel) ?? key));
-  function beginEdit() { setSelected(steps.map(name)); setActiveStep(steps[0] ? name(steps[0]) : ""); setCandidate(""); setMessage(""); setEditing(true); }
-  function move(index: number, direction: number) { setSelected(current => { const copy = [...current]; [copy[index], copy[index + direction]] = [copy[index + direction], copy[index]]; return copy; }); }
-  async function createOption() {
-    if (!newModel || !newKey || selected.length >= 32) return;
-    const optionName = `option-${crypto.randomUUID().slice(0, 8)}`;
-    setBusy(true); setMessage("");
-    try {
-      await api.createResource("destinations", { kind: "Destination", state: "present", metadata: { name: optionName }, spec: { modelRef: { name: newModel }, credentialRef: { name: newKey }, weight: 100, enabled: true } } as Resource);
-      setSelected(current => [...current, optionName]); setActiveStep(optionName); setNewModel(""); setNewKey("");
-      await onSaved();
-      setMessage("Opción creada y añadida al borrador. Guarda el recorrido y luego publícalo para activarla.");
-    } catch { setMessage("No se pudo crear la opción. Comprueba que modelo y clave pertenezcan al mismo proveedor."); }
-    finally { setBusy(false); }
+  const info = (destinationId: string) => {
+    const destination = find(data.destinations, destinationId);
+    const modelId = drafts[destinationId]?.model ?? ref(spec(destination ?? route).modelRef);
+    const keyId = drafts[destinationId]?.credential ?? ref(spec(destination ?? route).credentialRef);
+    const model = find(data.models, modelId);
+    const key = find(data.credentials, keyId);
+    const provider = model && find(data.providers, providerOfModel(model));
+    const egress = key && find(data.egresses, ref(spec(key).egressRef));
+    return {
+      modelId, keyId, model: model ? display(model) : modelId || "Modelo pendiente",
+      key: key ? display(key) : keyId || "Clave pendiente",
+      provider: provider ? display(provider) : "Proveedor pendiente",
+      egress: egress ? display(egress) : "Salida sin identificar",
+    };
+  };
+  const palette: FlowModel[] = data.models.filter(enabled).map(model => {
+    const provider = find(data.providers, providerOfModel(model));
+    return { id: name(model), label: display(model), provider: provider ? display(provider) : "Proveedor" };
+  });
+  const flow: FlowStep[] = ids.map(destinationId => {
+    const item = info(destinationId);
+    return { id: destinationId, provider: item.provider, model: item.model, credential: item.key };
+  });
+  const focusIndex = dialogId ? ids.indexOf(dialogId) : -1;
+  const focus = focusIndex >= 0 ? info(ids[focusIndex]) : null;
+  const compatibleKeys = data.credentials.filter(key => enabled(key) && focus?.modelId && providerOfKey(key) === providerOfModel(find(data.models, focus.modelId) ?? key));
+  const observed = focus ? metrics?.models.find(item => item.name === focus.modelId) : undefined;
+  function beginEdit(focusId?: string) {
+    setSelected(original.map(name));
+    setDrafts({});
+    setMessage("");
+    setEditing(true);
+    setDialogId(focusId ?? null);
+  }
+  function addModel(modelId: string, index: number) {
+    if (ids.length >= 32) return;
+    const model = find(data.models, modelId);
+    if (!model) return;
+    const keys = data.credentials.filter(key => enabled(key) && providerOfKey(key) === providerOfModel(model));
+    const destinationId = "option-" + crypto.randomUUID().slice(0, 12);
+    setDrafts(current => ({ ...current, [destinationId]: { model: modelId, credential: keys.length === 1 ? name(keys[0]) : "" } }));
+    setSelected(current => { const copy = [...current]; copy.splice(index, 0, destinationId); return copy; });
+    setDialogId(destinationId);
+    setMessage("");
+  }
+  function moveStep(destinationId: string, index: number) {
+    setSelected(current => {
+      const from = current.indexOf(destinationId);
+      if (from < 0 || from === index || from + 1 === index) return current;
+      const copy = [...current];
+      const [item] = copy.splice(from, 1);
+      copy.splice(index > from ? index - 1 : index, 0, item);
+      return copy;
+    });
+    setMessage("");
+  }
+  function changeNode(destinationId: string, patch: Partial<DraftDestination>) {
+    if (drafts[destinationId]) {
+      setDrafts(current => ({ ...current, [destinationId]: { ...current[destinationId], ...patch } }));
+      return;
+    }
+    const prior = info(destinationId);
+    const replacementId = "option-" + crypto.randomUUID().slice(0, 12);
+    setDrafts(current => ({ ...current, [replacementId]: { model: prior.modelId, credential: prior.keyId, ...patch } }));
+    setSelected(current => current.map(item => item === destinationId ? replacementId : item));
+    setDialogId(replacementId);
+  }
+  function moveFocus(direction: number) {
+    if (!dialogId || focusIndex + direction < 0 || focusIndex + direction >= ids.length) return;
+    moveStep(dialogId, focusIndex + (direction > 0 ? 2 : -1));
+  }
+  function removeFocus() {
+    if (!dialogId || ids.length < 2) return;
+    setSelected(current => current.filter(item => item !== dialogId));
+    setDialogId(null);
+    setMessage("");
   }
   async function save() {
     if (!strategy || !selected.length) return;
+    const entries = selected.map(info);
+    if (entries.some(item => !item.modelId || !item.keyId)) { setMessage("Completa el modelo y la clave de cada destino."); return; }
+    if (entries.some(item => {
+      const model = find(data.models, item.modelId);
+      const key = find(data.credentials, item.keyId);
+      return !model || !key || providerOfModel(model) !== providerOfKey(key);
+    })) { setMessage("Modelo y clave deben pertenecer al mismo proveedor."); return; }
+    const refName = (value: string) => ({ name: value });
+    const resources: object[] = selected.filter(value => drafts[value]).map(value => ({
+      kind: "Destination", state: "present", metadata: { name: value },
+      spec: { modelRef: refName(drafts[value].model), credentialRef: refName(drafts[value].credential), enabled: true, weight: 100 },
+    }));
+    resources.push({
+      kind: "Strategy", state: "present", metadata: { name: name(strategy), displayName: object(strategy.metadata).displayName, description: object(strategy.metadata).description },
+      spec: { ...spec(strategy), destinations: selected.map(refName), maxAttempts: selected.length },
+    });
+    const desired = { apiVersion: "modelcairn.io/v1alpha1", kind: "Configuration", resources } as Configuration;
     setBusy(true); setMessage("");
     try {
-      await api.updateResource("strategies", name(strategy), Number(object(strategy.metadata).resourceVersion), { kind: "Strategy", state: "present", metadata: { name: name(strategy), displayName: object(strategy.metadata).displayName, description: object(strategy.metadata).description }, spec: { ...spec(strategy), destinations: selected.map(value => ({ name: value })), maxAttempts: selected.length } } as Resource);
-      await onSaved(); setEditing(false); setMessage("Recorrido guardado como borrador. Pulsa Publicar para activarlo.");
-    } catch { setMessage("No se pudo guardar el recorrido. Comprueba si cambió en otra sesión."); }
+      const plan = await api.planConfiguration(desired);
+      await api.applyConfiguration(desired, plan.planToken);
+      await onSaved();
+      setEditing(false); setDialogId(null); setDrafts({}); setSelected([]);
+      setMessage("Recorrido guardado como borrador. Publícalo para cambiar el tráfico.");
+    } catch { setMessage("No se pudo guardar el borrador. Comprueba si cambió en otra sesión."); }
     finally { setBusy(false); }
   }
   async function publish() {
@@ -279,29 +360,14 @@ function RouteDetail({ id, data, stepsFor, onSaved }: { id: string; data: Catalo
     catch { setMessage("No se pudo publicar. Actualiza la página y vuelve a intentarlo."); }
     finally { setBusy(false); }
   }
-  const shown = editing ? selected.map(value => find(data.destinations, value)).filter((item): item is Resource => Boolean(item)) : steps;
-  const active = shown.find(item => name(item) === activeStep) ?? shown[0];
-  const activeIndex = active ? shown.findIndex(item => name(item) === name(active)) : -1;
-  const detail = active ? description(active) : null;
-  const flow: FlowStep[] = shown.map(item => {
-    const info = description(item);
-    return { id: name(item), provider: info.provider, model: info.model, credential: info.key };
-  });
-  const alias = text(spec(route).modelAlias) || display(route);
   return <>
     <a className="catalog-back" href={url("routes")}>← Rutas</a>
-    <div className="route-page-head"><div><p className="eyebrow">RECORRIDO DE RESPALDO</p><h1 id="catalog-title">Ruta {alias}</h1><p>ModelCairn prueba los destinos en orden. El tráfico usa la última versión publicada.</p></div><span className={enabled(route) ? "catalog-badge ready" : "catalog-badge"}>{enabled(route) ? "Habilitada" : "Deshabilitada"}</span></div>
-    <div className="catalog-route-toolbar"><strong>{shown.length === 1 ? "Un destino" : shown.length + " destinos en secuencia"}</strong><div>{strategy && !editing && <button type="button" className="secondary" onClick={beginEdit}>Editar recorrido</button>}{strategy && !editing && <button type="button" onClick={publish} disabled={busy}>Publicar borrador guardado</button>}{editing && <button type="button" className="secondary" onClick={() => setEditing(false)} disabled={busy}>Cancelar</button>}{editing && <button type="button" onClick={save} disabled={busy || !selected.length}>{busy ? "Guardando…" : "Guardar borrador"}</button>}</div></div>
-    {message && <div className={message.startsWith("No se") ? "form-error" : "notice"} role="status">{message}</div>}
-    <div className="route-workspace">
-      <section aria-label="Recorrido"><RouteFlow alias={alias} steps={flow} selected={active ? name(active) : ""} onSelect={setActiveStep}/>{editing && <div className="route-canvas-actions"><span>Los cambios se activan después de guardar y publicar.</span></div>}</section>
-      <section className="route-inspector" aria-label="Detalles del destino">
-        <h3>{activeIndex < 1 ? "Destino principal" : "Respaldo " + activeIndex}</h3>
-        {detail ? <><p>Selecciona otra tarjeta del recorrido para ver su configuración.</p><dl><div><dt>Proveedor</dt><dd>{detail.provider}</dd></div><div><dt>Modelo</dt><dd>{detail.model}</dd></div><div><dt>Clave API</dt><dd>{detail.key}</dd></div><div><dt>Salida de red</dt><dd>{detail.egress}</dd></div></dl></> : <p>Esta ruta no tiene destinos configurados.</p>}
-        {editing && active && <div className="route-inspector-actions"><button type="button" disabled={activeIndex === 0} onClick={() => move(activeIndex, -1)}>↑ Subir</button><button type="button" disabled={activeIndex === selected.length - 1} onClick={() => move(activeIndex, 1)}>↓ Bajar</button><button type="button" disabled={selected.length === 1} onClick={() => { setSelected(current => current.filter(value => value !== name(active))); setActiveStep(""); }}>Quitar</button></div>}
-        {editing && <div className="route-add-panel"><h3>Añadir respaldo</h3><label>Modelo<select value={newModel} onChange={event => { setNewModel(event.target.value); setNewKey(""); }}><option value="">Selecciona un modelo</option>{data.models.filter(enabled).map(item => <option key={name(item)} value={name(item)}>{display(item)}</option>)}</select></label><label>Clave API<select value={newKey} onChange={event => setNewKey(event.target.value)} disabled={!newModel}><option value="">Selecciona una clave compatible</option>{compatibleKeys.filter(enabled).map(item => <option key={name(item)} value={name(item)}>{display(item)}</option>)}</select></label>{newModel && !compatibleKeys.length && <p>Vincula una clave a este proveedor antes de añadirlo.</p>}<button type="button" disabled={busy || !newModel || !newKey || selected.length >= 32} onClick={createOption}>Crear y añadir</button><label>Opción ya configurada<select value={candidate} onChange={event => setCandidate(event.target.value)}><option value="">Selecciona otra opción</option>{available.map(item => <option key={name(item)} value={name(item)}>{description(item).model} · {description(item).key}</option>)}</select></label><button type="button" className="secondary" disabled={!candidate} onClick={() => { setSelected(current => [...current, candidate]); setActiveStep(candidate); setCandidate(""); }}>Añadir existente</button></div>}
-      </section>
-    </div>
-    <div className="catalog-info-grid catalog-followup"><article><h3>Intentos máximos del borrador</h3><p>{typeof spec(strategy ?? route).maxAttempts === "number" ? String(spec(strategy ?? route).maxAttempts) : "No especificados"}</p></article><article><h3>Acceso de aplicaciones</h3><p>Para usar el alias, una aplicación necesita un token autorizado para esta ruta. <a href="#/tokens">Ver aplicaciones</a>.</p></article></div>
+    <div className="route-page-head"><div><p className="eyebrow">RECORRIDO DE RESPALDO</p><h1 id="catalog-title">Ruta {alias}</h1><p>{editing ? "Arrastra para cambiar la prioridad. Guarda el borrador y publícalo cuando esté listo." : "Toca un destino para ver sus datos. El tráfico usa la última versión publicada."}</p></div><span className={enabled(route) ? "catalog-badge ready" : "catalog-badge"}>{enabled(route) ? "Habilitada" : "Deshabilitada"}</span></div>
+    <div className="catalog-route-toolbar"><strong>{ids.length === 1 ? "Un destino" : ids.length + " destinos en secuencia"}</strong><div>{strategy && !editing && <button type="button" className="secondary" onClick={() => beginEdit()}>Editar en el lienzo</button>}{strategy && !editing && <button type="button" onClick={publish} disabled={busy}>Publicar borrador guardado</button>}{editing && <button type="button" className="secondary" onClick={() => { setEditing(false); setDialogId(null); setDrafts({}); }} disabled={busy}>Descartar cambios</button>}{editing && <button type="button" onClick={save} disabled={busy || !selected.length}>{busy ? "Guardando…" : "Guardar borrador"}</button>}</div></div>
+    {message && <div className={message.startsWith("No se") || message.startsWith("Completa") || message.startsWith("Modelo y") ? "form-error" : "notice"} role="status">{message}</div>}
+    <RouteFlow alias={alias} steps={flow} selected={dialogId ?? ""} onSelect={setDialogId} onSourceClick={() => setSourceOpen(true)}
+      models={editing ? palette : undefined} onAddModel={editing ? addModel : undefined} onMoveStep={editing ? moveStep : undefined}/>
+    {sourceOpen && <div className="route-node-dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setSourceOpen(false); }}><div className="route-node-dialog" role="dialog" aria-modal="true" aria-labelledby="route-source-title"><div className="route-node-dialog-head"><div><small>ENTRADA</small><h2 id="route-source-title">{alias}</h2></div><button type="button" aria-label="Cerrar" onClick={() => setSourceOpen(false)}>×</button></div><p>Este alias es el nombre de modelo que envían las aplicaciones al gateway. Cambiarlo afecta a sus clientes; por ahora se edita desde Opciones avanzadas.</p><div className="route-node-dialog-actions"><button type="button" onClick={() => setSourceOpen(false)}>Cerrar</button></div></div></div>}
+    {focus && <div className="route-node-dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setDialogId(null); }}><div className="route-node-dialog" role="dialog" aria-modal="true" aria-labelledby="route-detail-node-title"><div className="route-node-dialog-head"><div><small>{focusIndex === 0 ? "DESTINO PRINCIPAL" : "RESPALDO " + focusIndex}</small><h2 id="route-detail-node-title">{focus.model}</h2></div><button type="button" aria-label="Cerrar" onClick={() => setDialogId(null)}>×</button></div>{editing ? <><p>Editar aquí crea un destino nuevo en el borrador; el publicado no cambia hasta que guardes y publiques.</p><label>Modelo<select value={focus.modelId} onChange={event => changeNode(ids[focusIndex], { model: event.target.value, credential: "" })}><option value="">Selecciona un modelo</option>{data.models.filter(enabled).map(item => <option key={name(item)} value={name(item)}>{display(item)}</option>)}</select></label><label>Clave API<select value={focus.keyId} onChange={event => changeNode(ids[focusIndex], { credential: event.target.value })} disabled={!focus.modelId}><option value="">Selecciona una clave</option>{compatibleKeys.map(item => <option key={name(item)} value={name(item)}>{display(item)}</option>)}</select></label>{focus.modelId && !compatibleKeys.length && <p>No hay una clave compatible para este proveedor.</p>}<div className="route-node-dialog-actions"><button type="button" disabled={focusIndex === 0} onClick={() => moveFocus(-1)}>↑ Subir</button><button type="button" disabled={focusIndex === ids.length - 1} onClick={() => moveFocus(1)}>↓ Bajar</button><button type="button" className="danger" disabled={ids.length < 2} onClick={removeFocus}>Quitar</button><button type="button" onClick={() => setDialogId(null)}>Listo</button></div></> : <><dl><div><dt>Proveedor</dt><dd>{focus.provider}</dd></div><div><dt>Modelo</dt><dd>{focus.model}</dd></div><div><dt>Clave API</dt><dd>{focus.key}</dd></div><div><dt>Salida de red</dt><dd>{focus.egress}</dd></div></dl>{observed && <div className="route-node-observed"><strong>Uso observado del modelo</strong><span>No es exclusivo de esta ruta.</span><div><span>{observed.requests.toLocaleString("es")} solicitudes</span><span>{observed.avgLatencyMillis == null ? "Latencia sin datos" : Math.round(observed.avgLatencyMillis) + " ms de latencia media"}</span><span>{observed.outputTokensPerSecond == null ? "Velocidad sin datos" : observed.outputTokensPerSecond.toLocaleString("es", { maximumFractionDigits: 1 }) + " tokens/s"}</span></div></div>}<div className="route-node-dialog-actions"><button type="button" onClick={() => beginEdit(ids[focusIndex])}>Editar este destino</button><button type="button" onClick={() => setDialogId(null)}>Cerrar</button></div></>}</div></div>}
   </>;
 }
