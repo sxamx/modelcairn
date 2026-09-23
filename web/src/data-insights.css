@@ -1,6 +1,7 @@
 .data-insights { color:var(--mc-ink); }
 .data-title-row,.data-panel-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; flex-wrap:wrap; }
-.data-title-row .lede { margin-bottom:24px; }
+.data-title-row { margin-bottom:24px; }
+.data-title-row .lede { margin-bottom:0; }
 .data-demo-toggle { min-height:38px; padding:8px 14px; font-weight:600; cursor:pointer; }
 .data-demo-banner { display:flex; gap:12px; flex-wrap:wrap; padding:12px 16px; margin-bottom:16px; border:1px solid var(--mc-accent); border-radius:10px; background:var(--mc-accent-soft); color:var(--mc-accent); }
 .data-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:14px; }

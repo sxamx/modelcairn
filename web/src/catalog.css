@@ -2,7 +2,8 @@
 .catalog-heading,.catalog-detail-head,.catalog-section-head {
   display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
 }
-.catalog-heading .lede { margin-bottom:22px; }
+.catalog-heading { margin-bottom:24px; }
+.catalog-heading .lede { margin-bottom:0; }
 .catalog-heading-actions { align-self:flex-start; }
 .catalog-heading-actions button,
 .catalog-dialog-actions button:not(.secondary) {
