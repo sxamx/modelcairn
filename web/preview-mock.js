@@ -1,6 +1,8 @@
 /* Fixture exclusively for preview.html. Vite's production build uses index.html, not this file. */
 (() => {
   if (!['localhost', '127.0.0.1'].includes(window.location.hostname)) throw new Error('La vista previa solo funciona en este equipo.');
+  const requestedTheme = new URLSearchParams(window.location.search).get('theme');
+  if (requestedTheme === 'light' || requestedTheme === 'dark') localStorage.setItem('modelcairn-theme', requestedTheme);
   const nativeFetch = window.fetch.bind(window);
   const now = new Date();
   const iso = offset => new Date(now.getTime() - offset * 60000).toISOString();

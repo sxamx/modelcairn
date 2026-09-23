@@ -99,6 +99,9 @@
 .console-redesign .console-wrap { min-height:100vh; background:var(--mc-bg); }
 .console-redesign .content h1 { font-size:30px; color:var(--mc-ink); }
 .console-redesign .content h2 { color:var(--mc-ink); }
+.console-redesign .content h1,
+.console-redesign .content h2,
+.console-redesign .content h3 { font-family:inherit; letter-spacing:-.02em; }
 .console-redesign .content .lede { margin:8px 0 24px; color:var(--mc-muted); font-size:15px; line-height:1.5; }
 .console-redesign .metric-grid { margin-top:22px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
 .console-redesign .metric,
@@ -114,8 +117,21 @@
 .console-redesign .metric strong { font-size:26px; }
 .console-redesign .metric.ready strong { color:var(--mc-success); }
 .console-redesign .metric.not_ready strong { color:var(--mc-danger); }
+.console-redesign .routes-coming { max-width:880px; }
+.console-redesign .routes-coming-card { display:flex; align-items:flex-start; gap:20px; margin-top:28px; padding:28px; background:var(--mc-surface); border:1px solid var(--mc-line); border-radius:var(--mc-radius-card); box-shadow:var(--mc-shadow-card); }
+.console-redesign .routes-coming-icon { width:48px; height:48px; flex:none; display:grid; place-items:center; border-radius:12px; color:var(--mc-accent); background:var(--mc-accent-soft); }
+.console-redesign .routes-coming-icon .console-icon { width:24px; height:24px; }
+.console-redesign .routes-coming-tag { display:inline-flex; align-items:center; min-height:28px; padding:4px 10px; border-radius:99px; background:var(--mc-info-soft); color:var(--mc-info); font-size:13px; font-weight:700; }
+.console-redesign .routes-coming-card h2 { margin:14px 0 8px; font-size:20px; line-height:1.25; }
+.console-redesign .routes-coming-card p { max-width:65ch; margin:0; color:var(--mc-muted); font-size:15px; line-height:1.55; }
+.console-redesign .routes-legacy { margin-top:20px; color:var(--mc-muted); font-size:14px; line-height:1.5; }
+.console-redesign .routes-legacy summary { width:max-content; max-width:100%; color:var(--mc-accent); font-weight:600; cursor:pointer; }
+.console-redesign .routes-legacy p { max-width:64ch; margin:10px 0 6px; }
+.console-redesign .routes-legacy a { color:var(--mc-accent); font-weight:600; text-underline-offset:3px; }
 .console-redesign .recent { padding:18px; }
 .console-redesign .recent li { border-color:var(--mc-line); }
+.console-redesign .token-list h2 { font-family:inherit; font-size:16px; font-weight:600; line-height:1.35; letter-spacing:0; }
+.console-redesign .token-list p { font-size:14px; line-height:1.45; }
 .console-redesign .outcome { background:var(--mc-surface-alt); color:var(--mc-muted); }
 .console-redesign .outcome.success { background:var(--mc-success-soft); color:var(--mc-success); }
 .console-redesign .outcome.error { background:var(--mc-danger-soft); color:var(--mc-danger); }
@@ -204,6 +220,14 @@
   box-shadow:none; white-space:pre-wrap; overflow-wrap:anywhere;
 }
 .console-redesign .activity-header { background:var(--mc-surface-alt); color:var(--mc-muted); }
+.console-redesign .activity-filters label { gap:6px; font-size:13px; line-height:1.25; }
+.console-redesign .activity-filters input,
+.console-redesign .activity-filters select,
+.console-redesign .activity-filters button { height:42px; min-height:42px; box-sizing:border-box; }
+.console-redesign .activity-filters input,
+.console-redesign .activity-filters select { padding:8px 11px; }
+.console-redesign .activity-filters button { padding:8px 14px; align-self:end; line-height:1.2; }
+.console-redesign .request-row > .outcome { justify-self:start; display:inline-flex; align-items:center; width:auto; max-width:100%; white-space:nowrap; }
 .console-redesign .request-row { background:var(--mc-surface); color:var(--mc-ink); border-color:var(--mc-line); }
 .console-redesign .request-row:hover { background:var(--mc-surface-alt); }
 .console-redesign .attempts { background:var(--mc-surface-alt); }
@@ -273,6 +297,7 @@
   .console-redesign .console-profile-menu { right:16px; }
   .console-redesign .content { padding:24px 16px calc(100px + env(safe-area-inset-bottom,0px)); }
   .console-redesign .content h1 { font-size:26px; }
+  .console-redesign .routes-coming-card { padding:20px; flex-direction:column; gap:16px; }
   .console-redesign .settings-primary { grid-template-columns:1fr; }
   .console-redesign .console-mobile-nav {
     position:fixed; inset:auto 0 0; z-index:20;

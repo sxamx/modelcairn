@@ -116,6 +116,23 @@ test("mobile navigation exposes the primary sections and the More menu", async (
   expect(screen.queryByRole("menu", { name: "Más secciones" })).not.toBeInTheDocument();
 });
 
+test("keeps the current routes intact while the visual editor is coming soon", async () => {
+  window.location.hash = "#/routes";
+  vi.spyOn(globalThis, "fetch").mockImplementation(input => {
+    if (String(input).endsWith("/session/me")) return response(200, { admin: { id: "id", username: "sam" }, csrfToken: "csrf", expiresAt: "2026-09-14T00:00:00Z" });
+    if (String(input).endsWith("/readyz")) return response(200, { status: "ready", components: {} });
+    if (String(input).includes("/resources/")) return response(200, { items: [], nextCursor: null });
+    return response(200, { resourceCounts: { Route: 1 }, requests24h: { total: 0, success: 0, error: 0 }, activeCooldowns: 0, recentRequests: [], generatedAt: "2026-09-13T12:00:00Z" });
+  });
+  render(<App />);
+  expect(await screen.findByRole("heading", { name: "Rutas" })).toBeInTheDocument();
+  expect(screen.getByText("Próximamente")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Crear con asistente" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText("Necesito editar una ruta existente"));
+  fireEvent.click(screen.getByRole("link", { name: "Abrir configuración técnica" }));
+  expect(await screen.findByText("Modo avanzado")).toBeInTheDocument();
+});
+
 test("shows a uniform login error", async () => {
   vi.spyOn(globalThis, "fetch")
     .mockImplementationOnce(() => response(401, { error: { code: "authentication_required" } }))

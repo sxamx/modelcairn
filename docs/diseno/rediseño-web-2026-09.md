@@ -42,7 +42,9 @@ Configuración
 - «Volver» restaura proveedor, pestaña y, cuando corresponda, filtros. Abrir un panel para editar no debe perder la pantalla de origen.
 - Datos presenta agregados y tendencias; Actividad presenta eventos individuales. Un detalle ampliado puede abrirse contextualizado sin obligar a reconstruir la búsqueda.
 - Rutas distingue claramente borrador guardado de versión publicada. El backend ya soporta parte del recorrido, pero creación visual completa y operaciones atómicas requieren trabajo adicional.
+- Hasta completar el editor visual, la sección principal de Rutas muestra «Próximamente». La vista técnica anterior permanece detrás de un desplegable para administrar rutas existentes; esta decisión no altera su ejecución en el gateway.
 - Toda cifra se identifica como observada, estimada o no disponible. Los wireframes pueden usar ejemplos, pero la web real no mezclará ejemplos con datos del usuario.
+- El resumen de un proveedor puede graficar solicitudes por modelo a partir del historial retenido. No presenta esa actividad como uptime: la tarjeta de uptime dice «Sin sondeos» hasta que se implementen comprobaciones independientes.
 
 ## Etapas de implementación
 
