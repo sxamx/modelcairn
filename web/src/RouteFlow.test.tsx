@@ -6,31 +6,26 @@ const steps = [
   { id: "one", provider: "Google", model: "Primero", credential: "clave-a" },
   { id: "two", provider: "OpenRouter", model: "Segundo", credential: "clave-b" },
 ];
-const originalElementFromPoint = document.elementFromPoint;
 afterEach(() => {
-  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: originalElementFromPoint });
+  localStorage.clear();
 });
 
-test("adds a model by dropping it on the canvas and reorders a node by dragging", () => {
+test("adds a model and lets a node move visually without silently changing fallback priority", () => {
   const add = vi.fn();
   const reorder = vi.fn();
   const { container } = render(<RouteFlow alias="assistant" steps={steps}
     models={[{ id: "third", label: "Tercero", provider: "Proveedor" }]}
     onAddModel={add} onMoveStep={reorder} onSelect={() => undefined}/>);
-  const board = container.querySelector(".route-flow-board") as HTMLElement;
-  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: vi.fn(() => board) });
   const model = screen.getByRole("button", { name: "Añadir modelo Tercero" });
-  fireEvent.pointerDown(model, { pointerId: 1, pointerType: "mouse", button: 0, clientX: 10, clientY: 10 });
-  fireEvent.pointerMove(model, { pointerId: 1, clientX: 80, clientY: 80 });
-  fireEvent.pointerUp(model, { pointerId: 1, clientX: 80, clientY: 80 });
+  fireEvent.click(model);
   expect(add).toHaveBeenCalledWith("third", 2);
 
-  const second = container.querySelector('[data-route-node-index="1"]') as HTMLElement;
-  vi.spyOn(second, "getBoundingClientRect").mockReturnValue({ top: 0, height: 100 } as DOMRect);
-  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: vi.fn(() => second) });
-  const handle = screen.getByRole("button", { name: "Arrastrar Primero para cambiar prioridad" });
-  fireEvent.pointerDown(handle, { pointerId: 2, pointerType: "mouse", button: 0, clientX: 10, clientY: 10 });
-  fireEvent.pointerMove(handle, { pointerId: 2, clientX: 80, clientY: 80 });
-  fireEvent.pointerUp(handle, { pointerId: 2, clientX: 80, clientY: 80 });
-  expect(reorder).toHaveBeenCalledWith("one", 2);
+  const first = container.querySelector(".route-canvas-model") as HTMLElement;
+  fireEvent.pointerDown(first, { pointerId: 2, pointerType: "mouse", button: 0, clientX: 100, clientY: 100 });
+  fireEvent.pointerMove(first, { pointerId: 2, clientX: 160, clientY: 130 });
+  fireEvent.pointerUp(first, { pointerId: 2, clientX: 160, clientY: 130 });
+  expect(first.style.left).toBe("480px");
+  expect(first.style.top).toBe("280px");
+  expect(reorder).not.toHaveBeenCalled();
+  expect(JSON.parse(localStorage.getItem("modelcairn:route-layout:assistant") || "{}").one).toEqual({ x: 480, y: 280 });
 });

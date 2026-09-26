@@ -11,12 +11,13 @@ normal route workflow.
 - The entry node contains the model alias used by applications. Creating a route
   edits it in a dialog. Existing aliases are displayed but changes remain in
   advanced configuration because renaming affects clients.
-- A model can be dragged from the palette onto the canvas or tapped to append.
+- A model can be chosen from the palette to append.
   The destination dialog selects a provider-compatible API key. A sole compatible
   key may be preselected, but is still visible and changeable.
-- Dragging a destination changes its position; tapping opens its details. Up/down
-  buttons provide the same ordering operation without drag.
-- The vertical order maps exactly to the strategy's sequential destination list.
+- Dragging a destination changes only its visual position. Tapping opens its
+  details; Up/Down buttons change actual fallback priority and reconnect the edges.
+- The arrows map exactly to the strategy's sequential destination list, regardless
+  of where cards are placed.
   A fallback edge means the router may try the next destination after an eligible
   failure; it does not promise retries for every error.
 - Node metrics are observed for the model across the installation, not measured
@@ -29,16 +30,21 @@ normal route workflow.
 - Editing an existing route creates local proposals. Save plans and applies new
   destinations plus the strategy draft atomically. Only an explicit publication
   changes traffic. Discarding local edits writes nothing.
-- The editor never presents arbitrary branches or free-positioned nodes, because
-  the current backend implements ordered fallback, not a general workflow engine.
-  Advanced strategy fields remain in advanced configuration.
+- Free positions are stored in that browser only and are not synced across
+  devices or written to the backend. Priority is stored in the strategy after
+  saving and publishing.
+- The editor never presents arbitrary branches: the backend implements ordered
+  fallback, not a general workflow engine. Condition nodes, traffic percentages,
+  and fictitious estimates from the reference mockup are not shown. Advanced
+  strategy fields remain in advanced configuration.
 
 ## Responsive and accessibility
 
-The board stacks vertically on narrow screens. Touch pointer dragging is
-supported; tapping a palette item and using the dialog's up/down controls are
-non-drag alternatives. Node and palette actions have accessible button names.
+The canvas scrolls horizontally and supports zoom on narrow screens, with a Fit
+button for orientation. Touch pointer dragging moves cards; tapping a palette
+item and using the dialog's Up/Down controls are non-drag alternatives for
+functional changes. Buttons have accessible names.
 
-Acceptance: visual order equals the saved fallback order; opening or moving
-nodes never writes immediately; creating and saving use plan/apply; publication
-is explicit for an existing route.
+Acceptance: arrows and priority labels match saved fallback order; moving cards
+does not alter that order or write to the server; creating and saving use
+plan/apply; publication is explicit for an existing route.
