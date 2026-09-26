@@ -21,9 +21,10 @@ test("adds a model and lets a node move visually without silently changing fallb
   expect(add).toHaveBeenCalledWith("third", 2);
 
   const first = container.querySelector(".route-canvas-model") as HTMLElement;
-  fireEvent.pointerDown(first, { pointerId: 2, pointerType: "mouse", button: 0, clientX: 100, clientY: 100 });
-  fireEvent.pointerMove(first, { pointerId: 2, clientX: 160, clientY: 130 });
-  fireEvent.pointerUp(first, { pointerId: 2, clientX: 160, clientY: 130 });
+  const cardBody = screen.getByRole("button", { name: "Configurar Primero" });
+  fireEvent.pointerDown(cardBody, { pointerId: 2, pointerType: "mouse", button: 0, clientX: 100, clientY: 100 });
+  fireEvent.pointerMove(cardBody, { pointerId: 2, clientX: 160, clientY: 130 });
+  fireEvent.pointerUp(cardBody, { pointerId: 2, clientX: 160, clientY: 130 });
   expect(first.style.left).toBe("480px");
   expect(first.style.top).toBe("280px");
   expect(reorder).not.toHaveBeenCalled();

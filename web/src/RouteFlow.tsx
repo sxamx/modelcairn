@@ -86,7 +86,6 @@ export default function RouteFlow({
 
   function beginDrag(event: ReactPointerEvent<HTMLDivElement>, id: string, index: number) {
     if (event.pointerType === "mouse" && event.button !== 0) return;
-    if ((event.target as HTMLElement).closest("button")) return;
     drag.current = { id, startX: event.clientX, startY: event.clientY, origin: layout[id] || positionFor(index), moved: false };
     event.currentTarget.setPointerCapture?.(event.pointerId);
   }
